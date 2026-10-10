@@ -1,7 +1,7 @@
 {
   "name": "mafia-game-server",
   "main": "worker.js",
-  "compatibility_date": "2026-10-11",
+  "compatibility_date": "2026-10-10",
   "assets": {
     "directory": ".",
     "binding": "ASSETS",
