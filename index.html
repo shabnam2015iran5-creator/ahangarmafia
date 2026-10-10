@@ -2947,16 +2947,17 @@ body.ingame #dock button.bm-hidden-control{display:none!important}
   let godWasMuted=true,forcedMute=false;
 
   function patchLobby(){
-    const ready=$('readyBtn');if(ready)ready.style.setProperty('display','none','important');
+    const ready=$('readyBtn');
+    if(ready&&(ready.style.getPropertyValue('display')!=='none'||ready.style.getPropertyPriority('display')!=='important'))ready.style.setProperty('display','none','important');
     const start=$('roomStartBtn');
     if(start){
       if(isGod()){
-        start.style.removeProperty('display');
-        start.textContent='شروع بازی';
+        if(start.style.getPropertyValue('display'))start.style.removeProperty('display');
+        if(start.textContent!=='شروع بازی')start.textContent='شروع بازی';
         start.disabled=false;
-        start.setAttribute('aria-label','شروع بازی');
+        if(start.getAttribute('aria-label')!=='شروع بازی')start.setAttribute('aria-label','شروع بازی');
       }else{
-        start.style.setProperty('display','none','important');
+        if(start.style.getPropertyValue('display')!=='none'||start.style.getPropertyPriority('display')!=='important')start.style.setProperty('display','none','important');
       }
     }
     const status=$('voiceStatus');
