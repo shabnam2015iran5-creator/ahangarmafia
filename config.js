@@ -12,6 +12,6 @@ window.MAFIA_BP_ADMIN_PASS='00100900'; // رمز مرکز مدیریت؛ حتم�
 
 // حالت «فقط یک اتاق»: همهٔ بازیکن‌ها با ورود از در، مستقیم وارد یک اتاق مشترک می‌شوند (بدون کد و بدون Firebase).
 // برای برگشت به ساخت اتاق با کد، false بگذار.
-window.MAFIA_SINGLE_ROOM=true;
+window.MAFIA_SINGLE_ROOM=false;
 window.MAFIA_ROOM_NAME='main';      // نام اتاق مشترک
 window.MAFIA_ONE_ROOM_ALL=true;     // true: هر سه لابی یک اتاق‌اند؛ false: برای هر لابی یک اتاق جدا
