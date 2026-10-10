@@ -954,7 +954,7 @@ const Voice=(()=>{
  }
  // یک بار لمس صفحه: اگر مرورگر پخش خودکار صدا را بلاک کرده بود، دوباره تلاش می‌کند
  document.addEventListener('click',()=>{if(ctx&&ctx.state==='suspended')ctx.resume();Object.values(R).forEach(r=>{if(r.audio&&r.audio.paused)r.audio.play().catch(()=>{})})},true);
- return{join,leave:leaveVoice,toggleMute,isMuted:()=>!!(muted||!micOk),byUid:u=>{if(u&&u===myUid)return{sp:meSp,mu:!!(muted||!micOk)};const r=Object.values(R).find(x=>x.uid&&x.uid===u);return r?{sp:!!r.sp,mu:!!r.mu,live:!!r.live}:null},captureBase,patchSeats,afterRender,active:()=>on,broadcast,refresh,godHere,onGo:f=>{H.go=f},onMsg:(t,f)=>{H[t]=f},send,liveSlots:()=>humans().map(r=>r.slot),speakingOf:sl=>sl===slot?meSp:!!(R[sl]&&R[sl].sp),mySlot:()=>slot,godInfo,isLive:sl=>!!(R[sl]&&R[sl].live),godSlot:()=>{const r=humans().find(x=>x.role==='god');return r?r.slot:0}};
+ return{audioLevel:()=>{let v=0;try{if(micOk&&rawTrack&&rawTrack.enabled&&an&&anBuf)v=Math.max(v,lvl(an,anBuf));Object.values(R).forEach(r=>{if(r.live&&r.an&&r.buf)v=Math.max(v,lvl(r.an,r.buf))})}catch(e){}return Math.max(0,Math.min(1,(v-5)/42))},join,leave:leaveVoice,toggleMute,isMuted:()=>!!(muted||!micOk),byUid:u=>{if(u&&u===myUid)return{sp:meSp,mu:!!(muted||!micOk)};const r=Object.values(R).find(x=>x.uid&&x.uid===u);return r?{sp:!!r.sp,mu:!!r.mu,live:!!r.live}:null},captureBase,patchSeats,afterRender,active:()=>on,broadcast,refresh,godHere,onGo:f=>{H.go=f},onMsg:(t,f)=>{H[t]=f},send,liveSlots:()=>humans().map(r=>r.slot),speakingOf:sl=>sl===slot?meSp:!!(R[sl]&&R[sl].sp),mySlot:()=>slot,godInfo,isLive:sl=>!!(R[sl]&&R[sl].live),godSlot:()=>{const r=humans().find(x=>x.role==='god');return r?r.slot:0}};
 })();
 
 const Net=(()=>{
@@ -3095,5 +3095,92 @@ body.ingame #dock button.bm-hidden-control{display:none!important}
     }
   },900);
   setTimeout(patch,0);
+})();
+</script>
+
+
+<!-- BLACK MAFIA: waiting lobby layout + real microphone level equalizer -->
+<style id="bm-waiting-lobby-polish">
+/* Remove the large upper lobby title cards; keep the room itself and seat grid. */
+#lobbyRoom .lobbyTop,#lobbyRoom #roomBanner{display:none!important}
+#lobbyRoom .lobbyRoomWrap{overflow:hidden}
+#lobbyRoom .roomActions{
+ left:8px!important;right:8px!important;bottom:8px!important;top:auto!important;
+ display:flex!important;flex-wrap:wrap!important;align-items:center!important;justify-content:center!important;
+ gap:5px!important;z-index:30!important;padding:4px!important;
+ border:1px solid #76531f;border-radius:12px;background:#090603e8;
+}
+#lobbyRoom .roomActions .btn{min-width:0!important;min-height:35px!important;padding:6px 9px!important;font-size:12px!important;line-height:1!important;border-radius:9px!important}
+#lobbyRoom #roomMic{min-width:38px!important;width:38px!important}
+#lobbyRoom #roomStartBtn{max-width:105px!important}
+#lobbyRoom #deckBtn{max-width:105px!important;padding:6px 9px!important}
+#lobbyRoom #roomCount{display:inline-flex!important;align-items:center;justify-content:center;min-height:35px;padding:5px 8px!important;border:1px solid #c9972f;border-radius:9px;background:#171006;color:#f3d98c;font-weight:900;font-size:11px;white-space:nowrap}
+#lobbyRoom .roomIcon,#lobbyRoom #gbHome{display:inline-grid!important;place-items:center!important;width:35px!important;height:35px!important;min-width:35px!important;padding:0!important;font-size:19px!important;color:#f3d98c!important;border:1px solid #c9972f!important;border-radius:9px!important;background:linear-gradient(#2b1a0d,#100804)!important}
+#lobbyRoom .roomIcon{font-size:22px!important}
+#lobbyRoom #gbHome{font-size:20px!important}
+#globalBack.bm-visible{display:none!important}
+body:has(#lobbyRoom.on) #globalBack{display:none!important}
+#lobbyRoom .roomTimer{right:10px!important;bottom:137px!important;min-width:0!important;padding:5px 9px!important;font-size:16px!important;z-index:5}
+#lobbyRoom .modCard{left:9px!important;bottom:88px!important;width:clamp(112px,36vw,145px)!important;padding:5px!important;z-index:5}
+#lobbyRoom .modCard .modPortrait{width:100%!important;height:68px!important;max-height:68px!important}
+#lobbyMicEq{position:absolute;right:9px;bottom:88px;width:calc(100% - clamp(145px,43vw,175px));max-width:210px;height:80px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;gap:clamp(2px,1vw,5px);padding:9px 8px;border:2px solid #7c5a25;border-radius:12px;background:linear-gradient(145deg,#100b06,#050403);box-shadow:inset 0 0 12px #000b,0 0 10px #e0b25518;overflow:hidden;z-index:5}
+#lobbyMicEq i{display:block;flex:1;max-width:9px;height:3px;min-height:3px;border-radius:6px;background:linear-gradient(#fff0a6,#e0b255);opacity:.8;transition:height .09s linear;box-shadow:0 0 4px #e0b25533}
+#lobbyMicEq .eqHint{position:absolute;left:0;right:0;bottom:3px;text-align:center;font-size:8px;line-height:1;color:#bfa97d;pointer-events:none}
+#lobbyRoom .chairGrid{height:56%!important}
+@media(max-height:700px){
+ #lobbyRoom .modCard,#lobbyMicEq{bottom:84px!important}
+ #lobbyRoom .roomTimer{bottom:132px!important}
+ #lobbyMicEq{height:66px}
+ #lobbyRoom .modCard .modPortrait{height:54px!important;max-height:54px!important}
+ #lobbyRoom .chairGrid{height:52%!important}
+}
+@media(max-width:360px){
+ #lobbyRoom .roomActions .btn{padding:5px 7px!important;font-size:11px!important}
+ #lobbyRoom #roomStartBtn,#lobbyRoom #deckBtn{max-width:88px!important}
+ #lobbyRoom #roomCount{padding:4px 6px!important;font-size:10px!important}
+ #lobbyMicEq{width:calc(100% - 140px);gap:2px}
+}
+</style>
+<script id="bm-waiting-lobby-polish-script">
+(()=>{
+ if(window.__bmWaitingLobbyPolish)return;window.__bmWaitingLobbyPolish=true;
+ const $=id=>document.getElementById(id);
+ let eqTimer=0;
+ function setup(){
+   const lobby=$('lobbyRoom'),wrap=lobby&&lobby.querySelector('.lobbyRoomWrap'),acts=lobby&&lobby.querySelector('.roomActions');
+   if(!lobby||!wrap||!acts)return;
+   const top=lobby.querySelector('.lobbyTop');
+   const back=lobby.querySelector('.roomIcon');
+   const count=$('roomCount');
+   const home=$('gbHome');
+   // Keep only one back control and move navigation into the bottom action row.
+   if(back){back.textContent='←';back.setAttribute('aria-label','بازگشت');back.title='';if(back.parentElement!==acts)acts.prepend(back)}
+   if(home){home.textContent='⌂';home.setAttribute('aria-label','خانه');home.title='';home.onclick=()=>{try{window.goHomeGlobal()}catch(e){}};if(home.parentElement!==acts)acts.appendChild(home)}
+   const gbBack=$('gbBack');if(gbBack)gbBack.style.display='none';
+   if(count&&count.parentElement!==acts)acts.insertBefore(count,$('deckBtn')||acts.firstChild);
+   const deck=$('deckBtn');
+   if(deck){deck.textContent='🃏 مشاهده دک';deck.setAttribute('aria-label','مشاهده دک');deck.title=''}
+   if(top)top.style.display='none';
+   let panel=$('lobbyMicEq');
+   if(!panel){panel=document.createElement('div');panel.id='lobbyMicEq';panel.setAttribute('aria-label','نمایش زنده شدت صدای میکروفن');for(let i=0;i<13;i++){const bar=document.createElement('i');bar.dataset.i=String(i);panel.appendChild(bar)}const hint=document.createElement('span');hint.className='eqHint';hint.textContent='موج صدای زنده';panel.appendChild(hint);wrap.appendChild(panel)}
+   // Home and back buttons should not be shown at the old fixed top position.
+   const gb=$('globalBack');if(gb)gb.style.display='none';
+   if(!eqTimer)eqTimer=setInterval(()=>{
+     if(!$('lobbyRoom')?.classList.contains('on')){panel.style.opacity='.65';return}
+     let level=0;try{if(window.Voice&&typeof Voice.audioLevel==='function'&&Voice.active())level=Voice.audioLevel()}catch(e){}
+     const bars=panel.querySelectorAll('i');
+     bars.forEach((bar,i)=>{
+       const wave=Math.max(0,Math.sin((i+1)*1.73+Date.now()/115));
+       const ripple=Math.max(0,Math.sin((i+2)*.91+Date.now()/190));
+       const h=level>.035?3+Math.min(1,level*1.9)*(9+wave*22+ripple*8):3;
+       bar.style.height=Math.round(h)+'px';bar.style.opacity=level>.035?String(.65+Math.min(.35,level)):'0.38';
+     });
+     panel.style.borderColor=level>.08?'#72ff9a':'#7c5a25';
+     panel.style.boxShadow=level>.08?'0 0 14px #54ff8c55':'inset 0 0 12px #000b';
+   },100);
+ }
+ document.addEventListener('DOMContentLoaded',setup);
+ setup();setTimeout(setup,350);setTimeout(setup,1200);
+ const obs=new MutationObserver(()=>setup());obs.observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['class']});
 })();
 </script>
