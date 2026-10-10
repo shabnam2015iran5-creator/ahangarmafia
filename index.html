@@ -2558,18 +2558,48 @@ window.APP_VERSION='27.0';
   window.v24Load=loading;
   async function autoRoom(kind){
     if(!validProfile()||!ageOK(kind)){if(!ageOK(kind))toast('برای این لابی باید ۱۶ سال یا بیشتر باشید');return}
-    const mine=me(), now=Date.now(); let rooms={};
-    try{rooms=await getRooms()}catch(e){toast('اتصال به سرور اتاق‌ها برقرار نشد؛ حالت آفلاین فعال شد.');rooms=localAll()}
-    let found=null;
-    for(const r of Object.values(rooms||{})){const count=Object.values(r?.players||{}).filter(p=>p&&now-(p.at||0)<15000).length;if(r&&r.kind===kind&&now-(r.updatedAt||r.createdAt||0)<30000&&count<10){found=r;break}}
-    if(!found){
-      const c=code();found={code:c,kind,host:null,hostName:'',createdAt:now,updatedAt:now,status:'waiting',players:{}};
-    }
-    found.players=found.players||{};found.players[uid()]=mine;found.updatedAt=now;
-    // گرداننده فقط وقتی خودش وارد حالت گاد شده باشد جای گاد را می‌گیرد؛ در غیر این صورت جای گاد خالی می‌ماند.
-    if(lobbyMode==='god'){found.host=uid();found.hostName=mine.n;mine.role='god';found.players[uid()]=mine}
-    try{await saveRoom(found.code,found);await updatePlayer(found.code,mine)}catch(e){toast('ساخت اتاق ناموفق بود؛ دوباره تلاش کنید');console.error(e);return}
-    enterRealRoom(found);
+    // یک شناسهٔ ثابت برای اتاق مشترک؛ همهٔ لابی‌ها و ورودهای هم‌زمان به همین اتاق می‌روند.
+    const c='77777', now=Date.now(), mine=me();
+    let rooms={};
+    try{rooms=await getRooms()}catch(e){toast('اتصال به سرور اتاق‌ها برقرار نشد؛ اتصال اینترنت را بررسی کنید.');return}
+    let found=rooms[c]||null;
+    const stale=!found||now-(found.updatedAt||found.createdAt||0)>60000;
+    const patchMeta=async patch=>{
+      if(db()){
+        const res=await fetch(db()+'/roomsV23/'+c+'.json',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(patch)});
+        if(!res.ok)throw Error('server '+res.status);
+      }else{
+        const all=localAll(),r=all[c]||{code:c,kind:'friendly',players:{}};
+        Object.assign(r,patch);all[c]=r;localSave(all);
+      }
+    };
+    try{
+      if(stale){
+        // PATCH فقط مشخصات اتاق را تغییر می‌دهد و فهرست بازیکنان را پاک نمی‌کند.
+        await patchMeta({code:c,kind:'friendly',host:null,hostName:'',createdAt:now,updatedAt:now,status:'waiting'});
+      }
+      rooms=await getRooms();found=rooms[c]||{code:c,kind:'friendly',createdAt:now,updatedAt:now,status:'waiting',players:{}};
+      found.players=found.players||{};
+      if(lobbyMode==='god'){
+        const oldHost=found.host&&found.players[found.host];
+        const hostIsActive=!!(oldHost&&now-(oldHost.at||0)<15000);
+        if(found.host&&found.host!==uid()&&hostIsActive){
+          toast('این اتاق گردانندهٔ فعالی دارد؛ برای جلوگیری از دو گرداننده وارد حالت بازیکن شوید.');
+          return;
+        }
+        mine.role='god';
+        await patchMeta({host:uid(),hostName:mine.n,kind:'friendly',updatedAt:now,status:'waiting'});
+      }else{
+        mine.role='player';
+        await patchMeta({code:c,kind:'friendly',updatedAt:now});
+      }
+      // هر گوشی فقط رکورد خودش را می‌نویسد تا ورود هم‌زمان، بازیکن گوشی دیگر را حذف نکند.
+      await updatePlayer(c,{...mine,at:now});
+      rooms=await getRooms();found=rooms[c]||found;
+      found.players=found.players||{};
+      window.__voiceKey='friendly-'+c;
+      enterRealRoom(found);
+    }catch(e){toast('ورود به اتاق مشترک ناموفق بود؛ لطفاً دوباره تلاش کنید.');console.error(e)}
   }
   function enterRealRoom(r){
     window.MAFIA_ROOM_CODE=r.code;window.MAFIA_ROOM_META=r;window.MAFIA_ROOM_ONLINE=!!db();
@@ -2591,9 +2621,11 @@ window.APP_VERSION='27.0';
   async function refreshRealRoom(){
     const c=window.MAFIA_ROOM_CODE;if(!c)return;
     try{
-      let rooms=await getRooms(),r=rooms[c];if(!r)return;
-      const mine=me();r.players=r.players||{};r.players[uid()]={...mine,at:Date.now()};r.updatedAt=Date.now();
-      await saveRoom(c,r);renderRealSeats(r);
+      const mine=me(),now=Date.now();
+      await updatePlayer(c,{...mine,at:now});
+      const rooms=await getRooms(),r=rooms[c];if(!r)return;
+      renderRealSeats(r);
+      // شروع از سمت گرداننده از طریق کانال Net/Voice به بازیکنان می‌رسد؛ اتاق همچنان منبع حضور مشترک است.
     }catch(e){}
   }
   function renderRealSeats(r){
