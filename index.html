@@ -2563,7 +2563,7 @@ window.APP_VERSION='27.0';
     let rooms={};
     try{rooms=await getRooms()}catch(e){toast('اتصال به سرور اتاق‌ها برقرار نشد؛ اتصال اینترنت را بررسی کنید.');return}
     let found=rooms[c]||null;
-    const stale=!found||now-(found.updatedAt||found.createdAt||0)>60000;
+    const stale=!found||now-(found.updatedAt||found.createdAt||0)>43200000;
     const patchMeta=async patch=>{
       if(db()){
         const res=await fetch(db()+'/roomsV23/'+c+'.json',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(patch)});
