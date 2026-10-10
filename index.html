@@ -2961,7 +2961,7 @@ body.ingame #dock button.bm-hidden-control{display:none!important}
     }
     const status=$('voiceStatus');
     if(status&&$('lobbyRoom')?.classList.contains('on')&&!isGod()){
-      status.textContent='منتظر شروع بازی توسط گرداننده…';
+      if(status.textContent!=='منتظر شروع بازی توسط گرداننده…')status.textContent='منتظر شروع بازی توسط گرداننده…';
     }
   }
 
@@ -2986,7 +2986,7 @@ body.ingame #dock button.bm-hidden-control{display:none!important}
       dock.insertBefore(b,dock.querySelector('#freezeBtn')||dock.lastElementChild||null);
     }
     b.classList.toggle('bm-live',!!window.__bmModeratorSpeaking);
-    b.innerHTML=(window.__bmModeratorSpeaking?'🔇':'🎙')+'<small>'+(window.__bmModeratorSpeaking?'پایان صحبت':'نوبت صحبت')+'</small>';
+    const label=(window.__bmModeratorSpeaking?'🔇':'🎙')+'<small>'+(window.__bmModeratorSpeaking?'پایان صحبت':'نوبت صحبت')+'</small>';if(b.innerHTML!==label)b.innerHTML=label;
   }
 
   function cleanMenu(){
