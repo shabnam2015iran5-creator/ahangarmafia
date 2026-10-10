@@ -1,5 +1,5 @@
-/* تنظیمات بازی؛ بعد از ساخت سرور و ... مقدارها را اینجا بگذار */
-window.MAFIA_DB_URL='https://black-mafia-online-default-rtdb.firebaseio.com';
+/* تنظیمات بازی؛ درخواست‌های دیتابیس از واسط Cloudflare عبور می‌کنند. */
+window.MAFIA_DB_URL='/api/db';
 // سرور TURN برای اینترنت همراه/شبکه‌های سخت. این‌ها سرورهای رایگان و مشترک Open Relay هستند (برای شروع و تست).
 // برای استفادهٔ جدی، در metered.ca حساب رایگان بساز و اطلاعات خودت را اینجا بگذار.
 window.MAFIA_TURN=[
