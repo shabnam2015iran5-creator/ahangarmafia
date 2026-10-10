@@ -3149,6 +3149,8 @@ body:has(#lobbyRoom.on) #globalBack{display:none!important}
  function setup(){
    const lobby=$('lobbyRoom'),wrap=lobby&&lobby.querySelector('.lobbyRoomWrap'),acts=lobby&&lobby.querySelector('.roomActions');
    if(!lobby||!wrap||!acts)return;
+   const globalBar=$('globalBack'),globalHome=$('gbHome'),globalBackBtn=$('gbBack');
+   if(!lobby.classList.contains('on')){if(globalBar&&globalHome&&globalHome.parentElement!==globalBar)globalBar.appendChild(globalHome);if(globalBackBtn)globalBackBtn.style.display='';if(globalBar)globalBar.style.display='';return}
    const top=lobby.querySelector('.lobbyTop');
    const back=lobby.querySelector('.roomIcon');
    const count=$('roomCount');
