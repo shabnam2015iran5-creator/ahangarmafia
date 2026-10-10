@@ -2576,7 +2576,7 @@ window.APP_VERSION='27.0';
     }
     // همه قبل از ورود نقش خود را انتخاب می‌کنند؛ درِ گرداننده هم همین انتخاب را نشان می‌دهد.
     const asGod=confirm('چطور وارد شوی؟\n\n«تأیید» = گرداننده\n«لغو» = بازیکن');
-    lobbyMode=asGod?'god':'player';window.lobbyMode=lobbyMode;
+    lobbyMode=asGod?'god':'player';
     if(createNew){
       do{c=String(Math.floor(10000+Math.random()*90000))}while(rooms[c]);
     }
@@ -2924,5 +2924,175 @@ button[title], [role="button"][title]{cursor:pointer}button:focus-visible{outlin
       finally{entering=false}
     }catch(e){}
   },1200);
+})();
+</script>
+
+
+<!-- BLACK MAFIA hotfix: moderator-only start and moderator speaking turn -->
+<style id="bm-moderator-control-fix">
+#readyBtn{display:none!important}
+#roomStartBtn{font-weight:900!important}
+body.ingame #dock button.bm-hidden-control{display:none!important}
+#bmGodTurn{border-color:#f1c24f!important;background:linear-gradient(#f0c35f,#a8741f)!important;color:#241308!important}
+#bmGodTurn.bm-live{background:linear-gradient(#a02a2a,#5a1414)!important;color:#fff!important;border-color:#ff8b70!important;box-shadow:0 0 14px #ff4d4d55!important}
+#bmGodTurn small{font-size:10px!important}
+</style>
+<script id="bm-moderator-control-fix">
+(()=>{
+  if(window.__bmModeratorControlFix)return;
+  window.__bmModeratorControlFix=true;
+  const $=id=>document.getElementById(id);
+  const isGod=()=>((typeof role!=='undefined'&&role==='god')||(typeof lobbyMode!=='undefined'&&lobbyMode==='god'));
+  const inNight=()=>typeof G!=='undefined'&&G&&G.ph==='night';
+  let godWasMuted=true,forcedMute=false;
+
+  function patchLobby(){
+    const ready=$('readyBtn');if(ready)ready.style.setProperty('display','none','important');
+    const start=$('roomStartBtn');
+    if(start){
+      if(isGod()){
+        start.style.removeProperty('display');
+        start.textContent='شروع بازی';
+        start.disabled=false;
+        start.setAttribute('aria-label','شروع بازی');
+      }else{
+        start.style.setProperty('display','none','important');
+      }
+    }
+    const status=$('voiceStatus');
+    if(status&&$('lobbyRoom')?.classList.contains('on')&&!isGod()){
+      status.textContent='منتظر شروع بازی توسط گرداننده…';
+    }
+  }
+
+  function ensureGodButton(){
+    const dock=$('dock');if(!dock||!document.body.classList.contains('ingame'))return;
+    const old=$('bmGodTurn');
+    if(!isGod()){if(old)old.remove();return}
+    // Remove moderator chat/emoji and start/phase controls from the in-game dock.
+    dock.querySelectorAll('button').forEach(b=>{
+      const h=(b.getAttribute('onclick')||'');
+      const t=(b.innerText||'').replace(/\s+/g,' ');
+      if(h.includes('openEmo(')||h.includes('pickOrSkip(')||/شروع\s*\/\s*فاز|شروع بازی\s*\/\s*رد کردن فاز/.test(t)){
+        b.classList.add('bm-hidden-control');
+        b.remove();
+      }
+    });
+    let b=$('bmGodTurn');
+    if(!b){
+      b=document.createElement('button');b.type='button';b.id='bmGodTurn';b.className='ib2';
+      b.innerHTML='🎙<small>نوبت صحبت</small>';
+      b.onclick=window.bmToggleGodTurn;
+      dock.insertBefore(b,dock.querySelector('#freezeBtn')||dock.lastElementChild||null);
+    }
+    b.classList.toggle('bm-live',!!window.__bmModeratorSpeaking);
+    b.innerHTML=(window.__bmModeratorSpeaking?'🔇':'🎙')+'<small>'+(window.__bmModeratorSpeaking?'پایان صحبت':'نوبت صحبت')+'</small>';
+  }
+
+  function cleanMenu(){
+    if(!isGod())return;
+    document.querySelectorAll('#ovMenu button, #ovMenu .btn').forEach(b=>{
+      const h=b.getAttribute('onclick')||'';
+      const t=(b.innerText||'').replace(/\s+/g,' ');
+      if(h.includes('pickOrSkip(')||h.includes('openEmo(')||/شروع بازی\s*\/\s*رد کردن فاز|شروع\s*\/\s*فاز|چت و ایموجی/.test(t))b.remove();
+    });
+  }
+
+  function setModeratorSpeaking(on){
+    if(!isGod())return;
+    if(on&&(!started||inNight())){
+      if(inNight())try{toast('گرداننده در فاز شب اجازه صحبت ندارد')}catch(e){}
+      return;
+    }
+    if(!!window.__bmModeratorSpeaking===!!on)return;
+    window.__bmModeratorSpeaking=!!on;
+    if(window.Voice&&Voice.active()){
+      if(on){
+        godWasMuted=!!Voice.isMuted();
+        if(godWasMuted)Promise.resolve(Voice.toggleMute()).catch(()=>{});
+      }else{
+        // After the moderator's turn, keep the moderator microphone closed.
+        if(!Voice.isMuted())Promise.resolve(Voice.toggleMute()).catch(()=>{});
+      }
+      Voice.broadcast({t:'modturn',on:!!on,n:(typeof S!=='undefined'&&S.nick)||'گرداننده'});
+    }
+    if(typeof say==='function')try{say(on?'نوبت صحبت گرداننده آغاز شد. همه بازیکنان میکروفن‌های خود را ببندند.':'نوبت صحبت گرداننده تمام شد. ادامه بازی طبق نوبت‌ها.')}catch(e){}
+    if(typeof banner==='function')try{banner(on?'🎙 نوبت صحبت گرداننده':'🎭 ادامه نوبت‌های بازی')}catch(e){}
+    ensureGodButton();
+  }
+  window.bmToggleGodTurn=()=>setModeratorSpeaking(!window.__bmModeratorSpeaking);
+  window.bmSetModeratorSpeaking=setModeratorSpeaking;
+
+  // A live moderator-turn message is delivered to each connected phone over the voice channel.
+  if(window.Voice&&typeof Voice.onMsg==='function'){
+    Voice.onMsg('modturn',(slot,d)=>{
+      if(!d||typeof d.on!=='boolean')return;
+      window.__bmModeratorSpeaking=d.on;
+      forcedMute=d.on;
+      if(window.Net&&typeof Net.canSpeak==='function'){
+        if(!Net.__bmModTurnWrapped){
+          const original=Net.canSpeak.bind(Net);
+          Net.canSpeak=function(){return window.__bmModeratorSpeaking?false:original()};
+          Net.__bmModTurnWrapped=true;
+        }
+      }
+      if(d.on){
+        try{toast('🎙 نوبت صحبت گرداننده؛ میکروفن شما بسته است')}catch(e){}
+      }else{
+        try{toast('نوبت صحبت گرداننده تمام شد')}catch(e){}
+      }
+      // Refresh the voice gate immediately; Voice.enforce also reapplies it on its normal tick.
+      try{Voice.refresh()}catch(e){}
+      try{if(typeof render==='function')render()}catch(e){}
+    });
+  }
+  // Only the moderator can start. Players are already seated and need no ready toggle.
+  const oldStart=window.roomStartGame;
+  if(typeof oldStart==='function'&&!window.__bmStartGuard){
+    window.__bmStartGuard=true;
+    window.roomStartGame=function(){
+      if(!isGod()){try{toast('منتظر شروع بازی توسط گرداننده باشید')}catch(e){}return}
+      const b=$('roomStartBtn');if(b)b.textContent='شروع بازی';
+      return oldStart.apply(this,arguments);
+    };
+  }
+  // Moderator may only open their speaking turn outside the night phase.
+  const oldToggleMic=window.toggleMic;
+  if(typeof oldToggleMic==='function'&&!window.__bmMicGuard){
+    window.__bmMicGuard=true;
+    window.toggleMic=function(){
+      if(isGod()&&typeof started!=='undefined'&&started&&!window.__bmModeratorSpeaking){
+        try{toast('برای صحبت، ابتدا «نوبت صحبت» را بزنید')}catch(e){}
+        return;
+      }
+      return oldToggleMic.apply(this,arguments);
+    };
+  }
+  // Do not allow player chat while the moderator is addressing the room.
+  const oldSend=window.sendT;
+  if(typeof oldSend==='function'&&!window.__bmSendGuard){
+    window.__bmSendGuard=true;
+    window.sendT=function(v){
+      if(window.__bmModeratorSpeaking&&typeof role!=='undefined'&&role==='player'){
+        try{toast('هنگام صحبت گرداننده، چت و میکروفن بسته است')}catch(e){}
+        return;
+      }
+      return oldSend.apply(this,arguments);
+    };
+  }
+  const patch=()=>{patchLobby();ensureGodButton();cleanMenu()};
+  document.addEventListener('click',()=>setTimeout(patch,0),true);
+  document.addEventListener('DOMContentLoaded',patch);
+  const obs=new MutationObserver(()=>patch());
+  obs.observe(document.documentElement,{subtree:true,childList:true,attributes:true,attributeFilter:['class','style']});
+  setInterval(()=>{
+    patch();
+    if(window.__bmModeratorSpeaking&&inNight())setModeratorSpeaking(false);
+    // Keep the moderator's microphone closed whenever their speaking turn is inactive.
+    if(isGod()&&typeof started!=='undefined'&&started&&!window.__bmModeratorSpeaking&&window.Voice&&Voice.active()&&!Voice.isMuted()){
+      try{Voice.toggleMute()}catch(e){}
+    }
+  },900);
+  setTimeout(patch,0);
 })();
 </script>
