@@ -83,7 +83,7 @@ export default {
         method,
         headers: body ? { "Content-Type": "application/json" } : undefined,
         body: body || undefined,
-        redirect: "error"
+        redirect: "follow"
       });
     } catch {
       return json({ error: "Database connection failed" }, 502);
