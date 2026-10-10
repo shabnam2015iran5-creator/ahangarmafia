@@ -2882,3 +2882,47 @@ button[title], [role="button"][title]{cursor:pointer}button:focus-visible{outlin
  if(typeof oldCreate==='function'&&!window.__bmV31CreateWrapped){window.__bmV31CreateWrapped=true;window.rdCreate=function(){const k=(window.lobbyKind||'');return oldCreate.apply(this,arguments)}}
 })();
 </script>
+
+<!-- BLACK MAFIA: reliable game-start signal across phones -->
+<script id="bm-shared-game-start">
+(()=>{
+  if(window.__bmSharedGameStartInstalled)return;
+  window.__bmSharedGameStartInstalled=true;
+  const db=()=>String(window.MAFIA_DB_URL||'').replace(/\/$/,'');
+  const originalStart=window.roomStartGame;
+  let entering=false,lastStartedRoom='';
+  // Save the start state to the shared room before sending the live voice signal.
+  if(typeof originalStart==='function'){
+    window.roomStartGame=async function(){
+      const isGod=window.lobbyMode==='god';
+      const code=String(window.MAFIA_ROOM_CODE||'');
+      if(isGod&&code&&db()){
+        try{
+          const r=await fetch(db()+'/roomsV23/'+encodeURIComponent(code)+'.json',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:'started',startedAt:Date.now()})});
+          if(!r.ok)throw Error('room start '+r.status);
+        }catch(e){try{toast('شروع بازی در سرور ثبت نشد؛ اتصال اینترنت را بررسی کنید.')}catch(_){}}
+      }
+      return originalStart.apply(this,arguments);
+    };
+  }
+  // If the live "go" voice message was missed while PeerJS was connecting,
+  // the player phone enters as soon as it sees the persistent server state.
+  setInterval(async()=>{
+    const code=String(window.MAFIA_ROOM_CODE||'');
+    if(!code||window.lobbyMode!=='player'||entering)return;
+    const lobby=document.getElementById('lobbyRoom');
+    if(!lobby||!lobby.classList.contains('on'))return;
+    const d=db();if(!d)return;
+    try{
+      const r=await fetch(d+'/roomsV23/'+encodeURIComponent(code)+'.json',{cache:'no-store'});
+      if(!r.ok)return;
+      const room=await r.json();
+      if(!room||room.status!=='started'||lastStartedRoom===code)return;
+      if(window.Net&&Net.isClient()) {lastStartedRoom=code;return}
+      entering=true;lastStartedRoom=code;
+      try{window.lobbyReady=true;if(window.Net&&typeof Net.enter==='function')Net.enter()}
+      finally{entering=false}
+    }catch(e){}
+  },1200);
+})();
+</script>
