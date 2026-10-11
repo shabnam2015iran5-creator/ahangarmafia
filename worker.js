@@ -48,7 +48,25 @@ export default {
     const url = new URL(request.url);
 
     if (!url.pathname.startsWith("/api/db/")) {
-      return env.ASSETS.fetch(request);
+      const asset = await env.ASSETS.fetch(request);
+      if (request.method !== "GET" || !["/", "/index.html"].includes(url.pathname)) return asset;
+
+      // Net is a top-level lexical const, not window.Net. Fix the missed-start
+      // fallback in the served HTML so player phones can enter when they see
+      // the shared Firebase room status change.
+      const html = await asset.text();
+      const patched = html.replace(
+        "if(window.Net&&typeof Net.enter==='function')Net.enter()",
+        "if(typeof Net!=='undefined'&&typeof Net.enter==='function')Net.enter()"
+      );
+      if (patched === html) return asset;
+
+      const headers = new Headers(asset.headers);
+      headers.delete("Content-Length");
+      headers.delete("ETag");
+      headers.set("Cache-Control", "no-store");
+      headers.set("Content-Type", "text/html; charset=utf-8");
+      return new Response(patched, { status: asset.status, statusText: asset.statusText, headers });
     }
 
     const method = request.method.toUpperCase();
