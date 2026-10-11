@@ -2525,7 +2525,7 @@ window.APP_VERSION='27.0';
   const ls=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
   const db=()=>String(window.MAFIA_DB_URL||'').replace(/\/$/,'');
   // Prevent a stalled database request from trapping the user during role selection.
-  async function request(url,options={}){const ctl=new AbortController();const timer=setTimeout(()=>ctl.abort(),10000);try{return await request(url,{...options,signal:ctl.signal})}finally{clearTimeout(timer)}}
+  async function request(url,options={}){const ctl=new AbortController();const timer=setTimeout(()=>ctl.abort(),10000);try{return await window.fetch(url,{...options,signal:ctl.signal})}finally{clearTimeout(timer)}}
   const uid=()=>lg('mafia_uid')||('u'+Math.random().toString(36).slice(2,12));
   if(!lg('mafia_uid'))ls('mafia_uid',uid());
   const me=()=>({uid:uid(),n:String(S.nick||'بازیکن').slice(0,18),seed:+(S.avatarSeed||1),age:+(S.age||0),ready:!!lobbyReady,role:lobbyMode==='god'?'god':'player',at:Date.now()});
