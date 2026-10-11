@@ -182,7 +182,7 @@
     if(canAct){
       $('actionLabel').textContent=game.phase==='day'?'رأی به حذف یک بازیکن':'انتخاب هدف شب';
       $('actionHelp').textContent=game.phase==='night'&&role==='villager'?'شهروند در شب انتخابی ندارد.':(role==='mafia'&&game.phase==='night'?'مافیاها هدف شب را انتخاب می‌کنند.':role==='doctor'&&game.phase==='night'?'هدف نجات را انتخاب کن؛ می‌توانی خودت را هم انتخاب کنی.':role==='detective'&&game.phase==='night'?'نتیجهٔ بررسی فقط برای خودت نمایش داده می‌شود.':'رأی نهایی خود را ثبت کن؛ در هر دور فقط یک انتخاب معتبر است.');
-      const targets=game.phase==='day'?eligible:players.filter(p=>alive.has(p.id)&&(role==='doctor'||p.id!==state.id));
+      const targets=game.phase==='day'?eligible:players.filter(p=>alive.has(p.id)&&(role==='doctor'||p.id!==state.id)&&(role!=='mafia'||game.roles?.[p.id]!=='mafia'));
       $('targetSelect').innerHTML='<option value="">انتخاب کن…</option>'+targets.map(p=>'<option value="'+esc(p.id)+'">'+esc(p.name)+'</option>').join('');
       $('submitAction').disabled=!!game.actions?.[state.id]||targets.length===0;
       $('submitAction').textContent=game.actions?.[state.id]?'انتخاب ثبت شد ✓':'ثبت انتخاب';
