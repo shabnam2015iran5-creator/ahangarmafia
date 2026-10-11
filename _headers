@@ -1,0 +1,3 @@
+/*
+  Permissions-Policy: microphone=(self)
+  Cache-Control: public, max-age=0, must-revalidate
