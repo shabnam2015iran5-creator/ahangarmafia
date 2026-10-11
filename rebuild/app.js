@@ -100,6 +100,7 @@
     $('gameNotice').textContent = room.phase === 'started' ? 'گرداننده بازی را شروع کرده است. همهٔ دستگاه‌ها وضعیت یکسان اتاق را دریافت کرده‌اند.' : 'همه در همین اتاق هستند. گرداننده می‌تواند پس از آماده‌شدن بازیکنان شروع کند.';
     $('startBtn').disabled = players.filter(p=>p.seatType==='human').length < 2;
     $('readyBtn').textContent = state.ready ? 'لغو آمادگی' : 'آماده‌ام ✓';
+    $('readyBtn').classList.toggle('hidden', state.host);
     $('startBtn').textContent = room.phase === 'started' ? 'بازی شروع شد' : '🎬 شروع بازی';
     $('startBtn').disabled = !state.host || room.phase === 'started' || players.filter(p=>p.seatType==='human').length < 2;
     const messages = Object.entries(room.chat || {}).map(([key,m])=>({...m,key})).filter(m=>m && m.text).sort((a,b)=>(a.at||0)-(b.at||0)).slice(-100);
