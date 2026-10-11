@@ -2567,7 +2567,7 @@ window.APP_VERSION='27.0';
   function ageOK(kind){return kind==='edu'||(+S.age>=16)||S.released}
   function validProfile(){const n=String(S.nick||'').trim(),a=+S.age||0;if(!n){toast('لطفاً نام خود را وارد کنید؛ اول نامت را در پروفایل بگذار.');return false}if(a<1||a>99){toast('لطفاً سن خود را وارد کنید؛ اول سنت را در پروفایل بگذار.');return false}return true}
   window.saveProfile=function(){const n=String($('playerNick')?.value||'').trim(),a=+$('playerAge')?.value||0;if(!n){toast('لطفاً نام خود را وارد کنید؛ اول نامت را در پروفایل بگذار.');return false}if(a<1||a>99){toast('لطفاً سن خود را وارد کنید؛ اول سنت را در پروفایل بگذار.');return false}S.nick=n;S.age=a;S.avatarSeed=selectedAvSeed||1;save();return true};
-  function loading(next){const ov=$('ovLoad');if(!ov)return next();const m=ov.querySelector('.msg');if(m)m.innerHTML='سیستم در حال راه‌اندازی است<br>لطفاً صبور باشید...';ov.classList.add('s');setTimeout(()=>{ov.classList.remove('s');try{next()}catch(e){console.error(e)}},2000)}
+  function loading(next){const ov=$('ovLoad');if(!ov){Promise.resolve().then(next).catch(e=>{console.error(e);toast('خطا در ورود به لابی؛ دوباره تلاش کن.')});return}const m=ov.querySelector('.msg');if(m)m.textContent='سیستم در حال راه‌اندازی است؛ لطفاً صبور باشید...';ov.classList.add('s');setTimeout(async()=>{try{await next()}catch(e){console.error('BLACK MAFIA lobby loader:',e);toast('خطا در ورود به لابی؛ دوباره تلاش کن.')}finally{ov.classList.remove('s')}},250)}
   window.v24Load=loading;
   async function autoRoom(kind){
     if(!validProfile()||!ageOK(kind)){if(!ageOK(kind))toast('برای این لابی باید ۱۶ سال یا بیشتر باشید');return}
@@ -2580,16 +2580,16 @@ window.APP_VERSION='27.0';
       const players=Object.values(r.players||{});
       return players.some(p=>p&&now-(p.at||0)<15000);
     }).sort((a,b)=>(b.updatedAt||b.createdAt||0)-(a.updatedAt||a.createdAt||0));
-    let c='',createNew=!active.length;
-    if(active.length){
-      const r=active[0];
-      const goIn=confirm('یک اتاق در حال فعالیت است (#'+r.code+').\n\nبرای ورود به همین اتاق «تأیید» را بزن؛ برای ساخت اتاق جدید «لغو» را بزن.');
-      createNew=!goIn;
-      if(goIn)c=String(r.code);
-    }
-    // همه قبل از ورود نقش خود را انتخاب می‌کنند؛ درِ گرداننده هم همین انتخاب را نشان می‌دهد.
-    const asGod=confirm('چطور وارد شوی؟\n\n«تأیید» = گرداننده\n«لغو» = بازیکن');
+    // از پنجره‌های confirm سیستمی استفاده نکن؛ در بعضی مرورگرهای موبایل پس از بستن آن‌ها رابط کاربری قفل می‌شود.
+    // نقش از انتخاب قبلی کاربر در صفحهٔ در/لابی خوانده می‌شود.
+    const asGod=(window.lobbyMode||lobbyMode)==='god';
     lobbyMode=asGod?'god':'player';window.lobbyMode=lobbyMode;
+    let c='',createNew=!active.length;
+    if(active.length && !asGod){
+      // بازیکن به اتاق فعال می‌پیوندد؛ انتخاب اتاق تازه از فهرست اتاق‌ها انجام می‌شود.
+      c=String(active[0].code);
+      createNew=false;
+    }
     if(createNew){
       do{c=String(Math.floor(10000+Math.random()*90000))}while(rooms[c]);
     }
