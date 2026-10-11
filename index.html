@@ -2480,12 +2480,14 @@ window.APP_VERSION='27.0';
   }
   const timer=$('roomTimer');
   if(timer && window.MAFIA_ROOM_ONLINE){
+    const actions=document.querySelector('#lobbyRoom .roomActions'),deck=$('deckBtn');
+    if(actions&&timer.parentElement!==actions){if(deck)actions.insertBefore(timer,deck);else actions.appendChild(timer)}
     const left=Math.max(0,30*60*1000-(now()-(Number(r.createdAt)||now())));
     const mm=String(Math.floor(left/60000)).padStart(2,'0'),ss=String(Math.floor(left%60000/1000)).padStart(2,'0');
     const end=new Date((Number(r.createdAt)||now())+30*60*1000);
     const hh=String(end.getHours()).padStart(2,'0'),mi=String(end.getMinutes()).padStart(2,'0');
     timer.innerHTML=mm+':'+ss+'<small>پایان دگ: '+hh+':'+mi+'</small>';
-    timer.style.cssText+=';right:auto!important;left:10px!important;bottom:12px!important;min-width:105px!important;padding:5px 8px!important;font-size:16px!important;z-index:20';
+    timer.style.cssText+=';position:static!important;right:auto!important;left:auto!important;bottom:auto!important;min-width:76px!important;width:auto!important;padding:4px 6px!important;font-size:14px!important;z-index:45!important;flex-shrink:0!important';
   }const me=profile();try{if(hasDb())await api('PUT','roomsV23/'+r.code+'/players/'+uid,{...me,at:now()});else{r.players=r.players||{};r.players[uid]={...me,at:now()};r.updatedAt=now();setLocal(r)}}catch(e){}const ps=hasDb()?((await api('GET','roomsV23/'+r.code+'/players'))||{}):(r.players||{});const alive=Object.values(ps).filter(x=>x&&now()-(x.at||0)<12000);renderPresence(alive,r)}
  function renderPresence(players,r){window.__lastPres=[players,r];const arr=players.filter(p=>p.role!=='god').sort((a,b)=>String(a.uid).localeCompare(String(b.uid))).slice(0,10);const slots=Array(10).fill(null);arr.forEach((p,i)=>{let vu=null;try{vu=Voice.byUid(p.uid)}catch(e){}slots[i]={n:p.n,id:1000+i,seed:p.seed||1,f:(p.seed||1)%3===0,human:true,ready:!!p.ready,online:true,uid:p.uid,speaking:!!(vu&&vu.sp),mu:vu?!!vu.mu:!!p.mu}});lobbyRoomSeats=slots;renderLobbyChairs();$('roomCount').textContent='👥 '+arr.length+'/10';const host=players.find(p=>p.uid===r.host);if(host&&host.role==='god'){$('modName').textContent=host.n;$('modRole').textContent='گرداننده رسمی'}}
  async function refreshList(){const box=$('rdRooms');if(!box)return;let data={};try{data=hasDb()?((await api('GET','roomsV23'))||{}):(()=>{try{return JSON.parse(lg('mafia_local_rooms_v23')||'{}')}catch(e){return{}}})()}catch(e){box.innerHTML='<div class="rdEmpty">اتصال به سرور ناموفق بود.</div>';return}const rs=Object.values(data||{}).filter(r=>r&&r.code&&now()-(r.updatedAt||r.createdAt||0)<30000);if(!rs.length){box.innerHTML='<div class="rdEmpty">اتاق فعالی پیدا نشد.<br>می‌توانید یک اتاق جدید بسازید.</div>';return}box.innerHTML=rs.slice(0,20).map(r=>{const count=Object.keys(r.players||{}).filter(k=>r.players[k]).length;const title=lobbyLabel(r.kind)[0];return '<div class="rdRoom"><div class="rinfo"><b>'+esc(title)+'</b><small><span class="rdCode">#'+esc(r.code)+'</span> · '+count+'/10 نفر</small></div><button class="btn gold" onclick="rdQuickJoin(\''+r.code+'\',\''+r.kind+'\')">ورود</button></div>'}).join('')}
@@ -3117,6 +3119,13 @@ body.ingame #dock button.bm-hidden-control{display:none!important}
 #lobbyRoom .lobbyRoomWrap>#bmLobbyChat.bm-chat-closed{display:none!important}
 #lobbyRoom .lobbyRoomWrap>#bmLobbyChatToggle{position:absolute!important;right:12px;bottom:12px;z-index:45!important;display:none;align-items:center;justify-content:center;gap:5px;min-width:48px;height:44px;padding:0 12px;border:1px solid #d2a347;border-radius:24px;background:linear-gradient(#c99b43,#80551a);color:#170e04;font-size:21px;box-shadow:0 4px 15px #000b;cursor:pointer}
 #lobbyRoom .lobbyRoomWrap>#bmLobbyChatToggle.bm-chat-toggle-on{display:flex!important}
+#lobbyRoom .roomActions{left:8px!important;right:8px!important;max-width:calc(100% - 16px);display:flex!important;flex-wrap:wrap!important;align-items:center!important;justify-content:flex-end!important;gap:5px!important}
+#lobbyRoom .roomActions #bmLobbyChatToggle{position:static!important;right:auto!important;bottom:auto!important;min-width:40px!important;width:40px!important;height:38px!important;padding:0 5px!important;flex-shrink:0!important}
+#lobbyRoom .roomActions #bmLobbyChatToggle.bm-chat-toggle-on{display:flex!important}
+#lobbyRoom .roomActions #roomTimer{border-radius:8px!important;white-space:nowrap!important;line-height:1.2!important}
+#lobbyRoom .roomActions #roomTimer small{font-size:8px!important}
+#lobbyRoom .roomActions .btn{min-width:0!important;padding-left:8px!important;padding-right:8px!important;flex-shrink:1!important}
+@media(max-width:520px){#lobbyRoom .roomActions .btn{font-size:11px!important;min-height:36px!important}#lobbyRoom .roomActions #deckBtn{white-space:nowrap!important}}
 #bmLobbyChatToggle .blc-unread{display:none;min-width:19px;height:19px;padding:1px 5px;border-radius:12px;background:#d52c2c;color:white;font-size:11px;line-height:17px;font-weight:900;text-align:center}
 #bmLobbyChatToggle .blc-unread.on{display:inline-block}
 #bmLobbyChat .blc-head{display:flex;align-items:center;justify-content:space-between;gap:8px;font-weight:900;color:#f5d98d;font-size:14px}
@@ -3175,6 +3184,9 @@ body.ingame #dock button.bm-hidden-control{display:none!important}
   if(!$('bmLobbyChatToggle')){
    const t=document.createElement('button');t.type='button';t.id='bmLobbyChatToggle';t.innerHTML='💬 <span class="blc-unread" id="bmLobbyChatUnread">0</span>';t.addEventListener('click',openChat);wrap.appendChild(t);
   }
+  const actions=wrap.querySelector('.roomActions'),deck=$('deckBtn'),toggle=$('bmLobbyChatToggle'),timer=$('roomTimer');
+  if(actions&&toggle&&toggle.parentElement!==actions){if(deck)actions.insertBefore(toggle,deck);else actions.appendChild(toggle)}
+  if(actions&&timer&&timer.parentElement!==actions){if(deck)actions.insertBefore(timer,deck);else actions.appendChild(timer)}
   if(isOpen){$('bmLobbyChat')?.classList.remove('bm-chat-closed');$('bmLobbyChatToggle')?.classList.remove('bm-chat-toggle-on')}
   else closeChat();
   badge();
