@@ -2524,6 +2524,8 @@ window.APP_VERSION='27.0';
   const lg=k=>{try{return localStorage.getItem(k)}catch(e){return null}};
   const ls=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
   const db=()=>String(window.MAFIA_DB_URL||'').replace(/\/$/,'');
+  // Prevent a stalled database request from trapping the user during role selection.
+  async function request(url,options={}){const ctl=new AbortController();const timer=setTimeout(()=>ctl.abort(),10000);try{return await request(url,{...options,signal:ctl.signal})}finally{clearTimeout(timer)}}
   const uid=()=>lg('mafia_uid')||('u'+Math.random().toString(36).slice(2,12));
   if(!lg('mafia_uid'))ls('mafia_uid',uid());
   const me=()=>({uid:uid(),n:String(S.nick||'بازیکن').slice(0,18),seed:+(S.avatarSeed||1),age:+(S.age||0),ready:!!lobbyReady,role:lobbyMode==='god'?'god':'player',at:Date.now()});
@@ -2533,7 +2535,7 @@ window.APP_VERSION='27.0';
   function code(){return String(Math.floor(10000+Math.random()*90000))}
   async function getRooms(){
     if(db()){
-      const r=await fetch(db()+'/roomsV23.json');
+      const r=await request(db()+'/roomsV23.json');
       if(!r.ok)throw Error('server '+r.status);
       return await r.json()||{};
     }
@@ -2541,13 +2543,13 @@ window.APP_VERSION='27.0';
   }
   async function saveRoom(code,room){
     if(db()){
-      const r=await fetch(db()+'/roomsV23/'+code+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(room)});
+      const r=await request(db()+'/roomsV23/'+code+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(room)});
       if(!r.ok)throw Error('server '+r.status);
     }else{const a=localAll();a[code]=room;localSave(a)}
   }
   async function updatePlayer(code,p){
     if(db()){
-      const r=await fetch(db()+'/roomsV23/'+code+'/players/'+encodeURIComponent(uid())+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)});
+      const r=await request(db()+'/roomsV23/'+code+'/players/'+encodeURIComponent(uid())+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)});
       if(!r.ok)throw Error('server '+r.status);
     }else{const a=localAll();if(a[code]){a[code].players=a[code].players||{};a[code].players[uid()]=p;a[code].updatedAt=Date.now();localSave(a)}}
   }
@@ -2584,7 +2586,7 @@ window.APP_VERSION='27.0';
     mine.role=asGod?'god':'player';
     const patchMeta=async patch=>{
       if(db()){
-        const res=await fetch(db()+'/roomsV23/'+c+'.json',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(patch)});
+        const res=await request(db()+'/roomsV23/'+c+'.json',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(patch)});
         if(!res.ok)throw Error('server '+res.status);
       }else{
         const all=localAll(),r=all[c]||{code:c,kind:'friendly',players:{}};
