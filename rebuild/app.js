@@ -2,7 +2,7 @@
   'use strict';
   const $ = id => document.getElementById(id);
   const DB = String(window.MAFIA_DB_URL || '/api/db').replace(/\/$/, '');
-  const state = { room: null, code: '', id: '', name: '', host: false, ready: false, roomData: null, poll: null, chatKeys: new Set(), voice: null, localStream: null, voicePeers: new Map(), seenSignals: new Set(), signalBusy: false, lastUpdated: 0 };
+  const state = { room: null, code: '', id: '', name: '', host: false, ready: false, roomData: null, poll: null, chatKeys: new Set(), voice: null, localStream: null, voicePeers: new Map(), pendingCandidates: new Map(), seenSignals: new Set(), signalBusy: false, lastUpdated: 0 };
   const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const safe = value => String(value ?? '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 80);
   const setStatus = (message, type = '') => { const el = $('connection'); el.textContent = message; el.className = 'pill ' + (type ? 'status-' + type : ''); };
@@ -227,6 +227,7 @@
             if(!sender)continue;
             let item=state.voicePeers.get(sender.id);
             if(msg.type==='offer'&&!item){await makeVoicePeer({...sender,voiceId:msg.from},false);item=state.voicePeers.get(sender.id);}
+            if(!item && msg.type==='candidate'){const list=state.pendingCandidates.get(sender.id)||[];if(list.length<64)list.push(msg.candidate);state.pendingCandidates.set(sender.id,list);continue;}
             if(!item)continue;
             if(msg.type==='offer'){
               await item.pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
