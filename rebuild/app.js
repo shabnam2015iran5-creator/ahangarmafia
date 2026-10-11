@@ -112,7 +112,8 @@
   async function startGame() {
     if (!state.host || !state.roomData) return;
     const humans = Object.values(state.roomData.players||{}).filter(p=>p && p.seatType==='human');
-    if (humans.length < 2) return alert('برای شروع تست، دست‌کم دو بازیکن واقعی وارد کنید. صندلی آزمایشی جای بازیکن واقعی را نمی‌گیرد.');
+    const testSeats = Object.values(state.roomData.testSeats||{}).filter(Boolean);
+    if (humans.length + testSeats.length < 2) return alert('برای شروع، دست‌کم دو جایگاه لازم است. می‌توانی برای تست از صندلی آزمایشی استفاده کنی.');
     try { await db(path(),'PATCH',{phase:'started',startedAt:Date.now(),startedBy:state.id,updatedAt:Date.now()}); await refreshRoom(); }
     catch(e) { alert('شروع بازی ثبت نشد: '+e.message); }
   }
@@ -195,7 +196,7 @@
   }
   async function makeVoicePeer(player,initiator){
     if(state.voicePeers.has(player.id)||!player.voiceId)return;
-    const pc=new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'}]});
+    const pc=new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'},...(Array.isArray(window.MAFIA_TURN)?window.MAFIA_TURN:[])]});
     const item={pc,player,remoteCandidates:[],ready:false,audio:null};state.voicePeers.set(player.id,item);
     if(state.localStream)state.localStream.getTracks().forEach(track=>pc.addTrack(track,state.localStream));
     pc.onicecandidate=e=>{if(e.candidate)signal(player.voiceId,{type:'candidate',candidate:e.candidate.toJSON()}).catch(()=>{});};
