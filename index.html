@@ -2584,7 +2584,7 @@ window.APP_VERSION='27.0';
     // نقش از انتخاب قبلی کاربر در صفحهٔ در/لابی خوانده می‌شود.
     const asGod=(window.lobbyMode||lobbyMode)==='god';
     lobbyMode=asGod?'god':'player';window.lobbyMode=lobbyMode;
-    let c='',createNew=!active.length;
+    let c='',createNew=!active.length||asGod;
     if(active.length && !asGod){
       // بازیکن به اتاق فعال می‌پیوندد؛ انتخاب اتاق تازه از فهرست اتاق‌ها انجام می‌شود.
       c=String(active[0].code);
