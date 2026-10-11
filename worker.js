@@ -44,11 +44,10 @@ export default {
       return new Response(null, {
         status: 204,
         headers: {
-          "Access-Control-Allow-Origin": url.origin,
+          "Access-Control-Allow-Origin": "*",
           "Access-Control-Allow-Methods": "GET, PUT, PATCH, POST, DELETE, OPTIONS",
           "Access-Control-Allow-Headers": "Content-Type",
-          "Access-Control-Max-Age": "600",
-          "Vary": "Origin"
+          "Access-Control-Max-Age": "600"
         }
       });
     }
@@ -56,9 +55,6 @@ export default {
     if (!["GET", "PUT", "PATCH", "POST", "DELETE"].includes(method)) {
       return json({ error: "Method not allowed" }, 405, { "Allow": "GET, PUT, PATCH, POST, DELETE, OPTIONS" });
     }
-
-    const origin = request.headers.get("Origin");
-    if (origin && origin !== url.origin) return json({ error: "Origin not allowed" }, 403);
 
     const rawPath = url.pathname.slice("/api/db/".length);
     if (!rawPath.endsWith(".json") || !allowedPath(rawPath)) {
@@ -91,7 +87,9 @@ export default {
 
     const headers = new Headers(upstream.headers);
     headers.set("Cache-Control", "no-store");
-    headers.delete("Access-Control-Allow-Origin");
+    headers.set("Access-Control-Allow-Origin", "*");
+    headers.set("Access-Control-Allow-Methods", "GET, PUT, PATCH, POST, DELETE, OPTIONS");
+    headers.set("Access-Control-Allow-Headers", "Content-Type");
     return new Response(upstream.body, { status: upstream.status, headers });
   }
 };
