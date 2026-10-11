@@ -231,7 +231,8 @@
             if(!item)continue;
             if(msg.type==='offer'){
               await item.pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
-              for(const c of item.remoteCandidates.splice(0)){try{await item.pc.addIceCandidate(new RTCIceCandidate(c))}catch(_){}}
+              const queued=state.pendingCandidates.get(sender.id)||[];state.pendingCandidates.delete(sender.id);
+              for(const c of [...item.remoteCandidates.splice(0),...queued]){try{await item.pc.addIceCandidate(new RTCIceCandidate(c))}catch(_){}}
               const answer=await item.pc.createAnswer();await item.pc.setLocalDescription(answer);
               await signal(msg.from,{type:'answer',sdp:item.pc.localDescription.toJSON(),fromId:state.id});
             }else if(msg.type==='answer'){
