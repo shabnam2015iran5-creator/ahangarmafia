@@ -172,6 +172,7 @@
           return;
         }
         await db(path, 'PUT', { owner: this.owner, expires: now() + 20000 });
+        await wait(150);
         const verify = await db(path);
         if (!verify || verify.owner !== this.owner) {
           this.emit('error', Object.assign(new Error('ID already in use'), { type: 'unavailable-id' }));
@@ -195,8 +196,10 @@
     }
     async _signal(remote, message) {
       if (this.destroyed) return;
-      const target = 'voiceSignals/' + safe(this.room) + '/' + safe(remote) + '/messages';
-      await db(target, 'POST', Object.assign({ from: this.id, sentAt: now() }, message));
+      const targetRoot = 'voiceSignals/' + safe(this.room) + '/' + safe(remote);
+      const presence = await db(targetRoot + '/presence');
+      if (!presence || Number(presence.expires || 0) <= now()) return;
+      await db(targetRoot + '/messages', 'POST', Object.assign({ from: this.id, sentAt: now() }, message));
     }
     async _poll() {
       if (this.destroyed || this.pollBusy) return;
