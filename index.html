@@ -3101,10 +3101,10 @@ body.ingame #dock button.bm-hidden-control{display:none!important}
 
 <!-- BLACK MAFIA: shared lobby text chat for every seat, including the moderator -->
 <style id="bm-lobby-chat-style">
-#bmLobbyChat{direction:rtl;margin:12px 10px 100px;padding:12px;border:1px solid #9d762f;border-radius:15px;background:linear-gradient(145deg,#160f09f2,#070606f5);box-shadow:0 5px 18px #0008;color:#f7e8c4}
+#bmLobbyChat{position:absolute;left:8px;right:8px;bottom:72px;z-index:40;direction:rtl;margin:0;padding:9px;border:1px solid #d2a347;border-radius:15px;background:linear-gradient(145deg,#160f09fa,#070606fa);box-shadow:0 5px 22px #000c;color:#f7e8c4;max-height:46%;overflow:hidden}
 #bmLobbyChat .blc-head{display:flex;align-items:center;justify-content:space-between;gap:8px;font-weight:900;color:#f5d98d;font-size:14px}
 #bmLobbyChat .blc-sub{font-size:10px;color:#b8a47e;font-weight:400}
-#bmLobbyChat .blc-log{height:190px;overflow-y:auto;overscroll-behavior:contain;margin:10px 0;padding:8px;border-radius:10px;background:#0007;border:1px solid #ffffff12}
+#bmLobbyChat .blc-log{height:125px;max-height:25vh;overflow-y:auto;overscroll-behavior:contain;margin:10px 0;padding:8px;border-radius:10px;background:#0007;border:1px solid #ffffff12}
 #bmLobbyChat .blc-msg{padding:6px 8px;margin:5px 0;border-radius:9px;background:#ffffff08;overflow-wrap:anywhere}
 #bmLobbyChat .blc-msg .blc-name{font-size:11px;font-weight:900;color:#f0c96e;margin-left:6px}
 #bmLobbyChat .blc-msg .blc-god{color:#9fe4ff}
@@ -3114,7 +3114,7 @@ body.ingame #dock button.bm-hidden-control{display:none!important}
 #bmLobbyChat .blc-compose input{min-width:0;flex:1;border:1px solid #795a2a;border-radius:10px;background:#100c08;color:#fff1ce;padding:11px 10px;font:inherit;font-size:13px}
 #bmLobbyChat .blc-compose button{border:1px solid #d2a347;border-radius:10px;background:linear-gradient(#c99b43,#80551a);color:#160d04;font:inherit;font-weight:900;padding:0 14px;min-width:60px}
 #bmLobbyChat .blc-note{font-size:10px;color:#9c8a69;margin-top:6px}
-@media(max-width:520px){#bmLobbyChat .blc-log{height:165px}}
+@media(max-width:520px){#bmLobbyChat .blc-log{height:105px;max-height:20vh}}
 </style>
 <script id="bm-lobby-chat-module">
 (()=>{
