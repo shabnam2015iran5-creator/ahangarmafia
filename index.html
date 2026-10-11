@@ -3097,3 +3097,76 @@ body.ingame #dock button.bm-hidden-control{display:none!important}
   setTimeout(patch,0);
 })();
 </script>
+
+
+<!-- BLACK MAFIA: shared lobby text chat for every seat, including the moderator -->
+<style id="bm-lobby-chat-style">
+#bmLobbyChat{direction:rtl;margin:12px 10px 100px;padding:12px;border:1px solid #9d762f;border-radius:15px;background:linear-gradient(145deg,#160f09f2,#070606f5);box-shadow:0 5px 18px #0008;color:#f7e8c4}
+#bmLobbyChat .blc-head{display:flex;align-items:center;justify-content:space-between;gap:8px;font-weight:900;color:#f5d98d;font-size:14px}
+#bmLobbyChat .blc-sub{font-size:10px;color:#b8a47e;font-weight:400}
+#bmLobbyChat .blc-log{height:190px;overflow-y:auto;overscroll-behavior:contain;margin:10px 0;padding:8px;border-radius:10px;background:#0007;border:1px solid #ffffff12}
+#bmLobbyChat .blc-msg{padding:6px 8px;margin:5px 0;border-radius:9px;background:#ffffff08;overflow-wrap:anywhere}
+#bmLobbyChat .blc-msg .blc-name{font-size:11px;font-weight:900;color:#f0c96e;margin-left:6px}
+#bmLobbyChat .blc-msg .blc-god{color:#9fe4ff}
+#bmLobbyChat .blc-msg .blc-time{font-size:9px;color:#97876a}
+#bmLobbyChat .blc-msg .blc-text{font-size:13px;line-height:1.65;white-space:pre-wrap}
+#bmLobbyChat .blc-compose{display:flex;gap:6px}
+#bmLobbyChat .blc-compose input{min-width:0;flex:1;border:1px solid #795a2a;border-radius:10px;background:#100c08;color:#fff1ce;padding:11px 10px;font:inherit;font-size:13px}
+#bmLobbyChat .blc-compose button{border:1px solid #d2a347;border-radius:10px;background:linear-gradient(#c99b43,#80551a);color:#160d04;font:inherit;font-weight:900;padding:0 14px;min-width:60px}
+#bmLobbyChat .blc-note{font-size:10px;color:#9c8a69;margin-top:6px}
+@media(max-width:520px){#bmLobbyChat .blc-log{height:165px}}
+</style>
+<script id="bm-lobby-chat-module">
+(()=>{
+ const $=id=>document.getElementById(id);
+ const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ let lastSig='',busy=false,lastPoll=0;
+ const db=()=>String(window.MAFIA_DB_URL||'').replace(/\/$/,'');
+ const code=()=>String(window.MAFIA_ROOM_CODE||'');
+ const myUid=()=>{try{return localStorage.getItem('mafia_uid')||'guest'}catch(e){return'guest'}};
+ function ensure(){
+  const wrap=$('lobbyRoom')?.querySelector('.lobbyRoomWrap');if(!wrap||$('bmLobbyChat'))return;
+  const box=document.createElement('section');box.id='bmLobbyChat';
+  box.innerHTML='<div class="blc-head"><span>💬 چت عمومی لابی</span><span class="blc-sub">همه، حتی گرداننده</span></div><div class="blc-log" id="bmLobbyChatLog" aria-live="polite"><div class="blc-note">در حال دریافت پیام‌ها...</div></div><form class="blc-compose" id="bmLobbyChatForm"><input id="bmLobbyChatInput" maxlength="240" autocomplete="off" placeholder="پیامت را بنویس..." aria-label="پیام چت لابی"><button type="submit">ارسال</button></form><div class="blc-note">پیام‌ها برای همهٔ افراد همین اتاق نمایش داده می‌شوند.</div>';
+  const actions=wrap.querySelector('.roomActions');wrap.insertBefore(box,actions||null);
+  $('bmLobbyChatForm').addEventListener('submit',e=>{e.preventDefault();send()});
+  $('bmLobbyChatInput').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send()}});
+ }
+ async function poll(){
+  const c=code();if(!c||!$('lobbyRoom')?.classList.contains('on'))return;
+  ensure();if(!db()||busy)return;
+  const now=Date.now();if(now-lastPoll<1700)return;lastPoll=now;
+  try{
+   const r=await fetch(db()+'/roomsV23/'+encodeURIComponent(c)+'/chat.json',{cache:'no-store'});
+   if(!r.ok)return;const data=await r.json()||{};
+   const rows=Object.entries(data).filter(([k,v])=>v&&typeof v.text==='string').map(([id,v])=>({id,name:String(v.name||'بازیکن').slice(0,24),text:String(v.text).slice(0,240),at:+v.at||0,role:v.role==='god'?'god':'player'})).sort((a,b)=>a.at-b.at).slice(-60);
+   const sig=rows.map(x=>x.id+':'+x.at).join('|');if(sig===lastSig)return;lastSig=sig;
+   const log=$('bmLobbyChatLog');if(!log)return;
+   const nearBottom=log.scrollHeight-log.scrollTop-log.clientHeight<45;
+   log.innerHTML=rows.length?rows.map(x=>'<div class="blc-msg"><div><span class="blc-name '+(x.role==='god'?'blc-god':'')+'">'+(x.role==='god'?'🎙 ':'')+esc(x.name)+'</span><span class="blc-time">'+(x.at?new Date(x.at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}):'')+'</span></div><div class="blc-text">'+esc(x.text)+'</div></div>').join(''):'<div class="blc-note">هنوز پیامی نیست؛ اولین پیام را بفرست!</div>';
+   if(nearBottom||rows.length<=2)log.scrollTop=log.scrollHeight;
+  }catch(e){}
+ }
+ async function send(){
+  const input=$('bmLobbyChatInput'),c=code(),text=String(input?.value||'').trim().slice(0,240);
+  if(!text)return;if(!c||!db()){try{toast('اتصال اتاق برقرار نیست؛ دوباره وارد لابی شو.')}catch(e){}return}
+  if(busy)return;busy=true;
+  const button=$('bmLobbyChatForm')?.querySelector('button');if(button)button.disabled=true;
+  try{
+   const uid=myUid().replace(/[^A-Za-z0-9_-]/g,'').slice(0,35)||'guest';
+   const id=Date.now().toString(36)+'_'+uid+'_'+Math.random().toString(36).slice(2,7);
+   const name=String(window.S?.nick||'بازیکن').trim().slice(0,24)||'بازیکن';
+   const role=window.lobbyMode==='god'?'god':'player';
+   const url=db()+'/roomsV23/'+encodeURIComponent(c)+'/chat/'+id+'.json';
+   const r=await fetch(url,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,name,text,at:Date.now(),role})});
+   if(!r.ok)throw Error('send '+r.status);
+   input.value='';lastSig='';
+   await poll();
+  }catch(e){try{toast('پیام ارسال نشد؛ چند لحظه بعد دوباره امتحان کن.')}catch(_){}}
+  finally{busy=false;if(button)button.disabled=false;input?.focus()}
+ }
+ setInterval(poll,1800);
+ document.addEventListener('DOMContentLoaded',ensure);
+ setTimeout(ensure,1200);
+})();
+</script>

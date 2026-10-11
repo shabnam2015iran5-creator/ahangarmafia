@@ -15,8 +15,13 @@ function allowedPath(path) {
     if (p.length === 1) return true;
     if (!/^\d{5}$/.test(p[1])) return false;
     if (p.length === 2) return true;
-    if (p[2] !== "players") return false;
-    return p.length === 3 || (p.length === 4 && /^[A-Za-z0-9_-]{1,80}$/.test(p[3]));
+    if (p[2] === "players") {
+      return p.length === 3 || (p.length === 4 && /^[A-Za-z0-9_-]{1,80}$/.test(p[3]));
+    }
+    if (p[2] === "chat") {
+      return p.length === 3 || (p.length === 4 && /^[A-Za-z0-9_-]{1,80}$/.test(p[3]));
+    }
+    return false;
   }
 
   if (p[0] === "rooms") {
