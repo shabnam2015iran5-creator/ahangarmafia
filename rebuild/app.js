@@ -103,19 +103,157 @@
       $('chatMessages').innerHTML = messages.map(m=>'<div class="message"><div class="sender">'+esc(m.name||'بازیکن')+'<span class="time">'+new Date(m.at||Date.now()).toLocaleTimeString('fa-IR',{hour:'2-digit',minute:'2-digit'})+'</span></div><div class="body">'+esc(m.text)+'</div></div>').join('');
       $('chatMessages').scrollTop = $('chatMessages').scrollHeight;
     }
+    renderGame(room);
   }
   async function setReady() {
     if (!state.code) return;
     try { state.ready = !state.ready; await db(path('players/'+state.id+'/ready'),'PUT',state.ready); await refreshRoom(); }
     catch(e) { state.ready=!state.ready; alert('ثبت آمادگی انجام نشد: '+e.message); }
   }
+  function shuffle(items) {
+    const out=[...items];
+    for(let i=out.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[out[i],out[j]]=[out[j],out[i]];}
+    return out;
+  }
+  function makeRoles(players) {
+    const ids=shuffle(players.map(p=>p.id));
+    const roles={}; let cursor=0;
+    const mafiaCount=players.length>=9?3:players.length>=6?2:1;
+    for(let i=0;i<mafiaCount;i++)roles[ids[cursor++]]='mafia';
+    if(players.length>=5)roles[ids[cursor++]]='detective';
+    if(players.length>=6)roles[ids[cursor++]]='doctor';
+    while(cursor<ids.length)roles[ids[cursor++]]='villager';
+    return roles;
+  }
+  const roleNames={mafia:'مافیا',detective:'کارآگاه',doctor:'پزشک',villager:'شهروند'};
+  const roleHelp={mafia:'در شب، یک بازیکن زنده را برای حذف انتخاب کن. مافیا با رأی اکثریت شبانه هدف را مشخص می‌کند.',detective:'هر شب یک بازیکن را بررسی کن؛ نتیجه فقط برای خودت نمایش داده می‌شود.',doctor:'هر شب یک بازیکن را برای نجات انتخاب کن. می‌توانی خودت را هم انتخاب کنی.',villager:'در روز با گفت‌وگو و رأی‌گیری تلاش کن مافیا را پیدا کنی.'};
+  function addLog(game,text,type='') {
+    game.log=game.log||{};
+    game.log[id()]={text,at:Date.now(),type};
+  }
+  function alivePlayers(room,game) {
+    const alive=new Set(game.alive||[]);
+    return Object.values(room.players||{}).filter(p=>p&&p.seatType==='human'&&alive.has(p.id));
+  }
+  function winnerFor(room,game) {
+    const alive=alivePlayers(room,game);
+    const mafia=alive.filter(p=>game.roles?.[p.id]==='mafia').length;
+    const town=alive.length-mafia;
+    if(mafia===0)return 'town';
+    if(mafia>=town)return 'mafia';
+    return null;
+  }
   async function startGame() {
     if (!state.host || !state.roomData) return;
-    const humans = Object.values(state.roomData.players||{}).filter(p=>p && p.seatType==='human');
-    const testSeats = Object.values(state.roomData.testSeats||{}).filter(Boolean);
-    if (humans.length + testSeats.length < 2) return alert('برای شروع، دست‌کم دو جایگاه لازم است. می‌توانی برای تست از صندلی آزمایشی استفاده کنی.');
-    try { await db(path(),'PATCH',{phase:'started',startedAt:Date.now(),startedBy:state.id,updatedAt:Date.now()}); await refreshRoom(); }
-    catch(e) { alert('شروع بازی ثبت نشد: '+e.message); }
+    const humans=Object.values(state.roomData.players||{}).filter(p=>p&&p.seatType==='human');
+    if(humans.length<2)return alert('برای اجرای واقعی بازی، دست‌کم دو بازیکن واقعی لازم است. صندلی تمرینی بازیکن واقعی محسوب نمی‌شود.');
+    try {
+      const roles=makeRoles(humans);
+      const game={phase:'day',round:1,roles,alive:humans.map(p=>p.id),actions:{},log:{},privateResults:{},winner:null,startedAt:Date.now()};
+      addLog(game,'بازی آغاز شد. نقش‌ها به‌صورت تصادفی تعیین شدند.','system');
+      await db(path(),'PATCH',{phase:'started',startedAt:Date.now(),startedBy:state.id,updatedAt:Date.now(),game});
+      await refreshRoom();
+    } catch(e) { alert('شروع بازی ثبت نشد: '+e.message); }
+  }
+  function renderGame(room) {
+    const game=room.game;
+    $('gameplay').classList.toggle('hidden',!game);
+    $('hostGameControls').classList.toggle('hidden',!state.host||!game||!!game.winner);
+    if(!game)return;
+    const phaseName=game.winner?(game.winner==='mafia'?'پیروزی مافیا':'پیروزی شهروندان'):(game.phase==='night'?'شب':'روز و رأی‌گیری');
+    $('phase').textContent=phaseName;
+    $('gameNotice').textContent=game.winner?'🏆 بازی تمام شد: '+phaseName:(game.phase==='night'?'شب '+game.round+'؛ نقش‌های شبانه انتخاب خود را ثبت کنند.': 'روز '+game.round+'؛ گفت‌وگو کنید و به یک بازیکن زنده رأی بدهید.');
+    $('roundLabel').textContent='دور '+game.round;
+    const role=game.roles?.[state.id];
+    $('myRole').textContent=roleNames[role]||'نقش ثبت نشده';
+    $('myRoleHelp').textContent=roleHelp[role]||'اگر نقش نمایش داده نمی‌شود، از گاد بخواه بازی را بازنشانی و دوباره شروع کند.';
+    const alive=new Set(game.alive||[]);
+    const players=Object.values(room.players||{}).filter(p=>p&&p.seatType==='human');
+    $('gamePlayers').innerHTML=players.map(p=>{
+      const isAlive=alive.has(p.id), mine=p.id===state.id;
+      const roleVisible=game.winner||!isAlive;
+      return '<div class="game-player '+(isAlive?'':'dead')+'"><span class="avatar">'+(isAlive?'🎭':'⚰️')+'</span><div class="game-player-meta"><strong>'+esc(p.name)+(mine?' (شما)':'')+'</strong><small>'+(isAlive?'زنده':'حذف‌شده')+(roleVisible?' · '+esc(roleNames[game.roles?.[p.id]]||'نامشخص'):'')+'</small></div></div>';
+    }).join('');
+    const eligible=players.filter(p=>alive.has(p.id)&&p.id!==state.id);
+    const canAct=!!role&&!game.winner&&alive.has(state.id)&&((game.phase==='day')||(game.phase==='night'&&['mafia','doctor','detective'].includes(role)));
+    $('actionBox').classList.toggle('hidden',!canAct);
+    if(canAct){
+      $('actionLabel').textContent=game.phase==='day'?'رأی به حذف یک بازیکن':'انتخاب هدف شب';
+      $('actionHelp').textContent=game.phase==='night'&&role==='villager'?'شهروند در شب انتخابی ندارد.':(role==='mafia'&&game.phase==='night'?'مافیاها هدف شب را انتخاب می‌کنند.':role==='doctor'&&game.phase==='night'?'هدف نجات را انتخاب کن؛ می‌توانی خودت را هم انتخاب کنی.':role==='detective'&&game.phase==='night'?'نتیجهٔ بررسی فقط برای خودت نمایش داده می‌شود.':'رأی نهایی خود را ثبت کن؛ در هر دور فقط یک انتخاب معتبر است.');
+      const targets=game.phase==='day'?eligible:players.filter(p=>alive.has(p.id)&&(role==='doctor'||p.id!==state.id));
+      $('targetSelect').innerHTML='<option value="">انتخاب کن…</option>'+targets.map(p=>'<option value="'+esc(p.id)+'">'+esc(p.name)+'</option>').join('');
+      $('submitAction').disabled=!!game.actions?.[state.id]||targets.length===0;
+      $('submitAction').textContent=game.actions?.[state.id]?'انتخاب ثبت شد ✓':'ثبت انتخاب';
+    }
+    const log=Object.values(game.log||{}).sort((a,b)=>(a.at||0)-(b.at||0)).slice(-50);
+    $('gameLog').innerHTML=log.map(item=>'<div class="game-log-item '+esc(item.type||'')+'">'+esc(item.text)+'</div>').join('');
+    if(game.winner)$('gameLog').innerHTML+='<div class="game-log-item system game-over">🏆 '+phaseName+'</div>';
+    $('gameLog').scrollTop=$('gameLog').scrollHeight;
+    $('advancePhase').textContent=game.phase==='day'?'🌙 پایان رأی‌گیری و رفتن به شب':'☀️ پایان شب و شروع روز';
+  }
+  async function submitGameAction() {
+    const room=state.roomData,game=room?.game;
+    if(!game||game.winner)return;
+    const target=$('targetSelect').value;
+    if(!target)return alert('یک هدف انتخاب کن.');
+    const role=game.roles?.[state.id];
+    if(!game.alive?.includes(state.id))return alert('بازیکن حذف‌شده نمی‌تواند انتخاب کند.');
+    if(game.phase==='night'&&!['mafia','doctor','detective'].includes(role))return alert('نقش شما در شب انتخابی ندارد.');
+    try {
+      await db(path('game/actions/'+state.id),'PUT',{playerId:state.id,target,phase:game.phase,round:game.round,role,at:Date.now()});
+      await refreshRoom();
+    } catch(e) { alert('ثبت انتخاب انجام نشد: '+e.message); }
+  }
+  async function advancePhase() {
+    if(!state.host)return;
+    try {
+      const room=await db(path()),game=room?.game;
+      if(!game||game.winner)return;
+      const players=Object.values(room.players||{}).filter(p=>p&&p.seatType==='human');
+      const alive=new Set(game.alive||[]);
+      const actions=Object.values(game.actions||{}).filter(a=>a&&a.round===game.round&&a.phase===game.phase&&alive.has(a.playerId));
+      const next={...game,actions:{},privateResults:{...(game.privateResults||{})},log:{...(game.log||{})}};
+      if(game.phase==='day'){
+        const counts={};
+        for(const [pid,a] of Object.entries(game.actions||{}))if(a&&a.phase==='day'&&a.round===game.round&&alive.has(pid)&&alive.has(a.target)&&pid!==a.target)counts[a.target]=(counts[a.target]||0)+1;
+        const ranked=Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+        if(ranked.length&&(!ranked[1]||ranked[0][1]>ranked[1][1])){
+          const victim=players.find(p=>p.id===ranked[0][0]);
+          next.alive=next.alive.filter(pid=>pid!==ranked[0][0]);
+          addLog(next,'با رأی روز، '+(victim?.name||'یک بازیکن')+' حذف شد.','danger');
+        }else addLog(next,'رأی‌ها مساوی یا ناکافی بود؛ کسی حذف نشد.','system');
+        const win=winnerFor(room,next);
+        if(win){next.winner=win;addLog(next,win==='mafia'?'مافیا پیروز شد.':'شهروندان پیروز شدند.','system');}
+        else {next.phase='night';addLog(next,'شب '+next.round+' آغاز شد.','system');}
+      }else{
+        const allActions=game.actions||{};
+        const mafiaVotes={};let doctorTarget=null;const detectives=[];
+        for(const [pid,a] of Object.entries(allActions)){
+          if(!a||a.phase!=='night'||a.round!==game.round||!alive.has(pid)||!alive.has(a.target))continue;
+          const r=game.roles?.[pid];
+          if(r==='mafia'&&game.roles?.[a.target]!=='mafia')mafiaVotes[a.target]=(mafiaVotes[a.target]||0)+1;
+          if(r==='doctor')doctorTarget=a.target;
+          if(r==='detective')detectives.push({pid,target:a.target});
+        }
+        for(const d of detectives)next.privateResults[d.pid]=(game.roles?.[d.target]==='mafia'?'مافیاست':'مافیا نیست');
+        const ranked=Object.entries(mafiaVotes).sort((a,b)=>b[1]-a[1]);
+        if(ranked.length&&(!ranked[1]||ranked[0][1]>ranked[1][1])){
+          const victimId=ranked[0][0],victim=players.find(p=>p.id===victimId);
+          if(victimId===doctorTarget)addLog(next,'پزشک جان هدف مافیا را نجات داد.','system');
+          else {next.alive=next.alive.filter(pid=>pid!==victimId);addLog(next,'در شب، '+(victim?.name||'یک بازیکن')+' حذف شد.','danger');}
+        }else addLog(next,'در شب هدف مشخصی انتخاب نشد.','system');
+        const win=winnerFor(room,next);
+        if(win){next.winner=win;addLog(next,win==='mafia'?'مافیا پیروز شد.':'شهروندان پیروز شدند.','system');}
+        else {next.phase='day';next.round=(next.round||1)+1;addLog(next,'روز '+next.round+' آغاز شد.','system');}
+      }
+      await db(path(),'PATCH',{game:next,phase:next.winner?'finished':'started',updatedAt:Date.now()});
+      await refreshRoom();
+    }catch(e){alert('تغییر مرحله انجام نشد: '+e.message);}
+  }
+  async function resetGame() {
+    if(!state.host||!confirm('بازی فعلی پاک و به اتاق انتظار برگردد؟'))return;
+    try{await db(path(),'PATCH',{phase:'lobby',game:null,updatedAt:Date.now()});await refreshRoom();}
+    catch(e){alert('بازنشانی انجام نشد: '+e.message);}
   }
   async function addTestSeat() {
     if (!state.host) return;
@@ -139,6 +277,9 @@
   $('copyRoom').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(state.code);$('copyRoom').textContent='کپی شد ✓';setTimeout(()=>$('copyRoom').textContent='کپی کد',1300)}catch(_){prompt('کد اتاق را کپی کن:',state.code)}});
   $('readyBtn').addEventListener('click',setReady);
   $('startBtn').addEventListener('click',startGame);
+  $('submitAction').addEventListener('click',submitGameAction);
+  $('advancePhase').addEventListener('click',advancePhase);
+  $('resetGame').addEventListener('click',resetGame);
   $('addTestSeat').addEventListener('click',addTestSeat);
   $('removeTestSeats').addEventListener('click',removeTestSeats);
   $('chatForm').addEventListener('submit',e=>{e.preventDefault();sendChat($('chatInput').value)});
