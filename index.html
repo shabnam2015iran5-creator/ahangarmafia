@@ -765,7 +765,7 @@ const Voice=(()=>{
  let peer=null,slot=0,room='',local=null,rawTrack=null,micOk=false,ctx=null,an=null,anBuf=null,muted=false,on=false,joining=false,gen=0,tryT=null,loopT=null,meSp=false,base=[],meSeat=null,lastMu=null,myUid=(()=>{try{return localStorage.getItem('mafia_uid')||''}catch(e){return ''}})();
  const R={},H={};
  const myName=()=>String(S.nick||'بازیکن').replace(/[<>&"'`\\]/g,'').slice(0,18)||'بازیکن';
- const mySeed=()=>Math.max(1,Math.min(12,parseInt(selectedAvSeed)||1));
+ const mySeed=()=>Math.max(1,Math.min(108,parseInt(selectedAvSeed)||1));
  const clean=s=>String(s||'').replace(/[<>&"'`\\]/g,'').trim().slice(0,18);
  const slotOf=id=>{const p=room+'-';if(typeof id!=='string'||!id.startsWith(p))return 0;const n=parseInt(id.slice(p.length),10);return n>=1&&n<=C.maxSlots?n:0};
  const inGame=()=>document.body.classList.contains('ingame');
@@ -846,7 +846,7 @@ const Voice=(()=>{
   const hi=()=>{try{conn.send({t:'p',n:myName(),seed:mySeed(),f:mySeed()%3===0,role:(typeof lobbyMode!=='undefined'&&lobbyMode==='god')?'god':'player',rdy:(typeof lobbyReady!=='undefined'&&!!lobbyReady),mu:(muted||!micOk)?1:0,uid:myUid})}catch(e){}};
   if(conn.open)hi();conn.on('open',hi);
   conn.on('data',d=>{if(R[s]!==r||!d||typeof d!=='object')return;
-  if(d.t==='p'){r.n=clean(d.n)||('بازیکن '+s);r.seed=Math.max(1,Math.min(12,parseInt(d.seed)||1));r.f=!!d.f;r.role=d.role==='god'?'god':'player';r.ready=!!d.rdy;r.mu=!!d.mu;r.uid=String(d.uid||'');refresh()}
+  if(d.t==='p'){r.n=clean(d.n)||('بازیکن '+s);r.seed=Math.max(1,Math.min(108,parseInt(d.seed)||1));r.f=!!d.f;r.role=d.role==='god'?'god':'player';r.ready=!!d.rdy;r.mu=!!d.mu;r.uid=String(d.uid||'');refresh()}
   else if(d.t==='mu'){r.mu=!!d.v;refresh()}
   else if(d.t==='rdy'){r.ready=!!d.v;refresh()}
   else if(typeof H[d.t]==='function'&&(d.t==='act'||r.role==='god')){H[d.t](s,d)}});
@@ -3183,5 +3183,109 @@ body:has(#lobbyRoom.on) #globalBack{display:none!important}
  document.addEventListener('DOMContentLoaded',setup);
  setup();setTimeout(setup,350);setTimeout(setup,1200);
  const obs=new MutationObserver(()=>setup());obs.observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['class']});
+})();
+</script>
+
+
+<!-- BLACK MAFIA AVATAR SHOP: coin-priced legacy avatars + free online styles -->
+<style id="bm-avatar-shop-css">
+.bmAvShop{margin:12px 0;padding:12px;border:1px solid #a87528;border-radius:15px;background:linear-gradient(145deg,#1c1009,#080504);box-shadow:0 5px 16px #0008}
+.bmAvShop h3{margin:0 0 5px;color:#f3d98c;font-size:16px}
+.bmAvSub{color:#c6b18a;font-size:11px;line-height:1.8;margin-bottom:10px}
+.bmAvSection{font-size:13px;color:#f4d17a;font-weight:900;margin:12px 0 7px}
+.bmAvGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.bmAvItem{position:relative;min-width:0;padding:6px 4px 7px;border:1px solid #75501f;border-radius:11px;background:#0a0604;text-align:center;overflow:hidden}
+.bmAvItem.selected{border:2px solid #73ff9c;box-shadow:0 0 12px #73ff9c33}
+.bmAvItem .bmAvPic{width:100%;aspect-ratio:1;display:block;border-radius:8px;background:#17100b center/cover no-repeat;overflow:hidden}
+.bmAvPic img{width:100%;height:100%;object-fit:cover;display:block}
+.bmAvName{font-size:10px;color:#f5e7c5;display:block;min-height:27px;padding:4px 0 2px}
+.bmAvPrice{font-size:10px;color:#f3d98c;display:block;margin:0 0 5px}
+.bmAvBtn{width:100%;min-height:29px;padding:5px 3px;border:1px solid #a87528;border-radius:8px;background:linear-gradient(#3b2911,#171006);color:#ffedbd;font:inherit;font-size:10px;font-weight:900}
+.bmAvBtn.free{border-color:#367f4e;background:linear-gradient(#174b2a,#0b2012);color:#aaffbf}
+.bmAvBtn:disabled{opacity:.65}
+.bmAvNote{font-size:10px;color:#9f916e;text-align:center;margin-top:8px}
+@media(max-width:360px){.bmAvGrid{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.bmAvItem{padding:5px 3px}.bmAvName{font-size:9px}}
+</style>
+<script id="bm-avatar-shop-script">
+(()=>{
+ if(window.__bmAvatarShop)return;window.__bmAvatarShop=true;
+ const $=id=>document.getElementById(id);
+ const FREE=[
+  {id:101,style:'lorelei',seed:'black-mafia-free-01',name:'لوریلی'},
+  {id:102,style:'pixel-art',seed:'black-mafia-free-02',name:'پیکسلی'},
+  {id:103,style:'notionists',seed:'black-mafia-free-03',name:'نوشنیست'},
+  {id:104,style:'open-peeps',seed:'black-mafia-free-04',name:'اسکچ'},
+  {id:105,style:'thumbs',seed:'black-mafia-free-05',name:'کارتونی'},
+  {id:106,style:'bottts',seed:'black-mafia-free-06',name:'رباتی'},
+  {id:107,style:'adventurer-neutral',seed:'black-mafia-free-07',name:'ماجراجو'},
+  {id:108,style:'fun-emoji',seed:'black-mafia-free-08',name:'ایموجی'}
+ ];
+ const OLD=[100,150,200,250,300,350,400,450,500,550,600,650];
+ const url=(id)=>{const f=FREE.find(x=>x.id===Number(id));return f?'https://api.dicebear.com/10.x/'+f.style+'/svg?seed='+encodeURIComponent(f.seed)+'&backgroundColor=17100b,25190f':'https://api.dicebear.com/10.x/lorelei/svg?seed=black-mafia';};
+ const isFree=id=>Number(id)>=101&&Number(id)<=108;
+ function init(){
+   if(!window.S)return;
+   if(!Array.isArray(S.avatarOwn))S.avatarOwn=[];
+   const cur=Number(S.avatarSeed||1);
+   // Preserve the user's current avatar so existing accounts are never locked out.
+   if(cur>=1&&cur<=12&&!S.avatarOwn.includes(cur))S.avatarOwn.push(cur);
+   if(!S.avatarSeed)S.avatarSeed=1;
+ }
+ function owned(id){init();return isFree(id)||S.avatarOwn.includes(Number(id));}
+ function imageHtml(id){return '<div class="bmAvPic"><img loading="lazy" alt="آواتار" src="'+url(id)+'" onerror="this.onerror=null;this.src=\''+url(101)+'\'"></div>';}
+ function item(id,name,price){
+   const selected=Number(S.avatarSeed)===Number(id),have=owned(id);
+   const action=selected?'انتخاب‌شده':(have?'استفاده':(isFree(id)?'رایگان':'🪙 '+price));
+   const cls='bmAvItem'+(selected?' selected':'');
+   const click=selected?'':(have?'bmUseAvatar('+id+')':(isFree(id)?'bmUseAvatar('+id+')':'bmBuyAvatar('+id+')'));
+   return '<div class="'+cls+'">'+imageHtml(id)+'<span class="bmAvName">'+name+'</span><span class="bmAvPrice">'+(isFree(id)?'رایگان':'🪙 '+price+' سکه')+'</span><button class="bmAvBtn '+(isFree(id)?'free':'')+'" onclick="'+click+'" '+(selected?'disabled':'')+'>'+action+'</button></div>';
+ }
+ function renderShop(){
+   init();
+   const page=$('pg-shop');if(!page)return;
+   let root=$('bmAvatarShop');
+   if(!root){root=document.createElement('div');root.id='bmAvatarShop';root.className='bmAvShop';const cards=$('cards');const cardsParent=cards&&cards.closest('.card');if(cardsParent&&cardsParent.parentNode)cardsParent.parentNode.insertBefore(root,cardsParent.nextSibling);else page.prepend(root);}
+   let old='';for(let i=1;i<=12;i++)old+=item(i,'آواتار کلاسیک '+i,OLD[i-1]);
+   let fresh='';FREE.forEach(f=>fresh+=item(f.id,f.name,0));
+   root.innerHTML='<h3>🧑‍🎨 فروشگاه آواتار</h3><div class="bmAvSub">آواتارهای کلاسیک با سکه خریداری می‌شوند؛ ۸ آواتار تازه کاملاً رایگان‌اند. آواتار فعلی حساب شما محفوظ می‌ماند.</div><div class="bmAvSection">🪙 آواتارهای کلاسیک</div><div class="bmAvGrid">'+old+'</div><div class="bmAvSection">✨ آواتارهای جدید — رایگان</div><div class="bmAvGrid">'+fresh+'</div><div class="bmAvNote">طرح‌های جدید از کتابخانهٔ متن‌باز DiceBear ساخته می‌شوند.</div>';
+ }
+ window.bmBuyAvatar=function(id){
+   init();id=Number(id);if(id<1||id>12||owned(id))return window.bmUseAvatar(id);
+   const price=OLD[id-1];if((Number(S.coins)||0)<price){toast('سکه کافی نیست؛ از بازی و جایزه‌ها سکه جمع کن.');return}
+   if(!confirm('خرید آواتار کلاسیک '+id+' با '+price+' سکه؟'))return;
+   S.coins-=price;S.avatarOwn.push(id);save();renderShop();toast('آواتار خریداری شد؛ حالا می‌توانی از آن استفاده کنی.');
+ };
+ window.bmUseAvatar=function(id){
+   init();id=Number(id);if(id<1||(!isFree(id)&&!S.avatarOwn.includes(id))){toast('اول این آواتار را از فروشگاه بخَر.');return}
+   S.avatarSeed=id;selectedAvSeed=id;S.photo='';save();
+   try{injectMe()}catch(e){}
+   try{renderAvatarGallery()}catch(e){}
+   try{updateSetupPreview()}catch(e){}
+   renderShop();toast('آواتار انتخاب شد');
+ };
+ const oldRender=window.renderAvatarGallery;
+ window.renderAvatarGallery=function(){
+   init();const g=$('proAvGallery');if(!g)return;
+   let h='';
+   for(let i=1;i<=12;i++){
+     const have=owned(i),sel=Number(S.avatarSeed)===i;
+     h+='<button class="avChoice '+(sel?'on':'')+'" style="position:relative" onclick="'+(have?'bmUseAvatar('+i+')':'toast(\'این آواتار سکه‌ای است؛ از فروشگاه آواتار بخَر.\')')+'">'+(window.proAvatar?window.proAvatar(i,i%3===0):'')+(!have?'<span style="position:absolute;inset:auto 2px 2px;background:#000d;color:#f3d98c;border-radius:5px;font-size:9px">🪙 '+OLD[i-1]+'</span>':'')+'</button>';
+   }
+   FREE.forEach(f=>{h+='<button class="avChoice '+(Number(S.avatarSeed)===f.id?'on':'')+'" onclick="bmUseAvatar('+f.id+')">'+(window.proAvatar?window.proAvatar(f.id,false):'')+'<span style="display:block;color:#8dffae;font-size:9px">رایگان</span></button>'});
+   g.innerHTML=h;
+   try{updateSetupPreview()}catch(e){}
+ };
+ // Avatar IDs 101–108 resolve to remote, deterministic open-license designs.
+ window.proAvatar=function(seed,f){
+   const n=Number(seed);
+   if(isFree(n)){const u=url(n);return '<div class="avi" style="background-image:url(\''+u+'\');background-size:cover;background-position:center"></div>';}
+   const svg=window.proSvg?window.proSvg(n,!!f):'';
+   return '<div class="avi" style="background-image:url(\'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg)+'\');background-size:cover;background-position:center"></div>';
+ };
+ window.avatar=function(seed,f,open){return window.proAvatar(seed,f,open)};
+ const originalShop=window.rShop;
+ window.rShop=function(){try{if(originalShop)originalShop()}catch(e){}renderShop()};
+ document.addEventListener('DOMContentLoaded',()=>{init();renderShop()});
+ setTimeout(()=>{init();renderShop()},350);
 })();
 </script>
