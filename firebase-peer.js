@@ -157,6 +157,7 @@
       this.root = 'voiceSignals/' + safe(this.room) + '/' + safe(this.id);
       this.owner = Math.random().toString(36).slice(2) + now().toString(36);
       this.sessions = new Map();
+      this.pendingCandidates = new Map();
       this.seen = new Set();
       this.pollBusy = false;
       this._start();
@@ -225,10 +226,20 @@
         this.sessions.set(sid, session);
         this.emit(kind === 'call' ? 'call' : 'connection', session);
         await session._acceptOffer(msg.sdp);
+        const pending = this.pendingCandidates.get(sid) || [];
+        this.pendingCandidates.delete(sid);
+        for (const candidate of pending) await session._candidate(candidate);
         return;
       }
       const session = this.sessions.get(sid);
-      if (!session) return;
+      if (!session) {
+        if (msg.type === 'candidate' && sid && msg.candidate) {
+          const list = this.pendingCandidates.get(sid) || [];
+          if (list.length < 64) list.push(msg.candidate);
+          this.pendingCandidates.set(sid, list);
+        }
+        return;
+      }
       if (msg.type === 'answer') await session._acceptAnswer(msg.sdp);
       else if (msg.type === 'candidate') await session._candidate(msg.candidate);
       else if (msg.type === 'close') session._finish(false);
