@@ -137,6 +137,8 @@
   }
   function winnerFor(room,game) {
     const alive=alivePlayers(room,game);
+    const total=Object.values(room.players||{}).filter(p=>p&&p.seatType==='human').length;
+    if(alive.length===total)return null;
     const mafia=alive.filter(p=>game.roles?.[p.id]==='mafia').length;
     const town=alive.length-mafia;
     if(mafia===0)return 'town';
@@ -166,7 +168,7 @@
     $('roundLabel').textContent='دور '+game.round;
     const role=game.roles?.[state.id];
     $('myRole').textContent=roleNames[role]||'نقش ثبت نشده';
-    $('myRoleHelp').textContent=roleHelp[role]||'اگر نقش نمایش داده نمی‌شود، از گاد بخواه بازی را بازنشانی و دوباره شروع کند.';
+    $('myRoleHelp').textContent=(roleHelp[role]||'اگر نقش نمایش داده نمی‌شود، از گاد بخواه بازی را بازنشانی و دوباره شروع کند.')+(game.privateResults?.[state.id]?' نتیجه بررسی: '+game.privateResults[state.id]+'.':'');
     const alive=new Set(game.alive||[]);
     const players=Object.values(room.players||{}).filter(p=>p&&p.seatType==='human');
     $('gamePlayers').innerHTML=players.map(p=>{
