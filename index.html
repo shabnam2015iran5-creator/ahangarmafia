@@ -765,7 +765,7 @@ const Voice=(()=>{
  let peer=null,slot=0,room='',local=null,rawTrack=null,micOk=false,ctx=null,an=null,anBuf=null,muted=false,on=false,joining=false,gen=0,tryT=null,loopT=null,meSp=false,base=[],meSeat=null,lastMu=null,myUid=(()=>{try{return localStorage.getItem('mafia_uid')||''}catch(e){return ''}})();
  const R={},H={};
  const myName=()=>String(S.nick||'بازیکن').replace(/[<>&"'`\\]/g,'').slice(0,18)||'بازیکن';
- const mySeed=()=>Math.max(1,Math.min(108,parseInt(selectedAvSeed)||1));
+ const mySeed=()=>Math.max(1,Math.min(12,parseInt(selectedAvSeed)||1));
  const clean=s=>String(s||'').replace(/[<>&"'`\\]/g,'').trim().slice(0,18);
  const slotOf=id=>{const p=room+'-';if(typeof id!=='string'||!id.startsWith(p))return 0;const n=parseInt(id.slice(p.length),10);return n>=1&&n<=C.maxSlots?n:0};
  const inGame=()=>document.body.classList.contains('ingame');
@@ -846,7 +846,7 @@ const Voice=(()=>{
   const hi=()=>{try{conn.send({t:'p',n:myName(),seed:mySeed(),f:mySeed()%3===0,role:(typeof lobbyMode!=='undefined'&&lobbyMode==='god')?'god':'player',rdy:(typeof lobbyReady!=='undefined'&&!!lobbyReady),mu:(muted||!micOk)?1:0,uid:myUid})}catch(e){}};
   if(conn.open)hi();conn.on('open',hi);
   conn.on('data',d=>{if(R[s]!==r||!d||typeof d!=='object')return;
-  if(d.t==='p'){r.n=clean(d.n)||('بازیکن '+s);r.seed=Math.max(1,Math.min(108,parseInt(d.seed)||1));r.f=!!d.f;r.role=d.role==='god'?'god':'player';r.ready=!!d.rdy;r.mu=!!d.mu;r.uid=String(d.uid||'');refresh()}
+  if(d.t==='p'){r.n=clean(d.n)||('بازیکن '+s);r.seed=Math.max(1,Math.min(12,parseInt(d.seed)||1));r.f=!!d.f;r.role=d.role==='god'?'god':'player';r.ready=!!d.rdy;r.mu=!!d.mu;r.uid=String(d.uid||'');refresh()}
   else if(d.t==='mu'){r.mu=!!d.v;refresh()}
   else if(d.t==='rdy'){r.ready=!!d.v;refresh()}
   else if(typeof H[d.t]==='function'&&(d.t==='act'||r.role==='god')){H[d.t](s,d)}});
@@ -954,7 +954,7 @@ const Voice=(()=>{
  }
  // یک بار لمس صفحه: اگر مرورگر پخش خودکار صدا را بلاک کرده بود، دوباره تلاش می‌کند
  document.addEventListener('click',()=>{if(ctx&&ctx.state==='suspended')ctx.resume();Object.values(R).forEach(r=>{if(r.audio&&r.audio.paused)r.audio.play().catch(()=>{})})},true);
- return{audioLevel:()=>{let v=0;try{if(micOk&&rawTrack&&rawTrack.enabled&&an&&anBuf)v=Math.max(v,lvl(an,anBuf));Object.values(R).forEach(r=>{if(r.live&&r.an&&r.buf)v=Math.max(v,lvl(r.an,r.buf))})}catch(e){}return Math.max(0,Math.min(1,(v-5)/42))},join,leave:leaveVoice,toggleMute,isMuted:()=>!!(muted||!micOk),byUid:u=>{if(u&&u===myUid)return{sp:meSp,mu:!!(muted||!micOk)};const r=Object.values(R).find(x=>x.uid&&x.uid===u);return r?{sp:!!r.sp,mu:!!r.mu,live:!!r.live}:null},captureBase,patchSeats,afterRender,active:()=>on,broadcast,refresh,godHere,onGo:f=>{H.go=f},onMsg:(t,f)=>{H[t]=f},send,liveSlots:()=>humans().map(r=>r.slot),speakingOf:sl=>sl===slot?meSp:!!(R[sl]&&R[sl].sp),mySlot:()=>slot,godInfo,isLive:sl=>!!(R[sl]&&R[sl].live),godSlot:()=>{const r=humans().find(x=>x.role==='god');return r?r.slot:0}};
+ return{join,leave:leaveVoice,toggleMute,isMuted:()=>!!(muted||!micOk),byUid:u=>{if(u&&u===myUid)return{sp:meSp,mu:!!(muted||!micOk)};const r=Object.values(R).find(x=>x.uid&&x.uid===u);return r?{sp:!!r.sp,mu:!!r.mu,live:!!r.live}:null},captureBase,patchSeats,afterRender,active:()=>on,broadcast,refresh,godHere,onGo:f=>{H.go=f},onMsg:(t,f)=>{H[t]=f},send,liveSlots:()=>humans().map(r=>r.slot),speakingOf:sl=>sl===slot?meSp:!!(R[sl]&&R[sl].sp),mySlot:()=>slot,godInfo,isLive:sl=>!!(R[sl]&&R[sl].live),godSlot:()=>{const r=humans().find(x=>x.role==='god');return r?r.slot:0}};
 })();
 
 const Net=(()=>{
@@ -2524,19 +2524,6 @@ window.APP_VERSION='27.0';
   const lg=k=>{try{return localStorage.getItem(k)}catch(e){return null}};
   const ls=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
   const db=()=>String(window.MAFIA_DB_URL||'').replace(/\/$/,'');
-  // Prevent a stalled database request from trapping the user during role selection.
-  async function request(url,options={}){
-    const workerBase=db();
-    const isWorker=!!workerBase&&url.startsWith(workerBase+'/');
-    const directBase='https://black-mafia-online-default-rtdb.firebaseio.com';
-    const send=async target=>{const ctl=new AbortController();const timer=setTimeout(()=>ctl.abort(),8000);try{return await window.fetch(target,{...options,signal:ctl.signal})}finally{clearTimeout(timer)}};
-    if(isWorker){
-      try{const r=await send(url);if(r.ok)return r;console.warn('Worker DB returned',r.status,'; trying direct Firebase');}catch(e){console.warn('Worker DB request failed; trying direct Firebase',e)}
-      const directUrl=directBase+url.slice(workerBase.length);
-      return await send(directUrl);
-    }
-    return await send(url);
-  }
   const uid=()=>lg('mafia_uid')||('u'+Math.random().toString(36).slice(2,12));
   if(!lg('mafia_uid'))ls('mafia_uid',uid());
   const me=()=>({uid:uid(),n:String(S.nick||'بازیکن').slice(0,18),seed:+(S.avatarSeed||1),age:+(S.age||0),ready:!!lobbyReady,role:lobbyMode==='god'?'god':'player',at:Date.now()});
@@ -2546,7 +2533,7 @@ window.APP_VERSION='27.0';
   function code(){return String(Math.floor(10000+Math.random()*90000))}
   async function getRooms(){
     if(db()){
-      const r=await request(db()+'/roomsV23.json');
+      const r=await fetch(db()+'/roomsV23.json');
       if(!r.ok)throw Error('server '+r.status);
       return await r.json()||{};
     }
@@ -2554,20 +2541,20 @@ window.APP_VERSION='27.0';
   }
   async function saveRoom(code,room){
     if(db()){
-      const r=await request(db()+'/roomsV23/'+code+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(room)});
+      const r=await fetch(db()+'/roomsV23/'+code+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(room)});
       if(!r.ok)throw Error('server '+r.status);
     }else{const a=localAll();a[code]=room;localSave(a)}
   }
   async function updatePlayer(code,p){
     if(db()){
-      const r=await request(db()+'/roomsV23/'+code+'/players/'+encodeURIComponent(uid())+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)});
+      const r=await fetch(db()+'/roomsV23/'+code+'/players/'+encodeURIComponent(uid())+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)});
       if(!r.ok)throw Error('server '+r.status);
     }else{const a=localAll();if(a[code]){a[code].players=a[code].players||{};a[code].players[uid()]=p;a[code].updatedAt=Date.now();localSave(a)}}
   }
   function ageOK(kind){return kind==='edu'||(+S.age>=16)||S.released}
   function validProfile(){const n=String(S.nick||'').trim(),a=+S.age||0;if(!n){toast('لطفاً نام خود را وارد کنید؛ اول نامت را در پروفایل بگذار.');return false}if(a<1||a>99){toast('لطفاً سن خود را وارد کنید؛ اول سنت را در پروفایل بگذار.');return false}return true}
   window.saveProfile=function(){const n=String($('playerNick')?.value||'').trim(),a=+$('playerAge')?.value||0;if(!n){toast('لطفاً نام خود را وارد کنید؛ اول نامت را در پروفایل بگذار.');return false}if(a<1||a>99){toast('لطفاً سن خود را وارد کنید؛ اول سنت را در پروفایل بگذار.');return false}S.nick=n;S.age=a;S.avatarSeed=selectedAvSeed||1;save();return true};
-  function loading(next){const ov=$('ovLoad');if(!ov){Promise.resolve().then(next).catch(e=>{console.error(e);toast('خطا در ورود به لابی؛ دوباره تلاش کن.')});return}const m=ov.querySelector('.msg');if(m)m.textContent='سیستم در حال راه‌اندازی است؛ لطفاً صبور باشید...';ov.classList.add('s');setTimeout(async()=>{try{await next()}catch(e){console.error('BLACK MAFIA lobby loader:',e);toast('خطا در ورود به لابی؛ دوباره تلاش کن.')}finally{ov.classList.remove('s')}},250)}
+  function loading(next){const ov=$('ovLoad');if(!ov)return next();const m=ov.querySelector('.msg');if(m)m.innerHTML='سیستم در حال راه‌اندازی است<br>لطفاً صبور باشید...';ov.classList.add('s');setTimeout(()=>{ov.classList.remove('s');try{next()}catch(e){console.error(e)}},2000)}
   window.v24Load=loading;
   async function autoRoom(kind){
     if(!validProfile()||!ageOK(kind)){if(!ageOK(kind))toast('برای این لابی باید ۱۶ سال یا بیشتر باشید');return}
@@ -2580,16 +2567,16 @@ window.APP_VERSION='27.0';
       const players=Object.values(r.players||{});
       return players.some(p=>p&&now-(p.at||0)<15000);
     }).sort((a,b)=>(b.updatedAt||b.createdAt||0)-(a.updatedAt||a.createdAt||0));
-    // از پنجره‌های confirm سیستمی استفاده نکن؛ در بعضی مرورگرهای موبایل پس از بستن آن‌ها رابط کاربری قفل می‌شود.
-    // نقش از انتخاب قبلی کاربر در صفحهٔ در/لابی خوانده می‌شود.
-    const asGod=(window.lobbyMode||lobbyMode)==='god';
-    lobbyMode=asGod?'god':'player';window.lobbyMode=lobbyMode;
-    let c='',createNew=!active.length||asGod;
-    if(active.length && !asGod){
-      // بازیکن به اتاق فعال می‌پیوندد؛ انتخاب اتاق تازه از فهرست اتاق‌ها انجام می‌شود.
-      c=String(active[0].code);
-      createNew=false;
+    let c='',createNew=!active.length;
+    if(active.length){
+      const r=active[0];
+      const goIn=confirm('یک اتاق در حال فعالیت است (#'+r.code+').\n\nبرای ورود به همین اتاق «تأیید» را بزن؛ برای ساخت اتاق جدید «لغو» را بزن.');
+      createNew=!goIn;
+      if(goIn)c=String(r.code);
     }
+    // همه قبل از ورود نقش خود را انتخاب می‌کنند؛ درِ گرداننده هم همین انتخاب را نشان می‌دهد.
+    const asGod=confirm('چطور وارد شوی؟\n\n«تأیید» = گرداننده\n«لغو» = بازیکن');
+    lobbyMode=asGod?'god':'player';window.lobbyMode=lobbyMode;
     if(createNew){
       do{c=String(Math.floor(10000+Math.random()*90000))}while(rooms[c]);
     }
@@ -2597,7 +2584,7 @@ window.APP_VERSION='27.0';
     mine.role=asGod?'god':'player';
     const patchMeta=async patch=>{
       if(db()){
-        const res=await request(db()+'/roomsV23/'+c+'.json',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(patch)});
+        const res=await fetch(db()+'/roomsV23/'+c+'.json',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(patch)});
         if(!res.ok)throw Error('server '+res.status);
       }else{
         const all=localAll(),r=all[c]||{code:c,kind:'friendly',players:{}};
@@ -2616,8 +2603,8 @@ window.APP_VERSION='27.0';
         const oldHost=found.host&&found.players&&found.players[found.host];
         const hostIsActive=!!(oldHost&&now-(oldHost.at||0)<15000);
         if(found.host&&found.host!==uid()&&hostIsActive){
-          // Never open a second native confirm dialog after role selection; on some mobile webviews it can freeze the whole game UI.
-          // If the selected room already has an active moderator, create a fresh room automatically.
+          const makeAnother=confirm('این اتاق گردانندهٔ فعالی دارد.\nبرای اینکه گرداننده روی کارت پایین نمایش داده شود و دو گرداننده در یک اتاق نباشند، اتاق جدید بسازیم؟');
+          if(!makeAnother){toast('برای ورود به این اتاق، نقش بازیکن را انتخاب کن.');return}
           do{c=String(Math.floor(10000+Math.random()*90000))}while(rooms[c]);
           found={code:c,kind:'friendly',createdAt:now,updatedAt:now,status:'waiting',players:{}};
           await patchMeta({code:c,kind:'friendly',createdAt:now,updatedAt:now,status:'waiting',host:null,hostName:''});
@@ -2632,7 +2619,7 @@ window.APP_VERSION='27.0';
       found.players=found.players||{};
       window.__voiceKey='friendly-'+c;
       enterRealRoom(found);
-    }catch(e){console.error('BLACK MAFIA room entry failed:',e);toast('خطای ورود: '+String(e&&e.message||e).slice(0,100));}
+    }catch(e){toast('ورود یا ساخت اتاق ناموفق بود؛ لطفاً دوباره تلاش کنید.');console.error(e)}
   }
   function enterRealRoom(r){
     window.MAFIA_ROOM_CODE=r.code;window.MAFIA_ROOM_META=r;window.MAFIA_ROOM_ONLINE=!!db();
@@ -2886,7 +2873,7 @@ button[title], [role="button"][title]{cursor:pointer}button:focus-visible{outlin
  document.querySelectorAll('button[title], [role="button"][title]').forEach(el=>el.removeAttribute('title'));
  // The moderator entrance beside the door is open in friendly play and is never visually locked.
  const chalk=$('sChalk');
- if(chalk){chalk.classList.remove('locked');chalk.innerHTML='<b>🎙</b><span>گرداننده</span><small>ورود به‌عنوان گرداننده</small>';chalk.onclick=()=>{try{if(typeof saveProfile==='function'&&!saveProfile())return;lobbyMode='god';window.lobbyMode='god';if(typeof doorSfx==='function')doorSfx();const d=$('sDoor');if(d)d.classList.add('open');setTimeout(()=>{if(d)d.classList.remove('open');if(typeof openLobbyGate==='function')openLobbyGate();},350)}catch(e){try{if(typeof openGate==='function')openGate(true)}catch(_){}}};}
+ if(chalk){chalk.classList.remove('locked');chalk.innerHTML='<b>🎙</b><span>گرداننده</span><small>ورود به‌عنوان گرداننده</small>';chalk.onclick=()=>{try{if(typeof saveProfile==='function'&&!saveProfile())return;window.lobbyMode='god';if(typeof doorSfx==='function')doorSfx();const d=$('sDoor');if(d)d.classList.add('open');setTimeout(()=>{if(d)d.classList.remove('open');if(typeof openLobbyGate==='function')openLobbyGate();},350)}catch(e){try{if(typeof openGate==='function')openGate(true)}catch(_){}}};}
  // Explain the friendly-lobby flow: create/join a room, then choose moderator or player.
  const dir=$('roomDirectory'), box=dir&&dir.querySelector('.rdBox');
  if(box&&!box.querySelector('.rdWelcome')){const welcome=document.createElement('div');welcome.className='rdWelcome';welcome.textContent='لابی دوستانه';const choice=document.createElement('div');choice.className='rdChoice';choice.textContent='می‌خوای اتاق ایجاد کنی یا وارد یک اتاق بشی؟ بعدش ورود به‌عنوان گرداننده یا بازیکن رو انتخاب کن.';const tabs=box.querySelector('.rdTabs');if(tabs){tabs.before(welcome,choice)}else{box.append(welcome,choice)}}
@@ -2937,373 +2924,5 @@ button[title], [role="button"][title]{cursor:pointer}button:focus-visible{outlin
       finally{entering=false}
     }catch(e){}
   },1200);
-})();
-</script>
-
-
-<!-- BLACK MAFIA hotfix: moderator-only start and moderator speaking turn -->
-<style id="bm-moderator-control-fix">
-#readyBtn{display:none!important}
-#roomStartBtn{font-weight:900!important}
-body.ingame #dock button.bm-hidden-control{display:none!important}
-#bmGodTurn{border-color:#f1c24f!important;background:linear-gradient(#f0c35f,#a8741f)!important;color:#241308!important}
-#bmGodTurn.bm-live{background:linear-gradient(#a02a2a,#5a1414)!important;color:#fff!important;border-color:#ff8b70!important;box-shadow:0 0 14px #ff4d4d55!important}
-#bmGodTurn small{font-size:10px!important}
-</style>
-<script id="bm-moderator-control-fix">
-(()=>{
-  if(window.__bmModeratorControlFix)return;
-  window.__bmModeratorControlFix=true;
-  const $=id=>document.getElementById(id);
-  const isGod=()=>((typeof role!=='undefined'&&role==='god')||(typeof lobbyMode!=='undefined'&&lobbyMode==='god'));
-  const inNight=()=>typeof G!=='undefined'&&G&&G.ph==='night';
-  let godWasMuted=true,forcedMute=false;
-
-  function patchLobby(){
-    const ready=$('readyBtn');
-    if(ready&&(ready.style.getPropertyValue('display')!=='none'||ready.style.getPropertyPriority('display')!=='important'))ready.style.setProperty('display','none','important');
-    const start=$('roomStartBtn');
-    if(start){
-      if(isGod()){
-        if(start.style.getPropertyValue('display'))start.style.removeProperty('display');
-        if(start.textContent!=='شروع بازی')start.textContent='شروع بازی';
-        start.disabled=false;
-        if(start.getAttribute('aria-label')!=='شروع بازی')start.setAttribute('aria-label','شروع بازی');
-      }else{
-        if(start.style.getPropertyValue('display')!=='none'||start.style.getPropertyPriority('display')!=='important')start.style.setProperty('display','none','important');
-      }
-    }
-    const status=$('voiceStatus');
-    if(status&&$('lobbyRoom')?.classList.contains('on')&&!isGod()){
-      if(status.textContent!=='منتظر شروع بازی توسط گرداننده…')status.textContent='منتظر شروع بازی توسط گرداننده…';
-    }
-  }
-
-  function ensureGodButton(){
-    const dock=$('dock');if(!dock||!document.body.classList.contains('ingame'))return;
-    const old=$('bmGodTurn');
-    if(!isGod()){if(old)old.remove();return}
-    // Remove moderator chat/emoji and start/phase controls from the in-game dock.
-    dock.querySelectorAll('button').forEach(b=>{
-      const h=(b.getAttribute('onclick')||'');
-      const t=(b.innerText||'').replace(/\s+/g,' ');
-      if(h.includes('openEmo(')||h.includes('pickOrSkip(')||/شروع\s*\/\s*فاز|شروع بازی\s*\/\s*رد کردن فاز/.test(t)){
-        b.classList.add('bm-hidden-control');
-        b.remove();
-      }
-    });
-    let b=$('bmGodTurn');
-    if(!b){
-      b=document.createElement('button');b.type='button';b.id='bmGodTurn';b.className='ib2';
-      b.innerHTML='🎙<small>نوبت صحبت</small>';
-      b.onclick=window.bmToggleGodTurn;
-      dock.insertBefore(b,dock.querySelector('#freezeBtn')||dock.lastElementChild||null);
-    }
-    b.classList.toggle('bm-live',!!window.__bmModeratorSpeaking);
-    const label=(window.__bmModeratorSpeaking?'🔇':'🎙')+'<small>'+(window.__bmModeratorSpeaking?'پایان صحبت':'نوبت صحبت')+'</small>';if(b.innerHTML!==label)b.innerHTML=label;
-  }
-
-  function cleanMenu(){
-    if(!isGod())return;
-    document.querySelectorAll('#ovMenu button, #ovMenu .btn').forEach(b=>{
-      const h=b.getAttribute('onclick')||'';
-      const t=(b.innerText||'').replace(/\s+/g,' ');
-      if(h.includes('pickOrSkip(')||h.includes('openEmo(')||/شروع بازی\s*\/\s*رد کردن فاز|شروع\s*\/\s*فاز|چت و ایموجی/.test(t))b.remove();
-    });
-  }
-
-  function setModeratorSpeaking(on){
-    if(!isGod())return;
-    if(on&&(!started||inNight())){
-      if(inNight())try{toast('گرداننده در فاز شب اجازه صحبت ندارد')}catch(e){}
-      return;
-    }
-    if(!!window.__bmModeratorSpeaking===!!on)return;
-    window.__bmModeratorSpeaking=!!on;
-    if(window.Voice&&Voice.active()){
-      if(on){
-        godWasMuted=!!Voice.isMuted();
-        if(godWasMuted)Promise.resolve(Voice.toggleMute()).catch(()=>{});
-      }else{
-        // After the moderator's turn, keep the moderator microphone closed.
-        if(!Voice.isMuted())Promise.resolve(Voice.toggleMute()).catch(()=>{});
-      }
-      Voice.broadcast({t:'modturn',on:!!on,n:(typeof S!=='undefined'&&S.nick)||'گرداننده'});
-    }
-    if(typeof say==='function')try{say(on?'نوبت صحبت گرداننده آغاز شد. همه بازیکنان میکروفن‌های خود را ببندند.':'نوبت صحبت گرداننده تمام شد. ادامه بازی طبق نوبت‌ها.')}catch(e){}
-    if(typeof banner==='function')try{banner(on?'🎙 نوبت صحبت گرداننده':'🎭 ادامه نوبت‌های بازی')}catch(e){}
-    ensureGodButton();
-  }
-  window.bmToggleGodTurn=()=>setModeratorSpeaking(!window.__bmModeratorSpeaking);
-  window.bmSetModeratorSpeaking=setModeratorSpeaking;
-
-  // A live moderator-turn message is delivered to each connected phone over the voice channel.
-  if(window.Voice&&typeof Voice.onMsg==='function'){
-    Voice.onMsg('modturn',(slot,d)=>{
-      if(!d||typeof d.on!=='boolean')return;
-      window.__bmModeratorSpeaking=d.on;
-      forcedMute=d.on;
-      if(window.Net&&typeof Net.canSpeak==='function'){
-        if(!Net.__bmModTurnWrapped){
-          const original=Net.canSpeak.bind(Net);
-          Net.canSpeak=function(){return window.__bmModeratorSpeaking?false:original()};
-          Net.__bmModTurnWrapped=true;
-        }
-      }
-      if(d.on){
-        try{toast('🎙 نوبت صحبت گرداننده؛ میکروفن شما بسته است')}catch(e){}
-      }else{
-        try{toast('نوبت صحبت گرداننده تمام شد')}catch(e){}
-      }
-      // Refresh the voice gate immediately; Voice.enforce also reapplies it on its normal tick.
-      try{Voice.refresh()}catch(e){}
-      try{if(typeof render==='function')render()}catch(e){}
-    });
-  }
-  // Only the moderator can start. Players are already seated and need no ready toggle.
-  const oldStart=window.roomStartGame;
-  if(typeof oldStart==='function'&&!window.__bmStartGuard){
-    window.__bmStartGuard=true;
-    window.roomStartGame=function(){
-      if(!isGod()){try{toast('منتظر شروع بازی توسط گرداننده باشید')}catch(e){}return}
-      const b=$('roomStartBtn');if(b)b.textContent='شروع بازی';
-      return oldStart.apply(this,arguments);
-    };
-  }
-  // Moderator may only open their speaking turn outside the night phase.
-  const oldToggleMic=window.toggleMic;
-  if(typeof oldToggleMic==='function'&&!window.__bmMicGuard){
-    window.__bmMicGuard=true;
-    window.toggleMic=function(){
-      if(isGod()&&typeof started!=='undefined'&&started&&!window.__bmModeratorSpeaking){
-        try{toast('برای صحبت، ابتدا «نوبت صحبت» را بزنید')}catch(e){}
-        return;
-      }
-      return oldToggleMic.apply(this,arguments);
-    };
-  }
-  // Do not allow player chat while the moderator is addressing the room.
-  const oldSend=window.sendT;
-  if(typeof oldSend==='function'&&!window.__bmSendGuard){
-    window.__bmSendGuard=true;
-    window.sendT=function(v){
-      if(window.__bmModeratorSpeaking&&typeof role!=='undefined'&&role==='player'){
-        try{toast('هنگام صحبت گرداننده، چت و میکروفن بسته است')}catch(e){}
-        return;
-      }
-      return oldSend.apply(this,arguments);
-    };
-  }
-  const patch=()=>{patchLobby();ensureGodButton();cleanMenu()};
-  document.addEventListener('click',()=>setTimeout(patch,0),true);
-  document.addEventListener('DOMContentLoaded',patch);
-  const obs=new MutationObserver(()=>patch());
-  obs.observe(document.documentElement,{subtree:true,childList:true,attributes:true,attributeFilter:['class','style']});
-  setInterval(()=>{
-    patch();
-    if(window.__bmModeratorSpeaking&&inNight())setModeratorSpeaking(false);
-    // Keep the moderator's microphone closed whenever their speaking turn is inactive.
-    if(isGod()&&typeof started!=='undefined'&&started&&!window.__bmModeratorSpeaking&&window.Voice&&Voice.active()&&!Voice.isMuted()){
-      try{Voice.toggleMute()}catch(e){}
-    }
-  },900);
-  setTimeout(patch,0);
-})();
-</script>
-
-
-<!-- BLACK MAFIA: waiting lobby layout + real microphone level equalizer -->
-<style id="bm-waiting-lobby-polish">
-/* Remove the large upper lobby title cards; keep the room itself and seat grid. */
-#lobbyRoom .lobbyTop,#lobbyRoom #roomBanner{display:none!important}
-#lobbyRoom .lobbyRoomWrap{overflow:hidden}
-#lobbyRoom .roomActions{
- left:8px!important;right:8px!important;bottom:8px!important;top:auto!important;
- display:flex!important;flex-wrap:wrap!important;align-items:center!important;justify-content:center!important;
- gap:5px!important;z-index:30!important;padding:4px!important;
- border:1px solid #76531f;border-radius:12px;background:#090603e8;
-}
-#lobbyRoom .roomActions .btn{min-width:0!important;min-height:35px!important;padding:6px 9px!important;font-size:12px!important;line-height:1!important;border-radius:9px!important}
-#lobbyRoom #roomMic{min-width:38px!important;width:38px!important}
-#lobbyRoom #roomStartBtn{max-width:105px!important}
-#lobbyRoom #deckBtn{max-width:105px!important;padding:6px 9px!important}
-#lobbyRoom #roomCount{display:inline-flex!important;align-items:center;justify-content:center;min-height:35px;padding:5px 8px!important;border:1px solid #c9972f;border-radius:9px;background:#171006;color:#f3d98c;font-weight:900;font-size:11px;white-space:nowrap}
-#lobbyRoom .roomIcon,#lobbyRoom #gbHome{display:inline-grid!important;place-items:center!important;width:35px!important;height:35px!important;min-width:35px!important;padding:0!important;font-size:19px!important;color:#f3d98c!important;border:1px solid #c9972f!important;border-radius:9px!important;background:linear-gradient(#2b1a0d,#100804)!important}
-#lobbyRoom .roomIcon{font-size:22px!important}
-#lobbyRoom #gbHome{font-size:20px!important}
-body:has(#lobbyRoom.on) #globalBack{display:none!important}
-#lobbyRoom .roomTimer{right:10px!important;bottom:137px!important;min-width:0!important;padding:5px 9px!important;font-size:16px!important;z-index:5}
-#lobbyRoom .modCard{left:9px!important;bottom:88px!important;width:clamp(112px,36vw,145px)!important;padding:5px!important;z-index:5}
-#lobbyRoom .modCard .modPortrait{width:100%!important;height:68px!important;max-height:68px!important}
-#lobbyMicEq{position:absolute;right:9px;bottom:88px;width:calc(100% - clamp(145px,43vw,175px));max-width:210px;height:80px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;gap:clamp(2px,1vw,5px);padding:9px 8px;border:2px solid #7c5a25;border-radius:12px;background:linear-gradient(145deg,#100b06,#050403);box-shadow:inset 0 0 12px #000b,0 0 10px #e0b25518;overflow:hidden;z-index:5}
-#lobbyMicEq i{display:block;flex:1;max-width:9px;height:3px;min-height:3px;border-radius:6px;background:linear-gradient(#fff0a6,#e0b255);opacity:.8;transition:height .09s linear;box-shadow:0 0 4px #e0b25533}
-#lobbyMicEq .eqHint{position:absolute;left:0;right:0;bottom:3px;text-align:center;font-size:8px;line-height:1;color:#bfa97d;pointer-events:none}
-#lobbyRoom .chairGrid{height:56%!important}
-@media(max-height:700px){
- #lobbyRoom .modCard,#lobbyMicEq{bottom:84px!important}
- #lobbyRoom .roomTimer{bottom:132px!important}
- #lobbyMicEq{height:66px}
- #lobbyRoom .modCard .modPortrait{height:54px!important;max-height:54px!important}
- #lobbyRoom .chairGrid{height:52%!important}
-}
-@media(max-width:360px){
- #lobbyRoom .roomActions .btn{padding:5px 7px!important;font-size:11px!important}
- #lobbyRoom #roomStartBtn,#lobbyRoom #deckBtn{max-width:88px!important}
- #lobbyRoom #roomCount{padding:4px 6px!important;font-size:10px!important}
- #lobbyMicEq{width:calc(100% - 140px);gap:2px}
-}
-</style>
-<script id="bm-waiting-lobby-polish-script">
-(()=>{
- if(window.__bmWaitingLobbyPolish)return;window.__bmWaitingLobbyPolish=true;
- const $=id=>document.getElementById(id);
- let eqTimer=0;
- function setup(){
-   const lobby=$('lobbyRoom'),wrap=lobby&&lobby.querySelector('.lobbyRoomWrap'),acts=lobby&&lobby.querySelector('.roomActions');
-   if(!lobby||!wrap||!acts)return;
-   const globalBar=$('globalBack'),globalHome=$('gbHome'),globalBackBtn=$('gbBack');
-   if(!lobby.classList.contains('on')){if(globalBar&&globalHome&&globalHome.parentElement!==globalBar)globalBar.appendChild(globalHome);if(globalBackBtn)globalBackBtn.style.display='';if(globalBar)globalBar.style.display='';return}
-   const top=lobby.querySelector('.lobbyTop');
-   const back=lobby.querySelector('.roomIcon');
-   const count=$('roomCount');
-   const home=$('gbHome');
-   // Keep only one back control and move navigation into the bottom action row.
-   if(back){back.textContent='←';back.setAttribute('aria-label','بازگشت');back.title='';if(back.parentElement!==acts)acts.prepend(back)}
-   if(home){home.textContent='⌂';home.setAttribute('aria-label','خانه');home.title='';home.onclick=()=>{try{window.goHomeGlobal()}catch(e){}};if(home.parentElement!==acts)acts.appendChild(home)}
-   const gbBack=$('gbBack');if(gbBack)gbBack.style.display='none';
-   if(count&&count.parentElement!==acts)acts.insertBefore(count,$('deckBtn')||acts.firstChild);
-   const deck=$('deckBtn');
-   if(deck){deck.textContent='🃏 مشاهده دک';deck.setAttribute('aria-label','مشاهده دک');deck.title=''}
-   if(top)top.style.display='none';
-   let panel=$('lobbyMicEq');
-   if(!panel){panel=document.createElement('div');panel.id='lobbyMicEq';panel.setAttribute('aria-label','نمایش زنده شدت صدای میکروفن');for(let i=0;i<13;i++){const bar=document.createElement('i');bar.dataset.i=String(i);panel.appendChild(bar)}const hint=document.createElement('span');hint.className='eqHint';hint.textContent='موج صدای زنده';panel.appendChild(hint);wrap.appendChild(panel)}
-   // Home and back buttons should not be shown at the old fixed top position.
-   const gb=$('globalBack');if(gb)gb.style.display='none';
-   if(!eqTimer)eqTimer=setInterval(()=>{
-     if(!$('lobbyRoom')?.classList.contains('on')){panel.style.opacity='.65';return}
-     let level=0;try{if(window.Voice&&typeof Voice.audioLevel==='function'&&Voice.active())level=Voice.audioLevel()}catch(e){}
-     const bars=panel.querySelectorAll('i');
-     bars.forEach((bar,i)=>{
-       const wave=Math.max(0,Math.sin((i+1)*1.73+Date.now()/115));
-       const ripple=Math.max(0,Math.sin((i+2)*.91+Date.now()/190));
-       const h=level>.035?3+Math.min(1,level*1.9)*(9+wave*22+ripple*8):3;
-       bar.style.height=Math.round(h)+'px';bar.style.opacity=level>.035?String(.65+Math.min(.35,level)):'0.38';
-     });
-     panel.style.borderColor=level>.08?'#72ff9a':'#7c5a25';
-     panel.style.boxShadow=level>.08?'0 0 14px #54ff8c55':'inset 0 0 12px #000b';
-   },100);
- }
- document.addEventListener('DOMContentLoaded',setup);
- setup();setTimeout(setup,350);setTimeout(setup,1200);
- const obs=new MutationObserver(()=>setup());obs.observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['class']});
-})();
-</script>
-
-
-<!-- BLACK MAFIA AVATAR SHOP: coin-priced legacy avatars + free online styles -->
-<style id="bm-avatar-shop-css">
-.bmAvShop{margin:12px 0;padding:12px;border:1px solid #a87528;border-radius:15px;background:linear-gradient(145deg,#1c1009,#080504);box-shadow:0 5px 16px #0008}
-.bmAvShop h3{margin:0 0 5px;color:#f3d98c;font-size:16px}
-.bmAvSub{color:#c6b18a;font-size:11px;line-height:1.8;margin-bottom:10px}
-.bmAvSection{font-size:13px;color:#f4d17a;font-weight:900;margin:12px 0 7px}
-.bmAvGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
-.bmAvItem{position:relative;min-width:0;padding:6px 4px 7px;border:1px solid #75501f;border-radius:11px;background:#0a0604;text-align:center;overflow:hidden}
-.bmAvItem.selected{border:2px solid #73ff9c;box-shadow:0 0 12px #73ff9c33}
-.bmAvItem .bmAvPic{width:100%;aspect-ratio:1;display:block;border-radius:8px;background:#17100b center/cover no-repeat;overflow:hidden}
-.bmAvPic img{width:100%;height:100%;object-fit:cover;display:block}
-.bmAvName{font-size:10px;color:#f5e7c5;display:block;min-height:27px;padding:4px 0 2px}
-.bmAvPrice{font-size:10px;color:#f3d98c;display:block;margin:0 0 5px}
-.bmAvBtn{width:100%;min-height:29px;padding:5px 3px;border:1px solid #a87528;border-radius:8px;background:linear-gradient(#3b2911,#171006);color:#ffedbd;font:inherit;font-size:10px;font-weight:900}
-.bmAvBtn.free{border-color:#367f4e;background:linear-gradient(#174b2a,#0b2012);color:#aaffbf}
-.bmAvBtn:disabled{opacity:.65}
-.bmAvNote{font-size:10px;color:#9f916e;text-align:center;margin-top:8px}
-@media(max-width:360px){.bmAvGrid{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.bmAvItem{padding:5px 3px}.bmAvName{font-size:9px}}
-</style>
-<script id="bm-avatar-shop-script">
-(()=>{
- if(window.__bmAvatarShop)return;window.__bmAvatarShop=true;
- const $=id=>document.getElementById(id);
- const FREE=[
-  {id:101,style:'lorelei',seed:'black-mafia-free-01',name:'لوریلی'},
-  {id:102,style:'pixel-art',seed:'black-mafia-free-02',name:'پیکسلی'},
-  {id:103,style:'notionists',seed:'black-mafia-free-03',name:'نوشنیست'},
-  {id:104,style:'open-peeps',seed:'black-mafia-free-04',name:'اسکچ'},
-  {id:105,style:'thumbs',seed:'black-mafia-free-05',name:'کارتونی'},
-  {id:106,style:'cameo',seed:'black-mafia-free-06',name:'پرتره'},
-  {id:107,style:'critters',seed:'black-mafia-free-07',name:'فانتزی'},
-  {id:108,style:'voxel-art',seed:'black-mafia-free-08',name:'سه‌بعدی'}
- ];
- const OLD=[100,150,200,250,300,350,400,450,500,550,600,650];
- const url=(id)=>{const f=FREE.find(x=>x.id===Number(id));return f?'https://api.dicebear.com/10.x/'+f.style+'/svg?seed='+encodeURIComponent(f.seed)+'&backgroundColor=17100b,25190f':'https://api.dicebear.com/10.x/lorelei/svg?seed=black-mafia';};
- const isFree=id=>Number(id)>=101&&Number(id)<=108;
- function init(){
-   if(!window.S)return;
-   if(!Array.isArray(S.avatarOwn))S.avatarOwn=[];
-   const cur=Number(S.avatarSeed||1);
-   // Preserve the user's current avatar so existing accounts are never locked out.
-   if(cur>=1&&cur<=12&&!S.avatarOwn.includes(cur))S.avatarOwn.push(cur);
-   if(!S.avatarSeed)S.avatarSeed=1;
- }
- function owned(id){init();return isFree(id)||S.avatarOwn.includes(Number(id));}
- function imageHtml(id){return '<div class="bmAvPic"><img loading="lazy" alt="آواتار" src="'+url(id)+'" onerror="this.onerror=null;this.src=\''+url(101)+'\'"></div>';}
- function item(id,name,price){
-   const selected=Number(S.avatarSeed)===Number(id),have=owned(id);
-   const action=selected?'انتخاب‌شده':(have?'استفاده':(isFree(id)?'رایگان':'🪙 '+price));
-   const cls='bmAvItem'+(selected?' selected':'');
-   const click=selected?'':(have?'bmUseAvatar('+id+')':(isFree(id)?'bmUseAvatar('+id+')':'bmBuyAvatar('+id+')'));
-   return '<div class="'+cls+'">'+imageHtml(id)+'<span class="bmAvName">'+name+'</span><span class="bmAvPrice">'+(isFree(id)?'رایگان':'🪙 '+price+' سکه')+'</span><button class="bmAvBtn '+(isFree(id)?'free':'')+'" onclick="'+click+'" '+(selected?'disabled':'')+'>'+action+'</button></div>';
- }
- function renderShop(){
-   init();
-   const page=$('pg-shop');if(!page)return;
-   let root=$('bmAvatarShop');
-   if(!root){root=document.createElement('div');root.id='bmAvatarShop';root.className='bmAvShop';const cards=$('cards');const cardsParent=cards&&cards.closest('.card');if(cardsParent&&cardsParent.parentNode)cardsParent.parentNode.insertBefore(root,cardsParent.nextSibling);else page.prepend(root);}
-   let old='';for(let i=1;i<=12;i++)old+=item(i,'آواتار کلاسیک '+i,OLD[i-1]);
-   let fresh='';FREE.forEach(f=>fresh+=item(f.id,f.name,0));
-   root.innerHTML='<h3>🧑‍🎨 فروشگاه آواتار</h3><div class="bmAvSub">آواتارهای کلاسیک با سکه خریداری می‌شوند؛ ۸ آواتار تازه کاملاً رایگان‌اند. آواتار فعلی حساب شما محفوظ می‌ماند.</div><div class="bmAvSection">🪙 آواتارهای کلاسیک</div><div class="bmAvGrid">'+old+'</div><div class="bmAvSection">✨ آواتارهای جدید — رایگان</div><div class="bmAvGrid">'+fresh+'</div><div class="bmAvNote">طرح‌های جدید از کتابخانهٔ متن‌باز DiceBear ساخته می‌شوند.</div>';
- }
- window.bmBuyAvatar=function(id){
-   init();id=Number(id);if(id<1||id>12||owned(id))return window.bmUseAvatar(id);
-   const price=OLD[id-1];if((Number(S.coins)||0)<price){toast('سکه کافی نیست؛ از بازی و جایزه‌ها سکه جمع کن.');return}
-   if(!confirm('خرید آواتار کلاسیک '+id+' با '+price+' سکه؟'))return;
-   S.coins-=price;S.avatarOwn.push(id);save();renderShop();toast('آواتار خریداری شد؛ حالا می‌توانی از آن استفاده کنی.');
- };
- window.bmUseAvatar=function(id){
-   init();id=Number(id);if(id<1||(!isFree(id)&&!S.avatarOwn.includes(id))){toast('اول این آواتار را از فروشگاه بخَر.');return}
-   S.avatarSeed=id;selectedAvSeed=id;S.photo='';save();
-   try{injectMe()}catch(e){}
-   try{renderAvatarGallery()}catch(e){}
-   try{updateSetupPreview()}catch(e){}
-   renderShop();toast('آواتار انتخاب شد');
- };
- const oldRender=window.renderAvatarGallery;
- window.renderAvatarGallery=function(){
-   init();const g=$('proAvGallery');if(!g)return;
-   let h='';
-   for(let i=1;i<=12;i++){
-     const have=owned(i),sel=Number(S.avatarSeed)===i;
-     h+='<button class="avChoice '+(sel?'on':'')+'" style="position:relative" onclick="'+(have?'bmUseAvatar('+i+')':'toast(\'این آواتار سکه‌ای است؛ از فروشگاه آواتار بخَر.\')')+'">'+(window.proAvatar?window.proAvatar(i,i%3===0):'')+(!have?'<span style="position:absolute;inset:auto 2px 2px;background:#000d;color:#f3d98c;border-radius:5px;font-size:9px">🪙 '+OLD[i-1]+'</span>':'')+'</button>';
-   }
-   FREE.forEach(f=>{h+='<button class="avChoice '+(Number(S.avatarSeed)===f.id?'on':'')+'" onclick="bmUseAvatar('+f.id+')">'+(window.proAvatar?window.proAvatar(f.id,false):'')+'<span style="display:block;color:#8dffae;font-size:9px">رایگان</span></button>'});
-   g.innerHTML=h;
-   try{updateSetupPreview()}catch(e){}
- };
- // Avatar IDs 101–108 resolve to remote, deterministic open-license designs.
- const legacyProAvatar=window.proAvatar;
- window.proAvatar=function(seed,f){
-   const n=Number(seed);
-   if(isFree(n)){const u=url(n);return '<div class="avi" style="background-image:url(\\''+u+'\\');background-size:cover;background-position:center"></div>';}
-   return legacyProAvatar?legacyProAvatar(n,!!f):'<div class="avi"></div>';
- };
- window.avatar=function(seed,f,open){return window.proAvatar(seed,f,open)};
- window.chooseProAvatar=function(id){
-   id=Number(id);
-   if(!isFree(id)&&!owned(id)){toast('این آواتار سکه‌ای است؛ از فروشگاه آواتار بخَر.');return}
-   window.bmUseAvatar(id);
- };
- const originalShop=window.rShop;
- window.rShop=function(){try{if(originalShop)originalShop()}catch(e){}renderShop()};
- document.addEventListener('DOMContentLoaded',()=>{init();renderShop()});
- setTimeout(()=>{init();renderShop()},350);
 })();
 </script>
