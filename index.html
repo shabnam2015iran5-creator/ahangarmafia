@@ -2632,7 +2632,7 @@ window.APP_VERSION='27.0';
       found.players=found.players||{};
       window.__voiceKey='friendly-'+c;
       enterRealRoom(found);
-    }catch(e){toast('ورود یا ساخت اتاق ناموفق بود؛ لطفاً دوباره تلاش کنید.');console.error(e)}
+    }catch(e){console.error('BLACK MAFIA room entry failed:',e);toast('خطای ورود: '+String(e&&e.message||e).slice(0,100));}
   }
   function enterRealRoom(r){
     window.MAFIA_ROOM_CODE=r.code;window.MAFIA_ROOM_META=r;window.MAFIA_ROOM_ONLINE=!!db();
