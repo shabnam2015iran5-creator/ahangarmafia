@@ -2462,20 +2462,20 @@ window.APP_VERSION='27.0';
  window.rdKind=k=>{createKind=k;document.querySelectorAll('[data-kind]').forEach(b=>b.classList.toggle('on',b.dataset.kind===k))};
  window.rdJoinKind=k=>{joinKind=k;document.querySelectorAll('[data-jkind]').forEach(b=>b.classList.toggle('on',b.dataset.jkind===k))};
  window.closeRoomDirectory=()=>{$('roomDirectory')?.classList.remove('on')};
- window.openRoomDirectory=(t='create')=>{$('roomDirectory')?.classList.add('on');rdTab(t);setStatus(hasDb()?'اتصال آنلاین فعال است':'حالت آزمایشی: Firebase در config.js تنظیم نشده است','rdWarn')};
- async function writeRoom(c,kind){const me=profile();const room={code:c,kind,host:me.uid,hostName:me.n,createdAt:now(),updatedAt:now(),status:'waiting',players:{}};room.players[uid]=me;await api('PUT','roomsV23/'+c,room);return room}
- function localRoom(c,kind){const key='mafia_local_rooms_v23';let all={};try{all=JSON.parse(lg(key)||'{}')}catch(e){};if(!all[c])all[c]={code:c,kind,host:uid,hostName:S.nick||'بازیکن',createdAt:now(),updatedAt:now(),status:'waiting',players:{}};all[c].players[uid]=profile();ls(key,JSON.stringify(all));return all[c]}
+ window.openRoomDirectory=async(t='create')=>{$('roomDirectory')?.classList.add('on');rdTab(t);setStatus(hasDb()?'در حال بررسی اتصال سرور...':'حالت محلی آزمایشی: آدرس سرور تنظیم نشده است','rdWarn');if(!hasDb())return;try{await api('GET','roomsV23');setStatus('اتصال به سرور برقرار است.','rdGood')}catch(e){setStatus('اتصال به سرور برقرار نشد؛ بازی آنلاین هنوز آماده نیست.','rdWarn')}};
+ async function writeRoom(c,kind){const me=profile();const isGod=me.role==='god';const room={code:c,kind,host:isGod?me.uid:null,hostName:isGod?me.n:'',createdAt:now(),updatedAt:now(),status:'waiting',players:{}};room.players[uid]=me;await api('PUT','roomsV23/'+c,room);return room}
+ function localRoom(c,kind){const key='mafia_local_rooms_v23';let all={};try{all=JSON.parse(lg(key)||'{}')}catch(e){};const me=profile();if(!all[c])all[c]={code:c,kind,host:me.role==='god'?uid:null,hostName:me.role==='god'?me.n:'',createdAt:now(),updatedAt:now(),status:'waiting',players:{}};all[c].players[uid]=me;ls(key,JSON.stringify(all));return all[c]}
  function getLocal(c){let all={};try{all=JSON.parse(lg('mafia_local_rooms_v23')||'{}')}catch(e){};return all[c]||null}
  function setLocal(r){let all={};try{all=JSON.parse(lg('mafia_local_rooms_v23')||'{}')}catch(e){};all[r.code]=r;ls('mafia_local_rooms_v23',JSON.stringify(all))}
  async function create(){const c=code5();try{const r=hasDb()?await writeRoom(c,createKind):localRoom(c,createKind);enterOnlineRoom(r)}catch(e){setStatus('ساخت اتاق ناموفق بود: '+(e.message||'خطا'),'rdWarn')}}
  window.rdCreate=()=>{if(!saveProfile())return;if(createKind!=='edu'&&+S.age<16&&!S.released){toast('برای این لابی باید ۱۶ سال یا بیشتر باشید');return}create()};
  async function loadRoom(c){return hasDb()?await api('GET','roomsV23/'+c):getLocal(c)}
- async function join(){const c=String($('rdCodeInput')?.value||'').replace(/\D/g,'').slice(0,5);if(c.length!==5){toast('کد ۵ رقمی را وارد کنید');return}if(!saveProfile())return;try{const r=await loadRoom(c);if(!r){toast('اتاق پیدا نشد یا منقضی شده است');return}if(r.kind!==joinKind){toast('نوع این اتاق با انتخاب شما یکی نیست');return}const ps=r.players||{};if(Object.keys(ps).filter(k=>ps[k]).length>=10&&!ps[uid]){toast('ظرفیت اتاق تکمیل است');return}ps[uid]=profile();r.players=ps;r.updatedAt=now();if(hasDb())await api('PUT','roomsV23/'+c+'/players/'+uid,ps[uid]);else setLocal(r);enterOnlineRoom(r)}catch(e){toast('ورود به اتاق ناموفق بود')}}
+ async function join(){const c=String($('rdCodeInput')?.value||'').replace(/\D/g,'').slice(0,5);if(c.length!==5){toast('کد ۵ رقمی را وارد کنید');return}if(!saveProfile())return;try{const r=await loadRoom(c);if(!r){toast('اتاق پیدا نشد یا منقضی شده است');return}if(r.kind!==joinKind){toast('نوع این اتاق با انتخاب شما یکی نیست');return}const ps=r.players||{};if(Object.keys(ps).filter(k=>ps[k]).length>=10&&!ps[uid]){toast('ظرفیت اتاق تکمیل است');return}const me=profile();ps[uid]=me;r.players=ps;r.updatedAt=now();if(hasDb())await api('PUT','roomsV23/'+c+'/players/'+uid,ps[uid]);else setLocal(r);if(me.role==='god'&&(!r.host||!ps[r.host]||ps[r.host].role!=='god')){r.host=uid;r.hostName=me.n;if(hasDb())await api('PATCH','roomsV23/'+c,{host:uid,hostName:me.n,updatedAt:now()});else setLocal(r)}enterOnlineRoom(r)}catch(e){toast('ورود به اتاق ناموفق بود؛ اتصال سرور را بررسی کنید.')}}
  window.rdJoin=join;
  function enterOnlineRoom(r){window.MAFIA_ROOM_CODE=r.code;window.MAFIA_ROOM_META=r;window.MAFIA_ROOM_ONLINE=true;lobbyKind=r.kind;buildLobbyRoom();lobbyRoomSeats=Array(10).fill(null);renderLobbyChairs();try{Voice.captureBase()}catch(e){}$('lobbyGate').classList.remove('on');$('roomDirectory').classList.remove('on');$('lobbyRoom').classList.add('on');decorateRoom(r);syncPresence();if(poll)clearInterval(poll);poll=setInterval(syncPresence,2200);window.__voiceKey=r.kind+'-'+r.code;setTimeout(()=>Voice.join(r.kind),150)}
  function decorateRoom(r){const [title,sub]=lobbyLabel(r.kind);$('roomTitle').innerHTML=title+' <span class="roomCodeBadge">#'+esc(r.code)+'</span>';$('roomBanner').innerHTML='<span class="roomCodeBadge">اتاق '+esc(r.code)+'</span>'+title+'<small>'+sub+' · <span class="roomOnlineBadge">● آنلاین</span></small>';$('roomStartBtn').textContent=lobbyMode==='god'?'🎭 شروع بازی':'🎭 آماده‌سازی بازی';$('modName').textContent=lobbyMode==='god'?(S.nick||'گاد'):(r.hostName||'منتظر گرداننده');$('modRole').textContent='گرداننده اتاق'}
- async function syncPresence(){if(!window.MAFIA_ROOM_CODE)return;const r=await loadRoom(window.MAFIA_ROOM_CODE);if(!r){toast('اتاق حذف شده است');closeOnlineRoom();return}const me=profile();try{if(hasDb())await api('PUT','roomsV23/'+r.code+'/players/'+uid,{...me,at:now()});else{r.players=r.players||{};r.players[uid]={...me,at:now()};r.updatedAt=now();setLocal(r)}}catch(e){}const ps=hasDb()?((await api('GET','roomsV23/'+r.code+'/players'))||{}):(r.players||{});const alive=Object.values(ps).filter(x=>x&&now()-(x.at||0)<12000);renderPresence(alive,r)}
- function renderPresence(players,r){window.__lastPres=[players,r];const arr=players.filter(p=>p.role!=='god').sort((a,b)=>String(a.uid).localeCompare(String(b.uid))).slice(0,10);const slots=Array(10).fill(null);arr.forEach((p,i)=>{let vu=null;try{vu=Voice.byUid(p.uid)}catch(e){}slots[i]={n:p.n,id:1000+i,seed:p.seed||1,f:(p.seed||1)%3===0,human:true,ready:!!p.ready,online:true,uid:p.uid,speaking:!!(vu&&vu.sp),mu:vu?!!vu.mu:!!p.mu}});lobbyRoomSeats=slots;renderLobbyChairs();$('roomCount').textContent='👥 '+arr.length+'/10';const host=players.find(p=>p.uid===r.host);if(host&&host.role==='god'){$('modName').textContent=host.n;$('modRole').textContent='گرداننده رسمی'}}
+ let lastRootHeartbeat=0;async function syncPresence(){if(!window.MAFIA_ROOM_CODE)return;let r;try{r=await loadRoom(window.MAFIA_ROOM_CODE)}catch(e){setStatus('اتصال سرور قطع شد؛ در حال تلاش دوباره.','rdWarn');return}if(!r){toast('اتاق حذف شده است');closeOnlineRoom();return}const me=profile();try{if(hasDb())await api('PUT','roomsV23/'+r.code+'/players/'+uid,{...me,at:now()});else{r.players=r.players||{};r.players[uid]={...me,at:now()};r.updatedAt=now();setLocal(r)}}catch(e){setStatus('ارسال وضعیت بازیکن ناموفق بود؛ اتصال را بررسی کنید.','rdWarn');return}const ps=hasDb()?((await api('GET','roomsV23/'+r.code+'/players'))||{}):(r.players||{});const alive=Object.values(ps).filter(x=>x&&now()-(x.at||0)<12000);const host=ps[r.host];if(me.role==='god'&&(!host||host.role!=='god'||now()-(host.at||0)>12000)){r.host=uid;r.hostName=me.n;try{if(hasDb())await api('PATCH','roomsV23/'+r.code,{host:uid,hostName:me.n,updatedAt:now()});else{r.updatedAt=now();setLocal(r)}}catch(e){setStatus('ثبت گرداننده در سرور ناموفق بود.','rdWarn')}}if(now()-lastRootHeartbeat>10000){lastRootHeartbeat=now();try{if(hasDb())await api('PATCH','roomsV23/'+r.code,{updatedAt:now()})}catch(e){}}renderPresence(alive,r)}
+ function renderPresence(players,r){window.__lastPres=[players,r];const arr=players.filter(p=>p.role!=='god').sort((a,b)=>String(a.uid).localeCompare(String(b.uid))).slice(0,10);const slots=Array(10).fill(null);arr.forEach((p,i)=>{let vu=null;try{vu=Voice.byUid(p.uid)}catch(e){}slots[i]={n:p.n,id:1000+i,seed:p.seed||1,f:(p.seed||1)%3===0,human:true,ready:!!p.ready,online:true,uid:p.uid,speaking:!!(vu&&vu.sp),mu:vu?!!vu.mu:!!p.mu}});lobbyRoomSeats=slots;renderLobbyChairs();$('roomCount').textContent='👥 '+arr.length+'/10';const host=players.find(p=>p.uid===r.host&&p.role==='god');if(host){$('modName').textContent=host.n;$('modRole').textContent='گرداننده رسمی';$('modAvatar').innerHTML=proAvatar(host.seed||1,false)}else{$('modName').textContent='جای گاد خالی است';$('modRole').textContent='گرداننده هنوز وارد نشده';$('modAvatar').textContent='♛'}}
  async function refreshList(){const box=$('rdRooms');if(!box)return;let data={};try{data=hasDb()?((await api('GET','roomsV23'))||{}):(()=>{try{return JSON.parse(lg('mafia_local_rooms_v23')||'{}')}catch(e){return{}}})()}catch(e){box.innerHTML='<div class="rdEmpty">اتصال به سرور ناموفق بود.</div>';return}const rs=Object.values(data||{}).filter(r=>r&&r.code&&now()-(r.updatedAt||r.createdAt||0)<30000);if(!rs.length){box.innerHTML='<div class="rdEmpty">اتاق فعالی پیدا نشد.<br>می‌توانید یک اتاق جدید بسازید.</div>';return}box.innerHTML=rs.slice(0,20).map(r=>{const count=Object.keys(r.players||{}).filter(k=>r.players[k]).length;const title=lobbyLabel(r.kind)[0];return '<div class="rdRoom"><div class="rinfo"><b>'+esc(title)+'</b><small><span class="rdCode">#'+esc(r.code)+'</span> · '+count+'/10 نفر</small></div><button class="btn gold" onclick="rdQuickJoin(\''+r.code+'\',\''+r.kind+'\')">ورود</button></div>'}).join('')}
  window.rdQuickJoin=(c,k)=>{$('rdCodeInput').value=c;rdJoinKind(k);rdTab('join')};
  const legacyEnter=window.enterLobby;window.enterLobby=function(kind){if(window.MAFIA_SINGLE_ROOM)return legacyEnter(kind);if(!saveProfile())return;const age=+S.age||0;if(kind!=='edu'&&age<16&&!S.released){toast('این لابی فقط برای ۱۶ سال به بالا است');return}createKind=kind;joinKind=kind;openRoomDirectory('create');rdKind(kind);rdJoinKind(kind)};
@@ -2518,160 +2518,7 @@ window.APP_VERSION='27.0';
   <button class="gbBtn" id="gbBack" onclick="smartBack()">← عقب</button>
   <button class="gbBtn" id="gbHome" onclick="goHomeGlobal()">⌂ خانه</button>
 </div>
-<script id="v25-room-fix">
-(()=>{
-  const $=id=>document.getElementById(id);
-  const lg=k=>{try{return localStorage.getItem(k)}catch(e){return null}};
-  const ls=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
-  const db=()=>String(window.MAFIA_DB_URL||'').replace(/\/$/,'');
-  const uid=()=>lg('mafia_uid')||('u'+Math.random().toString(36).slice(2,12));
-  if(!lg('mafia_uid'))ls('mafia_uid',uid());
-  const me=()=>({uid:uid(),n:String(S.nick||'بازیکن').slice(0,18),seed:+(S.avatarSeed||1),age:+(S.age||0),ready:!!lobbyReady,role:lobbyMode==='god'?'god':'player',at:Date.now()});
-  const localKey='mafia_auto_rooms_v25';
-  function localAll(){try{return JSON.parse(lg(localKey)||'{}')}catch(e){return {}}}
-  function localSave(a){ls(localKey,JSON.stringify(a))}
-  function code(){return String(Math.floor(10000+Math.random()*90000))}
-  async function getRooms(){
-    if(db()){
-      const r=await fetch(db()+'/roomsV23.json');
-      if(!r.ok)throw Error('server '+r.status);
-      return await r.json()||{};
-    }
-    return localAll();
-  }
-  async function saveRoom(code,room){
-    if(db()){
-      const r=await fetch(db()+'/roomsV23/'+code+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(room)});
-      if(!r.ok)throw Error('server '+r.status);
-    }else{const a=localAll();a[code]=room;localSave(a)}
-  }
-  async function updatePlayer(code,p){
-    if(db()){
-      const r=await fetch(db()+'/roomsV23/'+code+'/players/'+encodeURIComponent(uid())+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)});
-      if(!r.ok)throw Error('server '+r.status);
-    }else{const a=localAll();if(a[code]){a[code].players=a[code].players||{};a[code].players[uid()]=p;a[code].updatedAt=Date.now();localSave(a)}}
-  }
-  function ageOK(kind){return kind==='edu'||(+S.age>=16)||S.released}
-  function validProfile(){const n=String(S.nick||'').trim(),a=+S.age||0;if(!n){toast('لطفاً نام خود را وارد کنید؛ اول نامت را در پروفایل بگذار.');return false}if(a<1||a>99){toast('لطفاً سن خود را وارد کنید؛ اول سنت را در پروفایل بگذار.');return false}return true}
-  window.saveProfile=function(){const n=String($('playerNick')?.value||'').trim(),a=+$('playerAge')?.value||0;if(!n){toast('لطفاً نام خود را وارد کنید؛ اول نامت را در پروفایل بگذار.');return false}if(a<1||a>99){toast('لطفاً سن خود را وارد کنید؛ اول سنت را در پروفایل بگذار.');return false}S.nick=n;S.age=a;S.avatarSeed=selectedAvSeed||1;save();return true};
-  function loading(next){const ov=$('ovLoad');if(!ov)return next();const m=ov.querySelector('.msg');if(m)m.innerHTML='سیستم در حال راه‌اندازی است<br>لطفاً صبور باشید...';ov.classList.add('s');setTimeout(()=>{ov.classList.remove('s');try{next()}catch(e){console.error(e)}},2000)}
-  window.v24Load=loading;
-  async function autoRoom(kind){
-    if(!validProfile()||!ageOK(kind)){if(!ageOK(kind))toast('برای این لابی باید ۱۶ سال یا بیشتر باشید');return}
-    let rooms={};
-    try{rooms=await getRooms()}catch(e){toast('اتصال به سرور اتاق‌ها برقرار نشد؛ اتصال اینترنت را بررسی کنید.');return}
-    const now=Date.now();
-    // اتاق‌های تازه و دارای بازیکن آنلاین را برای پیشنهاد ورود پیدا کن.
-    const active=Object.values(rooms||{}).filter(r=>{
-      if(!r||!r.code||now-(r.updatedAt||r.createdAt||0)>43200000)return false;
-      const players=Object.values(r.players||{});
-      return players.some(p=>p&&now-(p.at||0)<15000);
-    }).sort((a,b)=>(b.updatedAt||b.createdAt||0)-(a.updatedAt||a.createdAt||0));
-    let c='',createNew=!active.length;
-    if(active.length){
-      const r=active[0];
-      const goIn=confirm('یک اتاق در حال فعالیت است (#'+r.code+').\n\nبرای ورود به همین اتاق «تأیید» را بزن؛ برای ساخت اتاق جدید «لغو» را بزن.');
-      createNew=!goIn;
-      if(goIn)c=String(r.code);
-    }
-    // همه قبل از ورود نقش خود را انتخاب می‌کنند؛ درِ گرداننده هم همین انتخاب را نشان می‌دهد.
-    const asGod=confirm('چطور وارد شوی؟\n\n«تأیید» = گرداننده\n«لغو» = بازیکن');
-    lobbyMode=asGod?'god':'player';window.lobbyMode=lobbyMode;
-    if(createNew){
-      do{c=String(Math.floor(10000+Math.random()*90000))}while(rooms[c]);
-    }
-    const mine=me();
-    mine.role=asGod?'god':'player';
-    const patchMeta=async patch=>{
-      if(db()){
-        const res=await fetch(db()+'/roomsV23/'+c+'.json',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(patch)});
-        if(!res.ok)throw Error('server '+res.status);
-      }else{
-        const all=localAll(),r=all[c]||{code:c,kind:'friendly',players:{}};
-        Object.assign(r,patch);all[c]=r;localSave(all);
-      }
-    };
-    try{
-      let found=rooms[c]||null;
-      if(createNew||!found){
-        found={code:c,kind:'friendly',createdAt:now,updatedAt:now,status:'waiting',players:{}};
-        await patchMeta({code:c,kind:'friendly',createdAt:now,updatedAt:now,status:'waiting',host:null,hostName:''});
-      }else{
-        found.players=found.players||{};
-      }
-      if(asGod){
-        const oldHost=found.host&&found.players&&found.players[found.host];
-        const hostIsActive=!!(oldHost&&now-(oldHost.at||0)<15000);
-        if(found.host&&found.host!==uid()&&hostIsActive){
-          const makeAnother=confirm('این اتاق گردانندهٔ فعالی دارد.\nبرای اینکه گرداننده روی کارت پایین نمایش داده شود و دو گرداننده در یک اتاق نباشند، اتاق جدید بسازیم؟');
-          if(!makeAnother){toast('برای ورود به این اتاق، نقش بازیکن را انتخاب کن.');return}
-          do{c=String(Math.floor(10000+Math.random()*90000))}while(rooms[c]);
-          found={code:c,kind:'friendly',createdAt:now,updatedAt:now,status:'waiting',players:{}};
-          await patchMeta({code:c,kind:'friendly',createdAt:now,updatedAt:now,status:'waiting',host:null,hostName:''});
-        }
-        await patchMeta({host:uid(),hostName:mine.n,kind:'friendly',updatedAt:now,status:'waiting'});
-      }else{
-        await patchMeta({code:c,kind:'friendly',updatedAt:now});
-      }
-      // هر گوشی فقط رکورد خودش را می‌نویسد؛ گرداننده روی صندلی بازیکنان قرار نمی‌گیرد.
-      await updatePlayer(c,{...mine,at:now});
-      rooms=await getRooms();found=rooms[c]||found;
-      found.players=found.players||{};
-      window.__voiceKey='friendly-'+c;
-      enterRealRoom(found);
-    }catch(e){toast('ورود یا ساخت اتاق ناموفق بود؛ لطفاً دوباره تلاش کنید.');console.error(e)}
-  }
-  function enterRealRoom(r){
-    window.MAFIA_ROOM_CODE=r.code;window.MAFIA_ROOM_META=r;window.MAFIA_ROOM_ONLINE=!!db();
-    lobbyKind=r.kind;
-    lobbyRoomSeats=Array(10).fill(null);lobbyReady=false;
-    if(lobbyMode==='player')role='player';
-    buildLobbyRoom();
-    $('lobbyGate')?.classList.remove('on');$('doorScreen')?.classList.remove('on');$('lobbyRoom')?.classList.add('on');
-    const roomMode=window.MAFIA_ROOM_ONLINE?'آنلاین':'محلی';
-    $('roomTitle').innerHTML=lobbyLabel(r.kind)[0]+' <span class="roomCodeBadge">اتاق '+roomMode+'</span>';
-    $('roomBanner').innerHTML='<span class="roomCodeBadge">● '+roomMode+'</span>'+lobbyLabel(r.kind)[0]+'<small>'+(window.MAFIA_ROOM_ONLINE?'اتاق مشترک بین دستگاه‌ها':'حالت آزمایشی همین مرورگر؛ برای اتاق مشترک، Firebase را تنظیم کنید')+'</small>';
-    if(!window.MAFIA_ROOM_ONLINE)toast('حالت محلی فعال است؛ برای بازی بین چند گوشی باید آدرس Firebase در config.js تنظیم شود.');
-    renderRealSeats(r);
-    if(window.MafiaRoomsV23?.syncPresence)try{MafiaRoomsV23.syncPresence()}catch(e){}
-    if(window.Voice?.join)setTimeout(()=>{try{Voice.join(r.kind)}catch(e){}},150);
-    if(window.__v25Poll)clearInterval(window.__v25Poll);
-    window.__v25Poll=setInterval(refreshRealRoom,2200);
-  }
-  async function refreshRealRoom(){
-    const c=window.MAFIA_ROOM_CODE;if(!c)return;
-    try{
-      const mine=me(),now=Date.now();
-      await updatePlayer(c,{...mine,at:now});
-      const rooms=await getRooms(),r=rooms[c];if(!r)return;
-      renderRealSeats(r);
-      // شروع از سمت گرداننده از طریق کانال Net/Voice به بازیکنان می‌رسد؛ اتاق همچنان منبع حضور مشترک است.
-    }catch(e){}
-  }
-  function renderRealSeats(r){
-    const now=Date.now(),arr=Object.values(r.players||{}).filter(p=>p&&now-(p.at||0)<15000&&p.role!=='god').slice(0,10);
-    lobbyRoomSeats=Array(10).fill(null);arr.forEach((p,i)=>lobbyRoomSeats[i]={n:p.n,id:i+1,seed:p.seed||1,f:(p.seed||1)%3===0,human:true,ready:!!p.ready,online:true,uid:p.uid});
-    renderLobbyChairs();$('roomCount').textContent='👥 '+arr.length+'/10';
-    const host=r.host&&r.players[r.host];const card=$('modCard');
-    if(host&&host.role==='god'){card?.classList.remove('modEmpty');$('modName').textContent=host.n;$('modRole').textContent='گرداننده رسمی';$('modAvatar').innerHTML=proAvatar(host.seed||1,false)}
-    else {card?.classList.add('modEmpty');$('modAvatar').innerHTML='♛';$('modName').textContent='جای گاد خالی است';$('modRole').textContent='گرداننده هنوز فعال نشده'}
-  }
-  const oldEnter=window.enterLobby;
-  window.enterLobby=function(kind){
-    if(!validProfile())return;
-    lobbyKind=kind;lobbyMode=lobbyMode||'player';
-    loading(()=>autoRoom(kind));
-  };
-  const oldClose=window.closeRoom;
-  window.closeRoom=function(){if(window.__v25Poll)clearInterval(window.__v25Poll);window.__v25Poll=null;window.MAFIA_ROOM_CODE='';window.MAFIA_ROOM_META=null;try{Voice.leave()}catch(e){}return oldClose&&oldClose()};
-  // هیچ پنجره‌ای برای ورود با کد نشان داده نشود.
-  $('roomDirectory')?.remove();
-  // خانه/عقب
-  window.goHomeGlobal=window.goHomeGlobal||function(){document.querySelectorAll('.pg').forEach(x=>x.classList.remove('on'));$('pg-home')?.classList.add('on')};
-  window.smartBack=window.smartBack||function(){goHomeGlobal()};
-  setTimeout(()=>{const n=$('nav');if(n)n.style.display='none'},20);
-})();
-</script>
+
 <!-- ===== END V24 PATCH ===== -->
 
 
@@ -2900,7 +2747,7 @@ button[title], [role="button"][title]{cursor:pointer}button:focus-visible{outlin
         try{
           const r=await fetch(db()+'/roomsV23/'+encodeURIComponent(code)+'.json',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:'started',startedAt:Date.now()})});
           if(!r.ok)throw Error('room start '+r.status);
-        }catch(e){try{toast('شروع بازی در سرور ثبت نشد؛ اتصال اینترنت را بررسی کنید.')}catch(_){}}
+        }catch(e){try{toast('شروع بازی در سرور ثبت نشد؛ اتصال اینترنت را بررسی کنید.')}catch(_){}return false}
       }
       return originalStart.apply(this,arguments);
     };
@@ -2924,5 +2771,46 @@ button[title], [role="button"][title]{cursor:pointer}button:focus-visible{outlin
       finally{entering=false}
     }catch(e){}
   },1200);
+})();
+</script>
+
+<script id="bm-unified-room-controller">
+(()=> {
+  if (window.__bmUnifiedRoomController) return;
+  window.__bmUnifiedRoomController = true;
+  const db = () => String(window.MAFIA_DB_URL || '').replace(/\/$/, '');
+  const notify = message => { try { if (typeof toast === 'function') toast(message); } catch (_) {} };
+  const originalStart = window.roomStartGame;
+  if (typeof originalStart === 'function') {
+    window.roomStartGame = async function () {
+      const code = String(window.MAFIA_ROOM_CODE || '');
+      if (!window.MAFIA_ROOM_ONLINE || !code || !db()) return originalStart.apply(this, arguments);
+      if (window.lobbyMode !== 'god') {
+        if (!window.lobbyReady) notify('اول روی «آماده‌ام» بزنید.');
+        else notify('آماده‌اید؛ منتظر شروع بازی توسط گرداننده باشید.');
+        return false;
+      }
+      const uid = (() => { try { return localStorage.getItem('mafia_uid') || ''; } catch (_) { return ''; } })();
+      try {
+        const response = await fetch(db() + '/roomsV23/' + encodeURIComponent(code) + '.json', { cache: 'no-store' });
+        if (!response.ok) throw new Error('room read ' + response.status);
+        const room = await response.json();
+        if (!room) { notify('اتاق در سرور پیدا نشد.'); return false; }
+        if (room.host && room.host !== uid) { notify('فقط گرداننده ثبت‌شدهٔ این اتاق می‌تواند بازی را شروع کند.'); return false; }
+        if (room.status === 'started') { notify('این بازی قبلاً شروع شده است.'); return false; }
+        if (!room.host) {
+          const save = await fetch(db() + '/roomsV23/' + encodeURIComponent(code) + '.json', {
+            method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ host: uid, hostName: 'گرداننده', updatedAt: Date.now() })
+          });
+          if (!save.ok) throw new Error('host claim ' + save.status);
+        }
+      } catch (error) {
+        notify('اتصال اتاق تأیید نشد؛ بازی شروع نشد. اینترنت و اتصال سرور را بررسی کنید.');
+        return false;
+      }
+      return originalStart.apply(this, arguments);
+    };
+  }
 })();
 </script>
