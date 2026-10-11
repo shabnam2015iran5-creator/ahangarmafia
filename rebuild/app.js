@@ -155,6 +155,8 @@
       const old = await db(own+'/presence');
       if (old && Number(old.expires||0)>Date.now()) throw new Error('شناسهٔ صوتی تکراری شد؛ دوباره تلاش کن.');
       await db(own+'/presence','PUT',{owner:state.id,expires:Date.now()+25000});
+      await db(path('players/'+state.id+'/voiceId'),'PUT',state.voice.id);
+      await refreshRoom();
       state.voice.heartbeat=setInterval(async()=>{try{await db(own+'/presence','PUT',{owner:state.id,expires:Date.now()+25000})}catch(_){}},7000);
       state.voice.poll=setInterval(pollSignals,650);
       $('voiceBtn').textContent='🔇 قطع میکروفن';
@@ -168,7 +170,7 @@
     }
   }
   function stopVoice() {
-    if(state.voice){clearInterval(state.voice.poll);clearInterval(state.voice.heartbeat);db('voiceSignals/'+state.code+'/'+state.voice.id+'/presence','DELETE').catch(()=>{});}
+    if(state.voice){clearInterval(state.voice.poll);clearInterval(state.voice.heartbeat);db('voiceSignals/'+state.code+'/'+state.voice.id+'/presence','DELETE').catch(()=>{});if(state.id)db(path('players/'+state.id+'/voiceId'),'DELETE').catch(()=>{});}
     for(const v of state.voicePeers.values()){try{v.pc.close()}catch(_){} if(v.audio) v.audio.remove();}
     state.voicePeers.clear();
     if(state.localStream)state.localStream.getTracks().forEach(t=>t.stop());
