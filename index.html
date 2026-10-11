@@ -3155,8 +3155,8 @@ body.ingame #dock button.bm-hidden-control{display:none!important}
   try{
    const uid=myUid().replace(/[^A-Za-z0-9_-]/g,'').slice(0,35)||'guest';
    const id=Date.now().toString(36)+'_'+uid+'_'+Math.random().toString(36).slice(2,7);
-   const name=String(window.S?.nick||'بازیکن').trim().slice(0,24)||'بازیکن';
-   const role=window.lobbyMode==='god'?'god':'player';
+   const name=String((typeof S!=='undefined'&&S.nick)||'بازیکن').trim().slice(0,24)||'بازیکن';
+   const role=(typeof lobbyMode!=='undefined'&&lobbyMode==='god')?'god':'player';
    const url=db()+'/roomsV23/'+encodeURIComponent(c)+'/chat/'+id+'.json';
    const r=await fetch(url,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,name,text,at:Date.now(),role})});
    if(!r.ok)throw Error('send '+r.status);
