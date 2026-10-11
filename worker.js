@@ -38,6 +38,15 @@ function allowedPath(rawPath) {
     return p.length <= 8 && p.slice(2).every(x => /^[A-Za-z0-9_-]{1,80}$/.test(x));
   }
 
+  if (p[0] === "voiceSignals") {
+    // Short-lived WebRTC signaling messages and peer presence only.
+    if (p.length < 4 || p.length > 5) return false;
+    if (!/^[A-Za-z0-9_-]{1,80}$/.test(p[1]) ||
+        !/^[A-Za-z0-9_-]{1,80}$/.test(p[2])) return false;
+    if (p.length === 4) return p[3] === "presence" || p[3] === "messages";
+    return p[3] === "messages" && /^[A-Za-z0-9_-]{1,80}$/.test(p[4]);
+  }
+
   if (p[0] === "godPerms") {
     return p.length === 1 || (p.length === 2 && /^[A-Za-z0-9_-]{1,80}$/.test(p[1]));
   }
