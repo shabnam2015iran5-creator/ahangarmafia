@@ -101,21 +101,42 @@ export default {
 
     const upstreamUrl = DB + "/" + rawPath + url.search;
     let upstream;
+    const retryable = ["GET", "PUT", "PATCH", "DELETE"].includes(method);
+    const maxAttempts = retryable ? 3 : 1;
 
-    try {
-      const headers = new Headers();
-      const accept = request.headers.get("Accept");
-      if (accept) headers.set("Accept", accept);
-      if (body) headers.set("Content-Type", "application/json");
+    // Bound every database request so a slow Firebase response cannot leave
+    // room creation waiting indefinitely. Retry only methods safe to repeat.
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        const headers = new Headers();
+        const accept = request.headers.get("Accept");
+        if (accept) headers.set("Accept", accept);
+        if (body) headers.set("Content-Type", "application/json");
 
-      upstream = await fetch(upstreamUrl, {
-        method,
-        headers,
-        body: body || undefined,
-        redirect: "follow"
-      });
-    } catch {
-      return json({ error: "Database connection failed" }, 502);
+        upstream = await fetch(upstreamUrl, {
+          method,
+          headers,
+          body: body || undefined,
+          redirect: "follow",
+          signal: AbortSignal.timeout(7000)
+        });
+
+        if (upstream.status < 500 || attempt === maxAttempts) break;
+        try { await upstream.body?.cancel(); } catch {}
+      } catch {
+        if (attempt === maxAttempts) {
+          return json({
+            error: "Database connection timed out",
+            retryable: true
+          }, 504);
+        }
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 200 * attempt));
+    }
+
+    if (!upstream) {
+      return json({ error: "Database connection failed", retryable: true }, 502);
     }
 
     const responseHeaders = new Headers(upstream.headers);
