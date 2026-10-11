@@ -459,8 +459,7 @@ function tick(){
  if(G.t>0&&G.t<=5&&['vote','revote','defense'].includes(G.ph))tap(1);if(G.t<=0)next()}
 function scenPick(){if(started||G.loading)return;const g=gods.find(x=>x.n=='شما');const al=role=='admin'?[0]:(g&&g.sc&&g.sc.length?g.sc:SC.map((_,i)=>i));
  $('scl').innerHTML=al.length?al.map(i=>`<button class="btn gold" style="width:100%;margin:3px 0" onclick="cl('ovScen');launch(${i})">${SC[i].n}<br><small>${comp(SC[i].r)}</small></button>`).join(''):'<p>شما اجازه‌ی هیچ سناریویی را ندارید</p>';op('ovScen')}
-function launch(si){if(started||G.loading||!role)return;G.loading=true;seats.forEach((s,i)=>{if(!s)seats[i]=nbot()});render();musicMode('tense');gun();op('ovLoad');
- setTimeout(()=>{cl('ovLoad');G.loading=false;if(role)godStart(si)},2000)}
+function launch(si){if(started||G.loading||!role)return;G.loading=true;seats.forEach((s,i)=>{if(!s)seats[i]=nbot()});render();musicMode('tense');gun();cl('ovLoad');G.loading=false;if(role)godStart(si)}
 const comp=s=>Object.keys(R).map(k=>{const c=[...s].filter(x=>x==k).length;return c?R[k].n+' '+c:''}).filter(Boolean).join('، ');
 function godStart(si){if(started)return;started=true;seats.forEach((s,i)=>{if(!s)seats[i]=nbot()});
  const rl=[...SC[si].r].sort(()=>Math.random()-.5);G.negUsed=false;
