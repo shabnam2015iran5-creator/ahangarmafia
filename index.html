@@ -857,8 +857,10 @@ const Voice=(()=>{
   else if(typeof H[d.t]==='function'&&(d.t==='act'||r.role==='god')){H[d.t](s,d)}});
  }
  function playRemote(r,st){
-  const a=document.createElement('audio');a.autoplay=true;a.playsInline=true;a.srcObject=st;a.style.display='none';document.body.appendChild(a);
-  const p=a.play&&a.play();if(p&&p.catch)p.catch(()=>{});r.audio=a;
+  const a=document.createElement('audio');a.autoplay=true;a.playsInline=true;a.muted=false;a.volume=1;a.srcObject=st;a.style.display='none';document.body.appendChild(a);r.audio=a;
+  const play=()=>{try{if(ctx&&ctx.state==='suspended')ctx.resume()}catch(e){}const p=a.play&&a.play();if(p&&p.catch)p.catch(()=>{setStatus('⚠️ صدای گوشی دیگر دریافت شد اما پخش آن مسدود است؛ یک‌بار روی صفحه بزنید')})};
+  play();
+  if(!window.__bmAudioUnlock){window.__bmAudioUnlock=true;const unlock=()=>{try{if(ctx&&ctx.state==='suspended')ctx.resume()}catch(e){}Object.values(R).forEach(x=>{if(x.audio){try{const p=x.audio.play();if(p&&p.catch)p.catch(()=>{})}catch(e){}}});};document.addEventListener('pointerdown',unlock);document.addEventListener('touchstart',unlock);}
   try{const n=ctx.createAnalyser();n.fftSize=256;ctx.createMediaStreamSource(st).connect(n);r.an=n;r.buf=new Uint8Array(n.frequencyBinCount)}catch(e){}
  }
  function drop(s,quiet){
