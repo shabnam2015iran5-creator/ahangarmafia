@@ -666,8 +666,8 @@ function renderAvatarGallery(){
 }
 function chooseProAvatar(i){selectedAvSeed=i;S.avatarSeed=i;S.photo='';save();injectMe();renderAvatarGallery();toast('آواتار حرفه‌ای انتخاب شد')}
 function updateSetupPreview(){const e=$('setupPreview');if(!e)return;e.innerHTML=S.photo?'<div class="avi avme"></div>':proAvatar(selectedAvSeed,selectedAvSeed%3===0)}
-function openDoorFlow(mode){lobbyMode=mode||'player';$('doorScreen').classList.add('on');$('doorFrame').classList.remove('doorOpen');setTimeout(openLobbyDoor,300)}
-function openLobbyDoor(){if(!$('doorScreen').classList.contains('on'))return;doorSfx();$('doorFrame').classList.add('doorOpen');setTimeout(()=>{$('doorScreen').classList.remove('on');openLobbyGate()},900)}
+function openDoorFlow(mode){lobbyMode=mode||'player';$('doorScreen').classList.add('on');$('doorFrame').classList.remove('doorOpen');setTimeout(openLobbyDoor,80)}
+function openLobbyDoor(){if(!$('doorScreen').classList.contains('on'))return;doorSfx();$('doorFrame').classList.add('doorOpen');setTimeout(()=>{$('doorScreen').classList.remove('on');openLobbyGate()},220)}
 function doorSfx(){try{const A=new (window.AudioContext||window.webkitAudioContext)(),t=A.currentTime;const o=A.createOscillator(),g=A.createGain();o.type='triangle';o.frequency.setValueAtTime(90,t);o.frequency.exponentialRampToValueAtTime(48,t+.42);g.gain.setValueAtTime(.001,t);g.gain.exponentialRampToValueAtTime(.32,t+.03);g.gain.exponentialRampToValueAtTime(.001,t+.5);o.connect(g);g.connect(A.destination);o.start(t);o.stop(t+.55);const o2=A.createOscillator(),g2=A.createGain();o2.type='sine';o2.frequency.value=420;g2.gain.setValueAtTime(.001,t+.18);g2.gain.exponentialRampToValueAtTime(.08,t+.22);g2.gain.exponentialRampToValueAtTime(.001,t+.5);o2.connect(g2);g2.connect(A.destination);o2.start(t+.18);o2.stop(t+.55);setTimeout(()=>A.close(),800)}catch(e){}}
 function openLobbyGate(){
  $('lobbyGate').classList.add('on');$('gateTitle').textContent=lobbyMode==='player'?'🎭 انتخاب آواتار و لابی':'🎙 انتخاب لابی گرداننده';
@@ -1222,7 +1222,7 @@ window.musicMode=function(m){if(!MU.mg)return;if(MU.mode==m&&MU.tm)return;MU.mod
  window.musicStart=function(){_ms();vol()};
  window.toggleMusic=function(){_tm();vol()};
  const _e=enterLobby,_c=closeRoom;
- window.enterLobby=function(k){_e(k);if(document.getElementById('lobbyRoom').classList.contains('on')){musicStart();musicMode('lobby');setTimeout(vol,1500)}};
+ window.enterLobby=function(k){_e(k);if(document.getElementById('lobbyRoom').classList.contains('on')){musicStart();musicMode('lobby');setTimeout(vol,400)}};
  window.closeRoom=function(){_c();if(typeof started==='undefined'||!started){clearInterval(MU.tm);MU.tm=null}};
 })();
 
@@ -1449,7 +1449,7 @@ const BP=(()=>{
  function resetSettings(){localStorage.removeItem(key+'q');localStorage.removeItem(key+'vol');loadSettings()}
  function loginAdmin(){if($('bpAdminPass').value===(window.MAFIA_BP_ADMIN_PASS||'00100900')){sessionStorage.setItem('bp_admin','1');$('bpAdminLogin').style.display='none';$('bpAdminPanel').style.display='block';tone('click')}else{alert('رمز مدیر اشتباه است');tone('challenge')}}
  function logoutAdmin(){sessionStorage.removeItem('bp_admin');$('bpAdminLogin').style.display='block';$('bpAdminPanel').style.display='none';$('bpAdminPass').value=''}
- function goLobby(k){close('rooms');try{if(typeof openDoorFlow==='function'){openDoorFlow('player');setTimeout(()=>{try{enterLobby(k)}catch(e){}},1100)}else alert('ماژول لابی در حال آماده‌سازی است')}catch(e){}}
+ function goLobby(k){close('rooms');try{if(typeof openDoorFlow==='function'){openDoorFlow('player');setTimeout(()=>{try{enterLobby(k)}catch(e){}},350)}else alert('ماژول لابی در حال آماده‌سازی است')}catch(e){}}
  function voiceTest(){tone('click');try{navigator.mediaDevices.getUserMedia({audio:true}).then(s=>{alert('میکروفن فعال است. اجازه دسترسی داده شد.');s.getTracks().forEach(t=>t.stop())}).catch(()=>alert('اجازه میکروفن داده نشد یا محیط فعلی HTTPS نیست.'))}catch(e){alert('مرورگر امکان تست میکروفن را ندارد')}}
  function sfx(t){tone(t)}
  function testAll(){tone('challenge');setTimeout(()=>tone('vote'),350);setTimeout(()=>tone('click'),800);alert('تست افکت‌ها انجام شد')}
@@ -1460,7 +1460,7 @@ const BP=(()=>{
 })();
 
 document.querySelectorAll('#bpQuality button').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('#bpQuality button').forEach(x=>x.classList.remove('on'));b.classList.add('on');}));
-window.addEventListener('load',()=>{let p=0,el=document.getElementById('bpPercent');const t=setInterval(()=>{p=Math.min(100,p+Math.floor(Math.random()*13)+4);if(el)el.textContent=p+'%';if(p>=100){clearInterval(t);setTimeout(()=>document.getElementById('bpSplash')?.classList.add('hide'),450)}},120);});
+window.addEventListener('load',()=>{const el=document.getElementById('bpPercent');if(el)el.textContent='100%';setTimeout(()=>document.getElementById('bpSplash')?.classList.add('hide'),120);});
 </script>
 <!-- ===== END BLACK PRO UPGRADE ===== -->
 
@@ -2554,7 +2554,7 @@ window.APP_VERSION='27.0';
   function ageOK(kind){return kind==='edu'||(+S.age>=16)||S.released}
   function validProfile(){const n=String(S.nick||'').trim(),a=+S.age||0;if(!n){toast('لطفاً نام خود را وارد کنید؛ اول نامت را در پروفایل بگذار.');return false}if(a<1||a>99){toast('لطفاً سن خود را وارد کنید؛ اول سنت را در پروفایل بگذار.');return false}return true}
   window.saveProfile=function(){const n=String($('playerNick')?.value||'').trim(),a=+$('playerAge')?.value||0;if(!n){toast('لطفاً نام خود را وارد کنید؛ اول نامت را در پروفایل بگذار.');return false}if(a<1||a>99){toast('لطفاً سن خود را وارد کنید؛ اول سنت را در پروفایل بگذار.');return false}S.nick=n;S.age=a;S.avatarSeed=selectedAvSeed||1;save();return true};
-  function loading(next){const ov=$('ovLoad');if(!ov)return next();const m=ov.querySelector('.msg');if(m)m.innerHTML='سیستم در حال راه‌اندازی است<br>لطفاً صبور باشید...';ov.classList.add('s');setTimeout(()=>{ov.classList.remove('s');try{next()}catch(e){console.error(e)}},2000)}
+  function loading(next){const ov=$('ovLoad');if(ov)ov.classList.remove('s');try{return next()}catch(e){console.error(e)}}
   window.v24Load=loading;
   async function autoRoom(kind){
     if(!validProfile()||!ageOK(kind)){if(!ageOK(kind))toast('برای این لابی باید ۱۶ سال یا بیشتر باشید');return}
@@ -3099,11 +3099,17 @@ body.ingame #dock button.bm-hidden-control{display:none!important}
 </script>
 
 
-<!-- BLACK MAFIA: shared lobby text chat for every seat, including the moderator -->
+<!-- BLACK MAFIA: compact lobby chat, unread badge, keep only newest 40 messages -->
 <style id="bm-lobby-chat-style">
 #lobbyRoom .lobbyRoomWrap>#bmLobbyChat{position:absolute!important;left:8px;right:8px;bottom:72px;z-index:40!important;direction:rtl;margin:0;padding:9px;border:1px solid #d2a347;border-radius:15px;background:linear-gradient(145deg,#160f09fa,#070606fa);box-shadow:0 5px 22px #000c;color:#f7e8c4;max-height:46%;overflow:hidden;display:block!important;visibility:visible!important;opacity:1!important;pointer-events:auto}
+#lobbyRoom .lobbyRoomWrap>#bmLobbyChat.bm-chat-closed{display:none!important}
+#lobbyRoom .lobbyRoomWrap>#bmLobbyChatToggle{position:absolute!important;right:12px;bottom:12px;z-index:45!important;display:none;align-items:center;justify-content:center;gap:5px;min-width:48px;height:44px;padding:0 12px;border:1px solid #d2a347;border-radius:24px;background:linear-gradient(#c99b43,#80551a);color:#170e04;font-size:21px;box-shadow:0 4px 15px #000b;cursor:pointer}
+#lobbyRoom .lobbyRoomWrap>#bmLobbyChatToggle.bm-chat-toggle-on{display:flex!important}
+#bmLobbyChatToggle .blc-unread{display:none;min-width:19px;height:19px;padding:1px 5px;border-radius:12px;background:#d52c2c;color:white;font-size:11px;line-height:17px;font-weight:900;text-align:center}
+#bmLobbyChatToggle .blc-unread.on{display:inline-block}
 #bmLobbyChat .blc-head{display:flex;align-items:center;justify-content:space-between;gap:8px;font-weight:900;color:#f5d98d;font-size:14px}
 #bmLobbyChat .blc-sub{font-size:10px;color:#b8a47e;font-weight:400}
+#bmLobbyChat .blc-close{border:1px solid #8f6a30;border-radius:8px;background:#30200e;color:#ffe9b5;padding:4px 10px;font-size:15px;font-weight:900;cursor:pointer}
 #bmLobbyChat .blc-log{height:125px;max-height:25vh;overflow-y:auto;overscroll-behavior:contain;margin:10px 0;padding:8px;border-radius:10px;background:#0007;border:1px solid #ffffff12}
 #bmLobbyChat .blc-msg{padding:6px 8px;margin:5px 0;border-radius:9px;background:#ffffff08;overflow-wrap:anywhere}
 #bmLobbyChat .blc-msg .blc-name{font-size:11px;font-weight:900;color:#f0c96e;margin-left:6px}
@@ -3120,36 +3126,81 @@ body.ingame #dock button.bm-hidden-control{display:none!important}
 (()=>{
  const $=id=>document.getElementById(id);
  const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
- let lastSig='',busy=false,lastPoll=0;
+ let lastSig='',busy=false,lastPoll=0,isOpen=true,initialized=false,unread=0;
+ const knownIds=new Set();
  const db=()=>String(window.MAFIA_DB_URL||'').replace(/\/$/,'');
  const code=()=>String(window.MAFIA_ROOM_CODE||'');
  const myUid=()=>{try{return localStorage.getItem('mafia_uid')||'guest'}catch(e){return'guest'}};
+ function badge(){
+  const b=$('bmLobbyChatUnread');if(!b)return;
+  b.textContent=unread>99?'99+':String(unread);b.classList.toggle('on',unread>0);
+  const t=$('bmLobbyChatToggle');if(t)t.setAttribute('aria-label',unread?'باز کردن چت، '+unread+' پیام خوانده‌نشده':'باز کردن چت');
+ }
+ function markSeen(rows){rows.forEach(x=>knownIds.add(x.id));while(knownIds.size>100){knownIds.delete(knownIds.values().next().value)}}
+ function openChat(){
+  isOpen=true;unread=0;
+  $('bmLobbyChat')?.classList.remove('bm-chat-closed');
+  $('bmLobbyChatToggle')?.classList.remove('bm-chat-toggle-on');
+  const log=$('bmLobbyChatLog');if(log)log.scrollTop=log.scrollHeight;
+  badge();
+ }
+ function closeChat(){
+  isOpen=false;
+  $('bmLobbyChat')?.classList.add('bm-chat-closed');
+  $('bmLobbyChatToggle')?.classList.add('bm-chat-toggle-on');
+  badge();
+ }
  function ensure(){
-  const wrap=$('lobbyRoom')?.querySelector('.lobbyRoomWrap');if(!wrap||$('bmLobbyChat'))return;
-  const box=document.createElement('section');box.id='bmLobbyChat';
-  box.innerHTML='<div class="blc-head"><span>💬 چت عمومی لابی</span><span class="blc-sub">همه، حتی گرداننده</span></div><div class="blc-log" id="bmLobbyChatLog" aria-live="polite"><div class="blc-note">در حال دریافت پیام‌ها...</div></div><form class="blc-compose" id="bmLobbyChatForm"><input id="bmLobbyChatInput" maxlength="240" autocomplete="off" placeholder="پیامت را بنویس..." aria-label="پیام چت لابی"><button type="submit">ارسال</button></form><div class="blc-note">پیام‌ها برای همهٔ افراد همین اتاق نمایش داده می‌شوند.</div>';
-  const actions=wrap.querySelector('.roomActions');wrap.insertBefore(box,actions||null);
-  $('bmLobbyChatForm').addEventListener('submit',e=>{e.preventDefault();send()});
-  $('bmLobbyChatInput').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send()}});
+  const wrap=$('lobbyRoom')?.querySelector('.lobbyRoomWrap');if(!wrap)return;
+  if(!$('bmLobbyChat')){
+   const box=document.createElement('section');box.id='bmLobbyChat';
+   box.innerHTML='<div class="blc-head"><span>💬 چت عمومی لابی</span><button type="button" class="blc-close" id="bmLobbyChatClose" aria-label="بستن چت">× بستن</button></div><div class="blc-log" id="bmLobbyChatLog" aria-live="polite"><div class="blc-note">در حال دریافت پیام‌ها...</div></div><form class="blc-compose" id="bmLobbyChatForm"><input id="bmLobbyChatInput" maxlength="240" autocomplete="off" placeholder="پیامت را بنویس..." aria-label="پیام چت لابی"><button type="submit">ارسال</button></form><div class="blc-note">حداکثر ۴۰ پیام اخیر نمایش داده می‌شود.</div>';
+   const actions=wrap.querySelector('.roomActions');wrap.insertBefore(box,actions||null);
+   $('bmLobbyChatClose').addEventListener('click',closeChat);
+   $('bmLobbyChatForm').addEventListener('submit',e=>{e.preventDefault();send()});
+   $('bmLobbyChatInput').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send()}});
+  }
+  if(!$('bmLobbyChatToggle')){
+   const t=document.createElement('button');t.type='button';t.id='bmLobbyChatToggle';t.innerHTML='💬 <span class="blc-unread" id="bmLobbyChatUnread">0</span>';t.addEventListener('click',openChat);wrap.appendChild(t);
+  }
+  if(isOpen){$('bmLobbyChat')?.classList.remove('bm-chat-closed');$('bmLobbyChatToggle')?.classList.remove('bm-chat-toggle-on')}
+  else closeChat();
+  badge();
  }
  async function poll(){
   const c=code();if(!c||!$('lobbyRoom')?.classList.contains('on'))return;
   ensure();if(!db()||busy)return;
-  const now=Date.now();if(now-lastPoll<1700)return;lastPoll=now;
+  const now=Date.now();if(now-lastPoll<1600)return;lastPoll=now;
   try{
    const r=await fetch(db()+'/roomsV23/'+encodeURIComponent(c)+'/chat.json',{cache:'no-store'});
    if(!r.ok)return;const data=await r.json()||{};
-   const rows=Object.entries(data).filter(([k,v])=>v&&typeof v.text==='string').map(([id,v])=>({id,name:String(v.name||'بازیکن').slice(0,24),text:String(v.text).slice(0,240),at:+v.at||0,role:v.role==='god'?'god':'player'})).sort((a,b)=>a.at-b.at).slice(-60);
-   const sig=rows.map(x=>x.id+':'+x.at).join('|');if(sig===lastSig)return;lastSig=sig;
-   const log=$('bmLobbyChatLog');if(!log)return;
+   const rows=Object.entries(data).filter(([k,v])=>v&&typeof v.text==='string').map(([id,v])=>({id,name:String(v.name||'بازیکن').slice(0,24),text:String(v.text).slice(0,240),at:+v.at||0,role:v.role==='god'?'god':'player'})).sort((a,b)=>a.at-b.at||a.id.localeCompare(b.id)).slice(-40);
+   if(initialized){
+    let added=0;rows.forEach(x=>{if(!knownIds.has(x.id)){added++;knownIds.add(x.id)}});
+    if(!isOpen&&added)unread+=added;
+   }else{markSeen(rows);initialized=true}
+   while(knownIds.size>100)knownIds.delete(knownIds.values().next().value);
+   badge();
+   const sig=rows.map(x=>x.id+':'+x.at).join('|'),log=$('bmLobbyChatLog');if(!log)return;
+   if(sig===lastSig&&log.dataset.sig===sig)return;lastSig=sig;log.dataset.sig=sig;
    const nearBottom=log.scrollHeight-log.scrollTop-log.clientHeight<45;
    log.innerHTML=rows.length?rows.map(x=>'<div class="blc-msg"><div><span class="blc-name '+(x.role==='god'?'blc-god':'')+'">'+(x.role==='god'?'🎙 ':'')+esc(x.name)+'</span><span class="blc-time">'+(x.at?new Date(x.at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}):'')+'</span></div><div class="blc-text">'+esc(x.text)+'</div></div>').join(''):'<div class="blc-note">هنوز پیامی نیست؛ اولین پیام را بفرست!</div>';
-   if(nearBottom||rows.length<=2)log.scrollTop=log.scrollHeight;
+   if(isOpen&&(nearBottom||rows.length<=2))log.scrollTop=log.scrollHeight;
+  }catch(e){}
+ }
+ async function trimOldMessages(){
+  const c=code();if(!c||!db())return;
+  try{
+   const base=db()+'/roomsV23/'+encodeURIComponent(c)+'/chat';
+   const r=await fetch(base+'.json',{cache:'no-store'});if(!r.ok)return;
+   const data=await r.json()||{};
+   const rows=Object.entries(data).filter(([id,v])=>v&&typeof v.text==='string').map(([id,v])=>({id,at:+v.at||0})).sort((a,b)=>a.at-b.at||a.id.localeCompare(b.id));
+   const excess=rows.length-40;if(excess>0)await Promise.all(rows.slice(0,excess).map(x=>fetch(base+'/'+encodeURIComponent(x.id)+'.json',{method:'DELETE'})));
   }catch(e){}
  }
  async function send(){
-  const input=$('bmLobbyChatInput'),c=code(),text=String(input?.value||'').trim().slice(0,240);
-  if(!text)return;if(!c||!db()){try{toast('اتصال اتاق برقرار نیست؛ دوباره وارد لابی شو.')}catch(e){}return}
+  const input=$('bmLobbyChatInput'),c=code(),message=String(input?.value||'').trim().slice(0,240);
+  if(!message)return;if(!c||!db()){try{toast('اتصال اتاق برقرار نیست؛ دوباره وارد لابی شو.')}catch(e){}return}
   if(busy)return;busy=true;
   const button=$('bmLobbyChatForm')?.querySelector('button');if(button)button.disabled=true;
   try{
@@ -3158,15 +3209,15 @@ body.ingame #dock button.bm-hidden-control{display:none!important}
    const name=String((typeof S!=='undefined'&&S.nick)||'بازیکن').trim().slice(0,24)||'بازیکن';
    const role=(typeof lobbyMode!=='undefined'&&lobbyMode==='god')?'god':'player';
    const url=db()+'/roomsV23/'+encodeURIComponent(c)+'/chat/'+id+'.json';
-   const r=await fetch(url,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,name,text,at:Date.now(),role})});
+   const r=await fetch(url,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,name,text:message,at:Date.now(),role})});
    if(!r.ok)throw Error('send '+r.status);
    input.value='';lastSig='';
-   await poll();
+   await trimOldMessages();await poll();
   }catch(e){try{toast('پیام ارسال نشد؛ چند لحظه بعد دوباره امتحان کن.')}catch(_){}}
-  finally{busy=false;if(button)button.disabled=false;input?.focus()}
+  finally{busy=false;if(button)button.disabled=false;if(isOpen)input?.focus()}
  }
- setInterval(poll,1800);
+ setInterval(poll,1700);
  document.addEventListener('DOMContentLoaded',ensure);
- setTimeout(ensure,1200);
+ setTimeout(ensure,250);
 })();
 </script>
