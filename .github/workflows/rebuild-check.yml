@@ -1,0 +1,38 @@
+name: Rebuild syntax check
+on:
+  push:
+    branches:
+      - "rewrite/**"
+    paths:
+      - "rebuild/**"
+      - ".github/workflows/rebuild-check.yml"
+  pull_request:
+    paths:
+      - "rebuild/**"
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check JavaScript syntax
+        run: |
+          node --check rebuild/app.js
+          node --check rebuild/admin.js
+      - name: Check required UI hooks exist
+        run: |
+          node - <<'NODE'
+          const fs = require('fs');
+          const html = fs.readFileSync('rebuild/index.html','utf8');
+          const app = fs.readFileSync('rebuild/app.js','utf8');
+          const required = ['gameplay','myRole','gamePlayers','actionBox','targetSelect','submitAction','advancePhase','resetGame','adminPanel','adminRooms'];
+          for (const id of required) {
+            if (!html.includes('id="' + id + '"')) throw new Error('Missing UI element: ' + id);
+          }
+          for (const hook of ['renderGame(room)','startGame','submitGameAction','advancePhase','resetGame']) {
+            if (!app.includes(hook)) throw new Error('Missing game function/hook: ' + hook);
+          }
+          console.log('UI hooks are present.');
+          NODE
