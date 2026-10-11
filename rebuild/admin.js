@@ -34,6 +34,10 @@
   }
   let timer = null;
   $('adminOpen').addEventListener('click', async () => {
+    const expected=String(window.MAFIA_ADMIN_PASS||'1234');
+    const entered=window.prompt('رمز فعلی مدیریت را وارد کن:');
+    if(entered===null)return;
+    if(entered!==expected){alert('رمز مدیریت درست نیست.');return;}
     $('adminPanel').classList.remove('hidden');
     await refresh();
     if (timer) clearInterval(timer);
