@@ -754,12 +754,10 @@ save();buildNav();rHome();injectMe();try{startFx()}catch(e){};renderAvatarGaller
 <script id="voice-module">
 /* ================= VOICE CHAT (WebRTC + PeerJS) ================= */
 const VOICE_CFG={
- // بهترین حالت: فایل peerjs.min.js را کنار همین HTML روی هاست آپلود کنید.
- // اگر نبود، به‌ترتیب از CDNهای زیر خوانده می‌شود.
- scripts:['peerjs.min.js','https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js','https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js','https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js'],
- // سرور سیگنالینگ: {} = سرور رایگان PeerJS. برای سرور خودتان مثلاً:
- // {host:'yourdomain.com',port:443,path:'/peerjs',secure:true}
- peer:{host:'0.peerjs.com',port:443,path:'/',secure:true},
+ // سیگنالینگ وویس از Firebase Realtime Database استفاده می‌کند تا به سرور عمومی PeerJS وابسته نباشد.
+ scripts:['firebase-peer.js'],
+ // این تنظیم برای سازگاری با رابط قدیمی نگه داشته شده؛ FirebasePeer آن را نادیده می‌گیرد.
+ peer:{},
  ice:[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'}].concat(window.MAFIA_TURN||[]),
  // برای شبکه‌هایی که اتصال مستقیم نمی‌دهند (اینترنت همراه/NAT سخت) سرور TURN لازم است:
  // ice.push({urls:'turn:YOUR_HOST:3478',username:'USER',credential:'PASS'})
