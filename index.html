@@ -3083,8 +3083,9 @@ body.ingame #dock button.bm-hidden-control{display:none!important}
   const patch=()=>{patchLobby();ensureGodButton();cleanMenu()};
   document.addEventListener('click',()=>setTimeout(patch,0),true);
   document.addEventListener('DOMContentLoaded',patch);
-  const obs=new MutationObserver(()=>patch());
-  obs.observe(document.documentElement,{subtree:true,childList:true,attributes:true,attributeFilter:['class','style']});
+  // Do not observe every DOM mutation here: patch() itself changes innerHTML/style,
+  // which recursively retriggers this observer and freezes the main thread.
+  // The 900ms interval below is sufficient to refresh these controls.
   setInterval(()=>{
     patch();
     if(window.__bmModeratorSpeaking&&inNight())setModeratorSpeaking(false);
