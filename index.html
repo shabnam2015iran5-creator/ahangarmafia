@@ -767,7 +767,7 @@ const VOICE_CFG={
 };
 const Voice=(()=>{
  const C=VOICE_CFG,g=id=>document.getElementById(id);
- let peer=null,slot=0,room='',local=null,rawTrack=null,micOk=false,ctx=null,an=null,anBuf=null,muted=false,on=false,joining=false,gen=0,tryT=null,loopT=null,meSp=false,base=[],meSeat=null,lastMu=null,myUid=(()=>{try{return localStorage.getItem('mafia_uid')||''}catch(e){return ''}})();
+ let peer=null,slot=0,room='',local=null,rawTrack=null,micOk=false,ctx=null,an=null,anBuf=null,muted=false,on=false,joining=false,gen=0,tryT=null,loopT=null,meSp=false,base=[],meSeat=null,lastMu=null,lastPeerError='',myUid=(()=>{try{return localStorage.getItem('mafia_uid')||''}catch(e){return ''}})();
  const R={},H={};
  const myName=()=>String(S.nick||'بازیکن').replace(/[<>&"'`\\]/g,'').slice(0,18)||'بازیکن';
  const mySeed=()=>Math.max(1,Math.min(12,parseInt(selectedAvSeed)||1));
@@ -788,9 +788,9 @@ const Voice=(()=>{
  function openPeer(id){return new Promise(res=>{
   let d=false;const p=new Peer(id,{config:{iceServers:C.ice},debug:0,...C.peer});
   const fin=v=>{if(d)return;d=true;clearTimeout(tm);if(v!==p){try{p.destroy()}catch(e){}}res(v)};
-  const tm=setTimeout(()=>fin(undefined),9000);
+  const tm=setTimeout(()=>{lastPeerError='timeout';fin(undefined)},9000);
   p.on('open',()=>fin(p));
-  p.on('error',e=>fin(e&&e.type==='unavailable-id'?null:undefined));
+  p.on('error',e=>{lastPeerError=(e&&e.type)||'unknown';fin(e&&e.type==='unavailable-id'?null:undefined)});
  })}
  const MIC={audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}};
  function watchLocal(){try{an=ctx.createAnalyser();an.fftSize=256;ctx.createMediaStreamSource(local).connect(an);anBuf=new Uint8Array(an.frequencyBinCount)}catch(e){an=null}}
@@ -813,7 +813,7 @@ const Voice=(()=>{
    if(r){p=r;slot=s}else if(r===undefined){fail=true;break}
   }
   if(!p){joining=false;if(micOk)local.getTracks().forEach(t=>t.stop());local=null;rawTrack=null;
-   setStatus(fail?'❌ اتصال به سرور وویس برقرار نشد':'⚠️ ظرفیت وویس این لابی پر است');return}
+   setStatus(fail?'❌ اتصال به سرور وویس برقرار نشد'+(lastPeerError?' ('+lastPeerError+')':''):'⚠️ ظرفیت وویس این لابی پر است');return}
   peer=p;on=true;joining=false;
   p.on('call',call=>{const s=slotOf(call.peer);if(!s||s===slot){try{call.close()}catch(e){}return}call.answer(local);bindCall(s,call)});
   p.on('connection',conn=>{const s=slotOf(conn.peer);if(!s||s===slot){try{conn.close()}catch(e){}return}bindConn(s,conn)});
