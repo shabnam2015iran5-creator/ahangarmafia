@@ -9,7 +9,7 @@
 </head>
 <body>
 <div class="shell">
-<header class="topbar"><div><div class="eyebrow">BLACK MAFIA · REBUILD</div><h1>🕵️ مافیای بلک</h1></div><span id="connection" class="pill">آماده اتصال</span></header>
+<header class="topbar"><div><div class="eyebrow">BLACK MAFIA · REBUILD</div><h1>🕵️ مافیای بلک</h1></div><div class="top-actions"><span id="connection" class="pill">آماده اتصال</span><button id="adminOpen" class="small">🛠️ مدیریت اتاق‌ها</button></div></header>
 <main>
 <section id="welcome" class="panel">
 <h2>ورود به بازی</h2>
@@ -29,6 +29,7 @@
 </div>
 <section class="panel game-panel"><div class="section-title"><h3>🎲 وضعیت بازی</h3><span id="phase" class="pill">انتظار</span></div><p id="gameNotice" class="muted">گرداننده پس از حضور بازیکنان می‌تواند بازی را شروع کند.</p><div class="voice-row"><button id="voiceBtn">🎙️ فعال‌کردن میکروفن</button><span id="voiceStatus" class="muted">صدا خاموش است</span></div><div id="audioPeers" class="audio-peers"></div></section>
 </section>
+<section id="adminPanel" class="panel hidden"><div class="section-title"><div><div class="eyebrow">مدیریت بازی</div><h2>🛠️ اتاق‌های باز</h2></div><button id="adminRefresh" class="small">↻ تازه‌سازی</button></div><div class="admin-stats"><div><span id="adminRoomCount">۰</span><small>اتاق باز</small></div><div><span id="adminPlayerCount">۰</span><small>بازیکن واقعی</small></div><div><span id="adminGameCount">۰</span><small>بازی شروع‌شده</small></div></div><p id="adminStatus" class="muted">برای دیدن فهرست اتاق‌ها، پنل را تازه‌سازی کن.</p><div id="adminRooms" class="admin-rooms"></div><button id="adminClose" class="quiet">بستن پنل مدیریت</button></section>
 <section id="rules" class="rules panel"><div class="emblem">🇮🇷</div><h2>اطلاعیه و قوانین استفاده</h2><p>استفاده از بازی باید مطابق قوانین و مقررات لازم‌الاجرا در جمهوری اسلامی ایران باشد. احترام به دیگران، پرهیز از توهین و تهدید، حفظ حریم خصوصی و خودداری از تقلب الزامی است.</p><p>با ورود به بازی، مسئولیت پیام‌ها و رفتار خود را می‌پذیرید. اطلاعات شخصی و رمزهای خود را در چت منتشر نکنید.</p><button id="acceptRules" class="primary">خواندم و می‌پذیرم</button></section>
 </main>
 <footer>نسخه بازنویسی آزمایشی · برای تست فنی · هنوز نسخه عمومی نیست</footer>
