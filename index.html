@@ -2903,12 +2903,15 @@ button[title], [role="button"][title]{cursor:pointer}button:focus-visible{outlin
   if(window.__bmSharedGameStartInstalled)return;
   window.__bmSharedGameStartInstalled=true;
   const db=()=>String(window.MAFIA_DB_URL||'').replace(/\/$/,'');
+  // lobbyMode is declared with top-level let in the main game script, so it is
+  // not automatically mirrored to window.lobbyMode. Read the real mode first.
+  const currentMode=()=>{try{return typeof lobbyMode!=='undefined'?lobbyMode:window.lobbyMode}catch(e){return window.lobbyMode}};
   const originalStart=window.roomStartGame;
   let entering=false,lastStartedRoom='';
   // Save the start state to the shared room before sending the live voice signal.
   if(typeof originalStart==='function'){
     window.roomStartGame=async function(){
-      const isGod=window.lobbyMode==='god';
+      const isGod=currentMode()==='god';
       const code=String(window.MAFIA_ROOM_CODE||'');
       if(isGod&&code&&db()){
         try{
@@ -2923,7 +2926,7 @@ button[title], [role="button"][title]{cursor:pointer}button:focus-visible{outlin
   // the player phone enters as soon as it sees the persistent server state.
   setInterval(async()=>{
     const code=String(window.MAFIA_ROOM_CODE||'');
-    if(!code||window.lobbyMode!=='player'||entering)return;
+    if(!code||currentMode()!=='player'||entering)return;
     const lobby=document.getElementById('lobbyRoom');
     if(!lobby||!lobby.classList.contains('on'))return;
     const d=db();if(!d)return;
