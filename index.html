@@ -2616,8 +2616,8 @@ window.APP_VERSION='27.0';
         const oldHost=found.host&&found.players&&found.players[found.host];
         const hostIsActive=!!(oldHost&&now-(oldHost.at||0)<15000);
         if(found.host&&found.host!==uid()&&hostIsActive){
-          const makeAnother=confirm('این اتاق گردانندهٔ فعالی دارد.\nبرای اینکه گرداننده روی کارت پایین نمایش داده شود و دو گرداننده در یک اتاق نباشند، اتاق جدید بسازیم؟');
-          if(!makeAnother){toast('برای ورود به این اتاق، نقش بازیکن را انتخاب کن.');return}
+          // Never open a second native confirm dialog after role selection; on some mobile webviews it can freeze the whole game UI.
+          // If the selected room already has an active moderator, create a fresh room automatically.
           do{c=String(Math.floor(10000+Math.random()*90000))}while(rooms[c]);
           found={code:c,kind:'friendly',createdAt:now,updatedAt:now,status:'waiting',players:{}};
           await patchMeta({code:c,kind:'friendly',createdAt:now,updatedAt:now,status:'waiting',host:null,hostName:''});
