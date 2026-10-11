@@ -2770,7 +2770,9 @@ button[title], [role="button"][title]{cursor:pointer}button:focus-visible{outlin
       if(!r.ok)return;
       const room=await r.json();
       if(!room||room.status!=='started'||lastStartedRoom===code)return;
-      if(window.Net&&Net.isClient()) {lastStartedRoom=code;return}
+      const lobbyStillOpen=!!(document.getElementById('lobbyRoom')&&document.getElementById('lobbyRoom').classList.contains('on'));
+      const gameAlreadyOpen=document.body.classList.contains('ingame')&&!lobbyStillOpen;
+      if(gameAlreadyOpen&&window.Net&&Net.isClient()){lastStartedRoom=code;return}
       entering=true;lastStartedRoom=code;
       try{window.lobbyReady=true;if(window.Net&&typeof Net.enter==='function')Net.enter()}
       finally{entering=false}
