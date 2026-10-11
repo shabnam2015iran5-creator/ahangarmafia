@@ -678,6 +678,7 @@ function updateAgeStatus(){const age=+(($('playerAge')||{}).value||0);const ok=a
 function saveProfile(){const n=$('playerNick').value.trim();const a=+$('playerAge').value||0;if(n)S.nick=n;if(lobbyMode==='player'){if(a<1||a>99){toast('سن را درست وارد کنید');return false}S.age=a}S.avatarSeed=selectedAvSeed;save();return true}
 $('playerAge')?.addEventListener('input',updateAgeStatus);
 $('playerNick')?.addEventListener('input',()=>{S.nick=$('playerNick').value.trim()||'رضا'});
+function selectEntryRole(mode){lobbyMode=mode==='god'?'god':'player';const t=document.getElementById('gateTitle');if(t)t.textContent=lobbyMode==='god'?'🎙 ورود به‌عنوان گرداننده':'🧑 ورود به‌عنوان بازیکن';const p=document.getElementById('rolePlayerBtn'),g=document.getElementById('roleGodBtn');if(p)p.classList.toggle('on',lobbyMode==='player');if(g)g.classList.toggle('on',lobbyMode==='god');const n=document.getElementById('gateNotice');if(n)n.textContent=lobbyMode==='god'?'حالت گرداننده انتخاب شده است؛ پس از ورود به لابی می‌توانید بازی را شروع کنید.':'حالت بازیکن انتخاب شده است؛ با ورود به اتاق آمادهٔ بازی هستید.';}
 function enterLobby(kind){if(!saveProfile())return;const age=+S.age||0;if(kind!=='edu' && age<16 && !S.released){toast('این لابی فقط برای بالای ۱۵ سال است؛ فعلاً لابی آموزشی برای شما فعال است');return}lobbyKind=kind;buildLobbyRoom();$('lobbyGate').classList.remove('on');$('lobbyRoom').classList.add('on');}
 function lobbyLabel(k){return k==='edu'?['🎓 لابی آموزشی','آموزش قوانین، نقش‌ها و تمرین قبل از بازی']:k==='friendly'?['🤝 لابی دوستانه','بازی دوستانه با فضای سبک و قوانین کامل']:['🏆 لابی حرفه‌ای','بازی رقابتی با گرداننده و قوانین کامل']}
 function buildLobbyRoom(){const [title,sub]=lobbyLabel(lobbyKind);$('roomTitle').textContent=title;$('roomBanner').innerHTML=title+`<small>${sub}</small>`;const names=lobbyKind==='pro'?['Rafael','ARIANA','MHD-SH','اربابی','Parissa','کیان','مهسا','بهروز','یلدا','آرمان','سارا']:lobbyKind==='friendly'?['دلارام','آرمان','سارا','کیان','مهسا','بهروز','نیلوفر','امیر','ستایش','فرهاد','یلدا']:['آموزش ۱','آموزش ۲','آموزش ۳','آموزش ۴','آموزش ۵','آموزش ۶','آموزش ۷','آموزش ۸','آموزش ۹','آموزش ۱۰','آموزش ۱۱'];
@@ -691,7 +692,7 @@ function renderLobbyChairs(){const g=$('chairGrid');if(!g)return;g.innerHTML=lob
 function toggleLobbyReady(){lobbyReady=!lobbyReady;$('readyBtn').textContent=lobbyReady?'✓ آماده‌ام':'✅ آماده‌ام';$('readyBtn').classList.toggle('on',lobbyReady);toast(lobbyReady?'آمادگی شما ثبت شد':'آمادگی لغو شد')}
 function closeLobbyFlow(){$('lobbyGate').classList.remove('on');$('doorScreen').classList.remove('on');}
 function closeRoom(){$('lobbyRoom').classList.remove('on');closeLobbyFlow();role=null;document.body.classList.remove('ingame')}
-function roomStartGame(){if(lobbyMode==='player'&&!lobbyReady){toast('اول روی «آماده‌ام» بزنید');return} $('lobbyRoom').classList.remove('on'); if(lobbyMode==='god'){role='god';__baseStart('god')}else{role='player';__baseStart('player')}setTimeout(()=>{$('gt').textContent='گرداننده: '+(lobbyKind==='pro'?'لابی حرفه‌ای':'لابی '+lobbyLabel(lobbyKind)[0].replace(/^.. /,''))},100)}
+function roomStartGame(){$('lobbyRoom').classList.remove('on'); if(lobbyMode==='god'){role='god';__baseStart('god')}else{role='player';__baseStart('player')}setTimeout(()=>{$('gt').textContent='گرداننده: '+(lobbyKind==='pro'?'لابی حرفه‌ای':'لابی '+lobbyLabel(lobbyKind)[0].replace(/^.. /,''))},100)}
 function start(r){lobbyMode=r==='god'?'god':'player';openDoorFlow(lobbyMode)}
 
 function updateVoiceStage(){const v=seats.find(s=>s&&s.sp);const box=$('voiceStage');if(!box)return;if(!v){box.classList.remove('on');return}box.classList.add('on');$('vsName').textContent='🎙 '+v.n+' در حال صحبت است';$('vsAv').innerHTML=v===me()&&S.photo?'<div class="avi avme"></div>':proAvatar(v.id||1,!!v.f);}
@@ -716,6 +717,10 @@ save();buildNav();rHome();injectMe();try{startFx()}catch(e){};renderAvatarGaller
 <div id="lobbyGate">
   <div class="lgBox">
     <div class="lgHead"><h2 id="gateTitle">🎭 ورود به لابی‌ها</h2><button class="lgClose" onclick="closeLobbyFlow()">×</button></div>
+    <div id="entryRoleChoice" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0 12px">
+      <button type="button" class="btn gold" id="rolePlayerBtn" onclick="selectEntryRole('player')">🧑 ورود به‌عنوان بازیکن</button>
+      <button type="button" class="btn gold" id="roleGodBtn" onclick="selectEntryRole('god')">🎙 ورود به‌عنوان گرداننده</button>
+    </div>
     <div class="profileSetup">
       <div class="setupAv" id="setupPreview"></div>
       <div style="display:flex;flex-direction:column;gap:7px">
@@ -742,7 +747,7 @@ save();buildNav();rHome();injectMe();try{startFx()}catch(e){};renderAvatarGaller
   <div class="chairGrid" id="chairGrid"></div>
   <div class="modCard" id="modCard"><div class="modLabel">گرداننده</div><div class="modPortrait" id="modAvatar"></div><div class="modPlate" id="modName">گاد</div><span id="modRole" style="display:none">گاد اصلی</span></div>
   <div class="roomTimer" id="roomTimer">19 : 14<small>زمان انتظار لابی</small></div>
-  <div class="roomActions"><button class="btn" id="roomMic" onclick="toggleRoomMic()">🎤</button><button class="btn" id="readyBtn" onclick="toggleLobbyReady()">✅ آماده‌ام</button><button class="btn gold" id="roomStartBtn" onclick="roomStartGame()">🎭 شروع بازی</button></div>
+  <div class="roomActions"><button class="btn" id="roomMic" onclick="toggleRoomMic()">🎤</button><button class="btn gold" id="roomStartBtn" onclick="roomStartGame()">🎭 شروع بازی</button></div>
  </div>
 </div>
 <div class="voiceStage" id="voiceStage"><div class="vsAv" id="vsAv"></div><div class="voiceInfo"><b id="vsName">در حال صحبت...</b><div class="eq"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div></div>
