@@ -3276,13 +3276,18 @@ body:has(#lobbyRoom.on) #globalBack{display:none!important}
    try{updateSetupPreview()}catch(e){}
  };
  // Avatar IDs 101–108 resolve to remote, deterministic open-license designs.
+ const legacyProAvatar=window.proAvatar;
  window.proAvatar=function(seed,f){
    const n=Number(seed);
-   if(isFree(n)){const u=url(n);return '<div class="avi" style="background-image:url(\''+u+'\');background-size:cover;background-position:center"></div>';}
-   const svg=window.proSvg?window.proSvg(n,!!f):'';
-   return '<div class="avi" style="background-image:url(\'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg)+'\');background-size:cover;background-position:center"></div>';
+   if(isFree(n)){const u=url(n);return '<div class="avi" style="background-image:url(\\''+u+'\\');background-size:cover;background-position:center"></div>';}
+   return legacyProAvatar?legacyProAvatar(n,!!f):'<div class="avi"></div>';
  };
  window.avatar=function(seed,f,open){return window.proAvatar(seed,f,open)};
+ window.chooseProAvatar=function(id){
+   id=Number(id);
+   if(!isFree(id)&&!owned(id)){toast('این آواتار سکه‌ای است؛ از فروشگاه آواتار بخَر.');return}
+   window.bmUseAvatar(id);
+ };
  const originalShop=window.rShop;
  window.rShop=function(){try{if(originalShop)originalShop()}catch(e){}renderShop()};
  document.addEventListener('DOMContentLoaded',()=>{init();renderShop()});
