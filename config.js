@@ -1,5 +1,5 @@
-/* اتصال اتاق‌ها از مسیر Worker کلادفلر؛ Worker درخواست‌ها را به Firebase منتقل می‌کند. */
-window.MAFIA_DB_URL='https://mafia-game-server.nova-d9d04c.workers.dev/api/db';
+/* تنظیمات بازی؛ تا زمان انتشار واسط Cloudflare از نشانی اصلی دیتابیس استفاده می‌شود. */
+window.MAFIA_DB_URL='/api/db';
 // سرور TURN برای اینترنت همراه/شبکه‌های سخت. این‌ها سرورهای رایگان و مشترک Open Relay هستند (برای شروع و تست).
 // برای استفادهٔ جدی، در metered.ca حساب رایگان بساز و اطلاعات خودت را اینجا بگذار.
 window.MAFIA_TURN=[
