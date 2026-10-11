@@ -685,7 +685,7 @@ function buildLobbyRoom(){const [title,sub]=lobbyLabel(lobbyKind);$('roomTitle')
  lobbyRoomSeats=(lobbyMode==='player'?names.slice(0,10):names).map((n,i)=>({n,id:i+1,f:i%3===1,bot:true,seed:(i%12)+1}));
  if(lobbyMode==='player')lobbyRoomSeats[0]={n:S.nick||'رضا',id:7,f:selectedAvSeed%3===0,bot:false,seed:selectedAvSeed};
  else lobbyRoomSeats[0]={n:'گاد',id:999,f:false,bot:false,seed:8,role:'god'};
- lobbyReady=false;$('readyBtn').style.display=lobbyMode==='player'?'inline-block':'none';$('roomStartBtn').textContent=lobbyMode==='god'?'🎭 شروع لابی':'🎭 شروع بازی';
+ lobbyReady=false;const readyButton=$('readyBtn');if(readyButton)readyButton.style.display=lobbyMode==='player'?'inline-block':'none';$('roomStartBtn').textContent=lobbyMode==='god'?'🎭 شروع لابی':'🎭 شروع بازی';
  $('roomCount').textContent='👥 '+lobbyRoomSeats.filter(s=>s&&s.role!=='god').length+'/10';$('modName').textContent=lobbyMode==='god'?(S.nick||'گاد'):'گاد اصلی';$('modRole').textContent=lobbyMode==='god'?'گاد اصلی':'گرداننده لابی';$('modAvatar').innerHTML=proAvatar(lobbyMode==='god'?selectedAvSeed:8,false);renderLobbyChairs();
 }
 function renderLobbyChairs(){const g=$('chairGrid');if(!g)return;g.innerHTML=lobbyRoomSeats.filter(s=>!(s&&s.role==='god')).map((s,i)=>{if(!s)return `<div class="lSeat empty"><div class="seatNum">${i+1}</div><div class="portrait">🪑</div><div class="seatName">؟؟؟</div></div>`;const sp=s.speaking?' speaking':'';return `<div class="lSeat${sp}"><div class="seatNum">${i+1}</div><div class="portrait">${proAvatar(s.seed,s.f)}</div><div class="seatName">${s.n}</div></div>`}).join('');}
