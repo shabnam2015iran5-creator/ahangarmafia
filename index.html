@@ -756,7 +756,7 @@ save();buildNav();rHome();injectMe();try{startFx()}catch(e){};renderAvatarGaller
 const VOICE_CFG={
  // بهترین حالت: فایل peerjs.min.js را کنار همین HTML روی هاست آپلود کنید.
  // اگر نبود، به‌ترتیب از CDNهای زیر خوانده می‌شود.
- scripts:['https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js','https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js'],
+ scripts:['peerjs.min.js','https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js','https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js','https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js'],
  // سرور سیگنالینگ: {} = سرور رایگان PeerJS. برای سرور خودتان مثلاً:
  // {host:'yourdomain.com',port:443,path:'/peerjs',secure:true}
  peer:{host:'0.peerjs.com',port:443,path:'/',secure:true},
@@ -782,13 +782,13 @@ const Voice=(()=>{
    if(i>=C.scripts.length)return rej(new Error('peer'));
    const s=document.createElement('script');let d=false;
    const fin=ok=>{if(d)return;d=true;clearTimeout(tm);if(ok&&window.Peer)res();else{s.remove();next()}};
-   const tm=setTimeout(()=>fin(false),4000);
+   const tm=setTimeout(()=>fin(false),7000);
    s.src=C.scripts[i++];s.onload=()=>fin(true);s.onerror=()=>fin(false);document.head.appendChild(s)})()});
  }
  function openPeer(id){return new Promise(res=>{
   let d=false;const p=new Peer(id,{config:{iceServers:C.ice},debug:0,...C.peer});
   const fin=v=>{if(d)return;d=true;clearTimeout(tm);if(v!==p){try{p.destroy()}catch(e){}}res(v)};
-  const tm=setTimeout(()=>fin(undefined),4500);
+  const tm=setTimeout(()=>fin(undefined),9000);
   p.on('open',()=>fin(p));
   p.on('error',e=>fin(e&&e.type==='unavailable-id'?null:undefined));
  })}
@@ -2467,7 +2467,7 @@ window.APP_VERSION='27.0';
  window.rdKind=k=>{createKind=k;document.querySelectorAll('[data-kind]').forEach(b=>b.classList.toggle('on',b.dataset.kind===k))};
  window.rdJoinKind=k=>{joinKind=k;document.querySelectorAll('[data-jkind]').forEach(b=>b.classList.toggle('on',b.dataset.jkind===k))};
  window.closeRoomDirectory=()=>{$('roomDirectory')?.classList.remove('on')};
- window.openRoomDirectory=(t='create')=>{$('roomDirectory')?.classList.add('on');rdTab(t);setStatus(hasDb()?'آماده؛ برای ساخت یا ورود ادامه دهید.':'حالت محلی آزمایشی: آدرس سرور تنظیم نشده است','rdGood')};
+ window.openRoomDirectory=async(t='create')=>{$('roomDirectory')?.classList.add('on');rdTab(t);setStatus(hasDb()?'در حال بررسی اتصال سرور...':'حالت محلی آزمایشی: آدرس سرور تنظیم نشده است','rdWarn');if(!hasDb())return;try{await api('GET','roomsV23');setStatus('اتصال به سرور برقرار است.','rdGood')}catch(e){setStatus('اتصال به سرور برقرار نشد؛ بازی آنلاین هنوز آماده نیست.','rdWarn')}};
  async function writeRoom(c,kind){const me=profile();const isGod=me.role==='god';const room={code:c,kind,host:isGod?me.uid:null,hostName:isGod?me.n:'',createdAt:now(),updatedAt:now(),status:'waiting',players:{}};room.players[uid]=me;await api('PUT','roomsV23/'+c,room);return room}
  function localRoom(c,kind){const key='mafia_local_rooms_v23';let all={};try{all=JSON.parse(lg(key)||'{}')}catch(e){};const me=profile();if(!all[c])all[c]={code:c,kind,host:me.role==='god'?uid:null,hostName:me.role==='god'?me.n:'',createdAt:now(),updatedAt:now(),status:'waiting',players:{}};all[c].players[uid]=me;ls(key,JSON.stringify(all));return all[c]}
  function getLocal(c){let all={};try{all=JSON.parse(lg('mafia_local_rooms_v23')||'{}')}catch(e){};return all[c]||null}
@@ -2819,43 +2819,5 @@ button[title], [role="button"][title]{cursor:pointer}button:focus-visible{outlin
       return originalStart.apply(this, arguments);
     };
   }
-})();
-</script>
-
-<!-- BLACK MAFIA: lobby navigation placement and faster entry -->
-<style id="bm-lobby-nav-speed">
-#lobbyRoom .lobbyTop .roomIcon{display:none!important}
-#lobbyRoom .roomActions .gbBtn{position:static!important;display:inline-flex!important;align-items:center;justify-content:center;flex:0 0 auto!important;min-width:42px!important;min-height:46px!important;padding:8px 10px!important;margin:0!important;font-size:12px!important;opacity:1!important}
-#lobbyRoom .roomActions #gbHome{order:4}
-#lobbyRoom .roomActions #gbBack{order:0}
-#lobbyRoom .roomActions #roomMic{order:1}
-#lobbyRoom .roomActions #deckBtn{order:2}
-#lobbyRoom .roomActions #roomStartBtn{order:5}
-#lobbyRoom .roomActions{gap:5px!important}
-@media(max-width:390px){#lobbyRoom .roomActions .gbBtn{min-width:34px!important;padding:6px!important;font-size:10px!important}#lobbyRoom .roomActions .btn{font-size:11px!important}}
-</style>
-<script id="bm-lobby-nav-speed-js">
-(()=>{
- const $=id=>document.getElementById(id);
- function placeLobbyControls(){
-   const lobby=$('lobbyRoom'),actions=lobby&&lobby.querySelector('.roomActions');
-   const back=$('gbBack'),home=$('gbHome'),bar=$('globalBack');
-   if(!actions||!back||!home)return;
-   if(lobby.classList.contains('on')){
-     const mic=$('roomMic'),deck=$('deckBtn'),start=$('roomStartBtn');
-     actions.insertBefore(back,mic||actions.firstChild);
-     if(deck)actions.insertBefore(home,deck.nextSibling);else if(start)actions.insertBefore(home,start);
-     if(bar)bar.classList.remove('bm-visible');
-   }else{
-     if(bar&&bar.contains(back)===false&&back.parentElement!==bar)bar.appendChild(back);
-     if(bar&&bar.contains(home)===false&&home.parentElement!==bar)bar.appendChild(home);
-   }
- }
- placeLobbyControls();
- const observer=new MutationObserver(placeLobbyControls);
- observer.observe(document.body,{subtree:true,attributes:true,attributeFilter:['class']});
- document.addEventListener('DOMContentLoaded',placeLobbyControls);
- setTimeout(placeLobbyControls,300);
- setTimeout(placeLobbyControls,1200);
 })();
 </script>
