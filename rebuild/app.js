@@ -42,7 +42,12 @@
   async function createRoom() {
     state.name = $('playerName').value.trim().slice(0,24);
     if (!state.name) return alert('اول نام بازیکن را بنویس.');
-    state.id = id(); state.code = newCode(); state.host = true; state.ready = true;
+    state.id = id(); state.host = true; state.ready = true;
+    try {
+      let found=false;
+      for(let attempt=0;attempt<8;attempt++){state.code=newCode();const existing=await db(path());if(!existing){found=true;break;}}
+      if(!found)throw new Error('کد اتاق آزاد پیدا نشد؛ دوباره تلاش کن.');
+    } catch(e) { alert('بررسی کد اتاق انجام نشد: '+e.message); return; }
     const room = { code:state.code, hostId:state.id, phase:'lobby', createdAt:Date.now(), updatedAt:Date.now(),
       players:{ [state.id]:{ id:state.id, name:state.name, host:true, ready:true, seatType:'human', joinedAt:Date.now(), online:true } },
       chat:{}, testSeats:{} };
@@ -60,6 +65,7 @@
     try {
       const room = await db(path());
       if (!room || !room.players) throw new Error('این اتاق پیدا نشد یا هنوز آماده نیست.');
+      if (room.phase === 'started' || room.phase === 'finished') throw new Error('این بازی شروع شده یا تمام شده است؛ برای ورود، از گرداننده بخواه بازی را بازنشانی کند.');
       const players = Object.values(room.players);
       if (players.filter(p => p && p.seatType === 'human').length >= 12) throw new Error('ظرفیت ۱۲ بازیکن واقعی تکمیل است.');
       await db(path('players/' + state.id), 'PUT', {id:state.id,name:state.name,host:false,ready:false,seatType:'human',joinedAt:Date.now(),online:true});
@@ -259,12 +265,14 @@
   }
   async function addTestSeat() {
     if (!state.host) return;
+    if (state.roomData?.phase === 'started' || state.roomData?.phase === 'finished') return alert('صندلی تمرینی را فقط در اتاق انتظار اضافه کن.');
     const key = id();
     try { await db(path('testSeats/'+key),'PUT',{id:key,name:'صندلی تمرینی '+(Object.keys(state.roomData?.testSeats||{}).length+1),seatType:'test',createdAt:Date.now()}); await refreshRoom(); }
     catch(e) { alert('افزودن صندلی آزمایشی انجام نشد: '+e.message); }
   }
   async function removeTestSeats() {
     if (!state.host) return;
+    if (state.roomData?.phase === 'started' || state.roomData?.phase === 'finished') return alert('صندلی‌های تمرینی را فقط در اتاق انتظار مدیریت کن.');
     try { await db(path('testSeats'),'DELETE'); await refreshRoom(); }
     catch(e) { alert('حذف صندلی‌ها انجام نشد: '+e.message); }
   }
