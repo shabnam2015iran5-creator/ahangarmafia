@@ -242,6 +242,35 @@ export default {
     }
 
     if (/^usersV1(?:\/|\.json$)/.test(rawPath)) return json({error:"اطلاعات حساب‌ها فقط از مسیرهای امن سرور قابل دسترسی است"},403);
+    // Validate bulk room writes too, so writing players.json or a whole room cannot skip registration/ban checks.
+    if (["PUT","PATCH"].includes(method)) {
+      const bulkPlayersPath = rawPath.match(/^roomsV23\/\d{5}\/players\.json$/);
+      const roomRootPath = rawPath.match(/^roomsV23\/\d{5}\.json$/);
+      if (bulkPlayersPath || roomRootPath) {
+        let payload;
+        try { payload = JSON.parse(body || "null"); } catch { return json({error:"اطلاعات بازیکنان نامعتبر است"},400); }
+        const players = bulkPlayersPath ? payload : payload && payload.players;
+        if (players && typeof players === "object" && !Array.isArray(players)) {
+          for (const [id, player] of Object.entries(players)) {
+            if (player === null) continue;
+            if (!/^[A-Za-z0-9_-]{1,80}$/.test(id)) return json({error:"شناسهٔ یکی از بازیکنان نامعتبر است"},400);
+            if (!player || typeof player !== "object" || Array.isArray(player)) return json({error:"اطلاعات یکی از بازیکنان نامعتبر است"},400);
+            if (player.uid && player.uid !== id) return json({error:"شناسهٔ بازیکن با درخواست مطابقت ندارد"},403);
+            let registered;
+            try { registered = (await dbRead("usersV1/"+id)).data; }
+            catch { return json({error:"بررسی ثبت‌نام بازیکنان ناموفق بود"},502); }
+            if (!registered || !registered.registered) return json({error:"همهٔ بازیکنان باید ابتدا ثبت‌نام کنند"},403);
+            let ban;
+            try { ban = await banFor({uid:id,nick:player.n||player.nick||registered.nick,account:player.account||registered.account}); }
+            catch { return json({error:"بررسی مسدودیت بازیکنان ناموفق بود"},502); }
+            if (ban) return json({error:"یکی از بازیکنان این اتاق مسدود است"},403);
+          }
+        } else if (bulkPlayersPath && method === "PUT" && payload !== null) {
+          return json({error:"فهرست بازیکنان باید یک شیء معتبر باشد"},400);
+        }
+      }
+    }
+
     const playerPath = rawPath.match(/^roomsV23\/(\d{5})\/players\/([A-Za-z0-9_-]{1,80})\.json$/);
     if (playerPath && ["PUT","PATCH"].includes(method)) {
       let player = {}; try { player = JSON.parse(body || "{}"); } catch { return json({error:"اطلاعات بازیکن نامعتبر است"},400); }
