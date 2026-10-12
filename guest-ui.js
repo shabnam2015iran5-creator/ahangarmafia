@@ -75,8 +75,20 @@ if(typeof originalClose==='function'){
 const originalLeave=window.leave;
 if(typeof originalLeave==='function'){
  window.leave=function(){
-  if(isGuest()){showGate();return}
+  if(isGuest()){const result=originalLeave.apply(this,arguments);showGate();return result}
   return originalLeave.apply(this,arguments);
+ };
+}
+if(window.BP){
+ const originalBPOpen=window.BP.open;
+ if(typeof originalBPOpen==='function')window.BP.open=function(which){
+  if(isGuest()){toastMsg('مهمان فقط اجازهٔ استفاده از آموزش را دارد.');return}
+  return originalBPOpen.apply(this,arguments);
+ };
+ const originalBPGoLobby=window.BP.goLobby;
+ if(typeof originalBPGoLobby==='function')window.BP.goLobby=function(kind){
+  if(isGuest()){if(kind==='training'||kind==='edu'){startTraining();return}toastMsg('برای ورود به این لابی باید ثبت‌نام کنی.');return}
+  return originalBPGoLobby.apply(this,arguments);
  };
 }
 function restrictRoomButtons(){
