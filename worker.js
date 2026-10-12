@@ -214,7 +214,6 @@ export default {
         if (!injected.includes("/account-ui.js")) injected = injected.replace(/<\/body\s*>/i, '<script src="/account-ui.js?v=30" defer></script></body>');
         if (!injected.includes("/admin-ui.js")) injected = injected.replace(/<\/body\s*>/i, '<script src="/admin-ui.js" defer></script></body>');
         if (!injected.includes("/room-ui.js")) injected = injected.replace(/<\/body\s*>/i, '<script src="/room-ui.js" defer></script></body>');
-        if (!injected.includes("/alliance-ui.js")) injected = injected.replace(/<\/body\s*>/i, '<script src="/alliance-ui.js" defer></script></body>');
         if (!injected.includes("/startup-fix.js")) injected = injected.replace(/<\/body\s*>/i, '<script src="/startup-fix.js" defer></script></body>');
         if (!injected.includes("/guest-ui.js")) injected = injected.replace(/<\/body\s*>/i, '<script src="/guest-ui.js?v=1" defer></script></body>');
         if (!injected.includes("/support-ui.js")) injected = injected.replace(/<\/body\s*>/i, '<script src="/support-ui.js?v=1" defer></script></body>');
