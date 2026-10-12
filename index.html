@@ -788,6 +788,23 @@ const Voice=(()=>{
   p.on('error',e=>fin(e&&e.type==='unavailable-id'?null:undefined));
  })}
  const MIC={audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}};
+ // Limit outgoing voice bandwidth to reduce data use on mobile networks.
+ // Apply the cap after PeerJS creates the underlying WebRTC sender.
+ function limitOutgoingAudio(call,attempt=0){
+  try{
+   const pc=call&&call.peerConnection;
+   const senders=pc&&typeof pc.getSenders==='function'?pc.getSenders():[];
+   const sender=senders.find(s=>s.track&&s.track.kind==='audio'&&typeof s.getParameters==='function'&&typeof s.setParameters==='function');
+   if(sender){
+    const params=sender.getParameters();
+    if(!params.encodings||!params.encodings.length)params.encodings=[{}];
+    params.encodings[0].maxBitrate=28000;
+    Promise.resolve(sender.setParameters(params)).catch(()=>{});
+    return;
+   }
+  }catch(e){}
+  if(attempt<20)setTimeout(()=>limitOutgoingAudio(call,attempt+1),150);
+ }
  function watchLocal(){try{an=ctx.createAnalyser();an.fftSize=256;ctx.createMediaStreamSource(local).connect(an);anBuf=new Uint8Array(an.frequencyBinCount)}catch(e){an=null}}
 
  async function join(kind){
@@ -810,7 +827,7 @@ const Voice=(()=>{
   if(!p){joining=false;if(micOk)local.getTracks().forEach(t=>t.stop());local=null;rawTrack=null;
    setStatus(fail?'❌ اتصال به سرور وویس برقرار نشد':'⚠️ ظرفیت وویس این لابی پر است');return}
   peer=p;on=true;joining=false;
-  p.on('call',call=>{const s=slotOf(call.peer);if(!s||s===slot){try{call.close()}catch(e){}return}call.answer(local);bindCall(s,call)});
+  p.on('call',call=>{const s=slotOf(call.peer);if(!s||s===slot){try{call.close()}catch(e){}return}call.answer(local);bindCall(s,call);limitOutgoingAudio(call)});
   p.on('connection',conn=>{const s=slotOf(conn.peer);if(!s||s===slot){try{conn.close()}catch(e){}return}bindConn(s,conn)});
   p.on('disconnected',()=>{if(peer===p&&!p.destroyed)try{p.reconnect()}catch(e){}});
   p.on('error',e=>{if(e&&e.type==='peer-unavailable'){const m=/(\S+)\s*$/.exec(e.message||'');const s=m&&slotOf(m[1]);if(s&&R[s]&&!R[s].live)drop(s)}});
@@ -823,7 +840,12 @@ const Voice=(()=>{
  function newR(s){return R[s]||(R[s]={slot:s,t0:Date.now(),live:false,sp:false})}
  function dial(s){
   const id=room+'-'+s,r=newR(s);r.t0=Date.now();
-  try{bindConn(s,peer.connect(id,{reliable:true}));bindCall(s,peer.call(id,local))}catch(e){drop(s)}
+  try{
+   bindConn(s,peer.connect(id,{reliable:true}));
+   const call=peer.call(id,local);
+   bindCall(s,call);
+   limitOutgoingAudio(call);
+  }catch(e){drop(s)}
  }
  function connectLoop(){
   if(!peer||peer.destroyed)return;
