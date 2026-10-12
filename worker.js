@@ -335,7 +335,7 @@ export default {
             if (player.uid && player.uid !== id) return json({error:"شناسهٔ بازیکن با درخواست مطابقت ندارد"},403);
             if (managerRequest) continue;
             let registered;
-            try { registered = (await dbRead("usersV1/"+id)).data;
+            try { registered = (await dbRead("usersV1/"+id)).data; }
             catch { return json({error:"بررسی ثبت‌نام بازیکنان ناموفق بود"},502); }
             if (!registered || !registered.registered) return json({error:"همهٔ بازیکنان باید ابتدا ثبت‌نام کنند"},403);
             let ban;
