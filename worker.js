@@ -142,6 +142,7 @@ export default {
         if (!injected.includes("/account-ui.js")) injected = injected.replace(/<\/body\s*>/i, '<script src="/account-ui.js" defer></script></body>');
         if (!injected.includes("/admin-ui.js")) injected = injected.replace(/<\/body\s*>/i, '<script src="/admin-ui.js" defer></script></body>');
         if (!injected.includes("/room-ui.js")) injected = injected.replace(/<\/body\s*>/i, '<script src="/room-ui.js" defer></script></body>');
+        if (!injected.includes("/alliance-ui.js")) injected = injected.replace(/<\/body\s*>/i, '<script src="/alliance-ui.js" defer></script></body>');
         const headers = new Headers(asset.headers); headers.delete("Content-Length"); headers.set("Cache-Control", "no-store");
         return new Response(injected, { status: asset.status, statusText: asset.statusText, headers });
       }
