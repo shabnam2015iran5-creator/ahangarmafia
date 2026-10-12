@@ -909,11 +909,20 @@ const Voice=(()=>{
   if(Array.isArray(seats))seats.forEach((s,i)=>{const c=document.querySelector('#s'+i+' .cell');if(!c)return;let b=c.querySelector('.vmic');const mine=(i==0&&typeof role!=='undefined'&&role==='player'),hv=s&&s.hv;if(s&&(hv||mine)){const off=mine?!!(muted||!micOk||!allowed()):!!s.mu;if(!b){b=document.createElement('i');c.appendChild(b)}b.className='vmic '+(off?'off':'on');b.textContent=off?'🔇':'🎙'}else if(b)b.remove()});
   enforce();
  }
+ function syncLobbySpeaking(){
+  const active=new Set();
+  if(on&&micOk&&meSp)active.add(clean(myName()));
+  Object.values(R).forEach(r=>{if(r.live&&r.sp&&r.n)active.add(clean(r.n))});
+  document.querySelectorAll('#chairGrid .lSeat').forEach(el=>{
+   const label=el.querySelector('.seatName'),name=label&&clean(label.textContent||'');
+   el.classList.toggle('speaking',!!name&&active.has(name));
+  });
+ }
  function refresh(){
   const n=humans().length+(on?1:0);
   setStatus(on?'🎙 وویس متصل · '+n+' نفر در کانال'+(micOk?'':' · (بدون میکروفن)'):'');
   const lr=g('lobbyRoom');
-  if(lr&&lr.classList.contains('on')){applyLobbySeats();renderLobbyChairs();
+  if(lr&&lr.classList.contains('on')){applyLobbySeats();renderLobbyChairs();syncLobbySpeaking();
    const sb=g('roomStartBtn');if(sb&&typeof lobbyMode!=='undefined'&&lobbyMode==='player'){const gd=on&&godHere();sb.textContent=gd?'⏳ منتظر گرداننده':'🎭 شروع بازی';sb.disabled=gd}}
   if(inGame())try{render()}catch(e){}
  }
