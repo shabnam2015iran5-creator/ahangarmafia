@@ -2574,7 +2574,7 @@ window.APP_VERSION='27.0';
     const active=Object.values(rooms||{}).filter(r=>{
       if(!r||!r.code||r.kind!==kind||now-(r.updatedAt||r.createdAt||0)>43200000)return false;
       const players=Object.values(r.players||{});
-      return players.some(p=>p&&now-(p.at||0)<15000);
+      return players.some(p=>p&&now-(p.at||0)<60000);
     }).sort((a,b)=>(b.updatedAt||b.createdAt||0)-(a.updatedAt||a.createdAt||0));
     let c='',createNew=!active.length;
     if(active.length){
@@ -2612,7 +2612,7 @@ window.APP_VERSION='27.0';
       }
       if(asGod){
         const oldHost=found.host&&found.players&&found.players[found.host];
-        const hostIsActive=!!(oldHost&&now-(oldHost.at||0)<15000);
+        const hostIsActive=!!(oldHost&&now-(oldHost.at||0)<60000);
         if(found.host&&found.host!==uid()&&hostIsActive){
           const makeAnother=confirm('این اتاق گردانندهٔ فعالی دارد.\nبرای اینکه گرداننده روی کارت پایین نمایش داده شود و دو گرداننده در یک اتاق نباشند، اتاق جدید بسازیم؟');
           if(!makeAnother){toast('برای ورود به این اتاق، نقش بازیکن را انتخاب کن.');return}
@@ -2652,8 +2652,10 @@ window.APP_VERSION='27.0';
     if(window.__v25Poll)clearInterval(window.__v25Poll);
     window.__v25Poll=setInterval(refreshRealRoom,2200);
   }
+  let refreshingRoom=false;
   async function refreshRealRoom(){
-    const c=window.MAFIA_ROOM_CODE;if(!c)return;
+    const c=window.MAFIA_ROOM_CODE;if(!c||refreshingRoom)return;
+    refreshingRoom=true;
     try{
       const mine=me(),now=Date.now();
       await updatePlayer(c,{...mine,at:now});
@@ -2662,10 +2664,10 @@ window.APP_VERSION='27.0';
       const rooms=await getRooms(),r=rooms[c];if(!r)return;
       renderRealSeats(r);
       // شروع از سمت گرداننده از طریق کانال Net/Voice به بازیکنان می‌رسد؛ اتاق همچنان منبع حضور مشترک است.
-    }catch(e){}
+    }catch(e){}finally{refreshingRoom=false}
   }
   function renderRealSeats(r){
-    const now=Date.now(),arr=Object.values(r.players||{}).filter(p=>p&&now-(p.at||0)<15000&&p.role!=='god').slice(0,10);
+    const now=Date.now(),arr=Object.values(r.players||{}).filter(p=>p&&now-(p.at||0)<60000&&p.role!=='god').slice(0,10);
     lobbyRoomSeats=Array(10).fill(null);arr.forEach((p,i)=>lobbyRoomSeats[i]={n:p.n,id:i+1,seed:p.seed||1,f:(p.seed||1)%3===0,human:true,ready:!!p.ready,online:true,uid:p.uid});
     renderLobbyChairs();$('roomCount').textContent='👥 '+arr.length+'/10';
     const host=r.host&&r.players[r.host];const card=$('modCard');
