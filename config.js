@@ -99,7 +99,7 @@ window.MAFIA_ONE_ROOM_ALL=true;     // true: هر سه لابی یک اتاق‌
 
  // Voice connection watchdog: Voice is a top-level lexical const in index.html,
  // not window.Voice. Access it through the page's global lexical environment.
- let bmVoiceLastAttempt=0,bmVoiceRoomKey='';
+ let bmVoiceLastAttempt=0,bmVoiceRoomKey='',bmVoiceConnectingSince=0;
  const bmVoiceEval=(code)=>{try{return (0,eval)(code)}catch(e){return undefined}};
  const bmVoiceWatch=()=>{
   try{
@@ -115,12 +115,18 @@ window.MAFIA_ONE_ROOM_ALL=true;     // true: هر سه لابی یک اتاق‌
    const status=document.getElementById('voiceStatus');
    const msg=String(status&&status.textContent||'').trim();
    const active=!!bmVoiceEval("typeof Voice!=='undefined' && Voice.active && Voice.active()");
-   if(active)return;
-   const failed=!msg||/اتصال به سرور وویس برقرار نشد|کتابخانه وویس.*بارگذاری نشد|ظرفیت وویس این لابی پر است|خطا.*وویس/i.test(msg);
-   if(!failed)return;
+   if(active){bmVoiceConnectingSince=0;return}
    const now=Date.now();
+   const connecting=/در حال تلاش برای اتصال ویس/i.test(msg);
+   if(connecting){if(!bmVoiceConnectingSince)bmVoiceConnectingSince=now}
+   else bmVoiceConnectingSince=0;
+   // If the connection stays in the connecting state too long, permit a cautious retry.
+   const stuckConnecting=connecting&&bmVoiceConnectingSince&&now-bmVoiceConnectingSince>=25000;
+   const failed=!msg||/اتصال به سرور وویس برقرار نشد|کتابخانه وویس.*بارگذاری نشد|ظرفیت وویس این لابی پر است|خطا.*وویس/i.test(msg)||stuckConnecting;
+   if(!failed)return;
    if(now-bmVoiceLastAttempt<15000)return;
    bmVoiceLastAttempt=now;
+   bmVoiceConnectingSince=now;
    if(status)status.textContent='⏳ در حال تلاش برای اتصال ویس...';
    bmVoiceEval("Voice.join(window.__voiceKey||window.MAFIA_ROOM_CODE||'main')");
   }catch(e){}
