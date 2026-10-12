@@ -10,5 +10,5 @@ function enter(){try{localStorage.setItem('bm_manager_mode','1');localStorage.re
 function statusText(t){const n=$('bmmStatus');if(n)n.textContent=t}
 launch.onclick=()=>{modal.style.display='flex';$('bmmCode').value='';statusText('');$('bmmCode').focus()};$('bmmClose').onclick=()=>modal.style.display='none';modal.addEventListener('click',e=>{if(e.target===modal)modal.style.display='none'});
 $('bmmEnter').onclick=()=>{if($('bmmCode').value!=='1234'){statusText('کد ورود نادرست است.');return}enter()};
-if(localStorage.getItem('bm_manager_mode')==='1'){window.BMManagerMode=true;launch.textContent='🛡 مدیر فعال';}
+if(localStorage.getItem('bm_manager_mode')==='1'){window.BMManagerMode=true;launch.textContent='🛡 مدیر فعال';setTimeout(enter,0)}
 })();
