@@ -830,7 +830,7 @@ const Voice=(()=>{
   for(let s=slot+1;s<=C.maxSlots;s++){ // فقط شماره‌ی کمتر به بیشتر زنگ می‌زند تا تماس دوتایی نشود
    const r=R[s];
    if(r&&r.live)continue;
-   if(r&&Date.now()-r.t0<35000)continue; // اجازه بده مذاکره WebRTC و ICE فرصت کافی برای رسیدن صدا داشته باشد
+   if(r&&Date.now()-r.t0<10000)continue;
    if(r)drop(s,true);
    dial(s);
   }
