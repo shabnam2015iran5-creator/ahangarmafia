@@ -270,7 +270,7 @@ window.MAFIA_ONE_ROOM_ALL=true;     // true: هر سه لابی یک اتاق‌
   // Pick a visible management control, not the similarly named button in a hidden modal.
   const admin=candidates.find(n=>visible(n)&&isAdmin(n));
   if(!admin)return;
-  const b=document.createElement('button');b.id='bmGhostEntry';b.type='button';b.textContent='👻 ورود روح ناظر';b.onclick=open;
+  const b=document.createElement('button');b.id='bmGhostEntry';b.type='button';b.textContent='روح ناظر';b.onclick=open;
   b.style.cssText='display:block!important;visibility:visible!important;opacity:1!important;position:relative;z-index:20;width:100%;max-width:100%;margin:10px 0;padding:12px;border-radius:12px;border:1px solid #7cecff;background:linear-gradient(135deg,#101d35,#263d5d);color:#dffcff;font-weight:800;cursor:pointer;box-sizing:border-box';
   // Insert beside the visible management button so the entry is visible on the same screen.
   (admin.parentElement||admin).insertAdjacentElement('afterend',b);
