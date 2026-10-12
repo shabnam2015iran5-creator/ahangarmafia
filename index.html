@@ -2563,7 +2563,7 @@ window.APP_VERSION='27.0';
     const now=Date.now();
     // اتاق‌های تازه و دارای بازیکن آنلاین را برای پیشنهاد ورود پیدا کن.
     const active=Object.values(rooms||{}).filter(r=>{
-      if(!r||!r.code||now-(r.updatedAt||r.createdAt||0)>43200000)return false;
+      if(!r||!r.code||r.kind!==kind||now-(r.updatedAt||r.createdAt||0)>43200000)return false;
       const players=Object.values(r.players||{});
       return players.some(p=>p&&now-(p.at||0)<15000);
     }).sort((a,b)=>(b.updatedAt||b.createdAt||0)-(a.updatedAt||a.createdAt||0));
@@ -2575,8 +2575,10 @@ window.APP_VERSION='27.0';
       if(goIn)c=String(r.code);
     }
     // همه قبل از ورود نقش خود را انتخاب می‌کنند؛ درِ گرداننده هم همین انتخاب را نشان می‌دهد.
-    const asGod=confirm('چطور وارد شوی؟\n\n«تأیید» = گرداننده\n«لغو» = بازیکن');
+    // ورود به اتاق موجود همیشه با نقش بازیکن انجام می‌شود؛ انتخاب گاد فقط هنگام ساخت اتاق جدید است.
+    const asGod=createNew ? confirm('برای اتاق جدید چگونه وارد شوی؟\n\n«تأیید» = گرداننده (گاد)\n«لغو» = بازیکن') : false;
     lobbyMode=asGod?'god':'player';window.lobbyMode=lobbyMode;
+    lobbyReady=!asGod;
     if(createNew){
       do{c=String(Math.floor(10000+Math.random()*90000))}while(rooms[c]);
     }
@@ -2587,15 +2589,15 @@ window.APP_VERSION='27.0';
         const res=await fetch(db()+'/roomsV23/'+c+'.json',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(patch)});
         if(!res.ok)throw Error('server '+res.status);
       }else{
-        const all=localAll(),r=all[c]||{code:c,kind:'friendly',players:{}};
+        const all=localAll(),r=all[c]||{code:c,kind:kind,players:{}};
         Object.assign(r,patch);all[c]=r;localSave(all);
       }
     };
     try{
       let found=rooms[c]||null;
       if(createNew||!found){
-        found={code:c,kind:'friendly',createdAt:now,updatedAt:now,status:'waiting',players:{}};
-        await patchMeta({code:c,kind:'friendly',createdAt:now,updatedAt:now,status:'waiting',host:null,hostName:''});
+        found={code:c,kind:kind,createdAt:now,updatedAt:now,status:'waiting',players:{}};
+        await patchMeta({code:c,kind:kind,createdAt:now,updatedAt:now,status:'waiting',host:null,hostName:''});
       }else{
         found.players=found.players||{};
       }
@@ -2606,26 +2608,29 @@ window.APP_VERSION='27.0';
           const makeAnother=confirm('این اتاق گردانندهٔ فعالی دارد.\nبرای اینکه گرداننده روی کارت پایین نمایش داده شود و دو گرداننده در یک اتاق نباشند، اتاق جدید بسازیم؟');
           if(!makeAnother){toast('برای ورود به این اتاق، نقش بازیکن را انتخاب کن.');return}
           do{c=String(Math.floor(10000+Math.random()*90000))}while(rooms[c]);
-          found={code:c,kind:'friendly',createdAt:now,updatedAt:now,status:'waiting',players:{}};
-          await patchMeta({code:c,kind:'friendly',createdAt:now,updatedAt:now,status:'waiting',host:null,hostName:''});
+          found={code:c,kind:kind,createdAt:now,updatedAt:now,status:'waiting',players:{}};
+          await patchMeta({code:c,kind:kind,createdAt:now,updatedAt:now,status:'waiting',host:null,hostName:''});
         }
-        await patchMeta({host:uid(),hostName:mine.n,kind:'friendly',updatedAt:now,status:'waiting'});
+        await patchMeta({host:uid(),hostName:mine.n,kind:kind,updatedAt:now,status:'waiting'});
       }else{
-        await patchMeta({code:c,kind:'friendly',updatedAt:now});
+        await patchMeta({code:c,kind:kind,updatedAt:now});
       }
       // هر گوشی فقط رکورد خودش را می‌نویسد؛ گرداننده روی صندلی بازیکنان قرار نمی‌گیرد.
       await updatePlayer(c,{...mine,at:now});
       rooms=await getRooms();found=rooms[c]||found;
       found.players=found.players||{};
-      window.__voiceKey='friendly-'+c;
+      window.__voiceKey=kind+'-'+c;
       enterRealRoom(found);
     }catch(e){toast('ورود یا ساخت اتاق ناموفق بود؛ لطفاً دوباره تلاش کنید.');console.error(e)}
   }
   function enterRealRoom(r){
     window.MAFIA_ROOM_CODE=r.code;window.MAFIA_ROOM_META=r;window.MAFIA_ROOM_ONLINE=!!db();
     lobbyKind=r.kind;
-    lobbyRoomSeats=Array(10).fill(null);lobbyReady=false;
+    lobbyRoomSeats=Array(10).fill(null);lobbyReady=lobbyMode!=='god';
     if(lobbyMode==='player')role='player';
+    const readyButton=$('readyBtn'),startButton=$('roomStartBtn');
+    if(readyButton)readyButton.style.display='none';
+    if(startButton){startButton.style.display=lobbyMode==='god'?'inline-flex':'none';startButton.textContent='🎭 شروع بازی';}
     buildLobbyRoom();
     $('lobbyGate')?.classList.remove('on');$('doorScreen')?.classList.remove('on');$('lobbyRoom')?.classList.add('on');
     const roomMode=window.MAFIA_ROOM_ONLINE?'آنلاین':'محلی';
@@ -2643,6 +2648,8 @@ window.APP_VERSION='27.0';
     try{
       const mine=me(),now=Date.now();
       await updatePlayer(c,{...mine,at:now});
+      if(db()){try{await fetch(db()+'/roomsV23/'+encodeURIComponent(c)+'.json',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({updatedAt:now})})}catch(e){}}
+      else {const all=localAll();if(all[c]){all[c].updatedAt=now;localSave(all)}}
       const rooms=await getRooms(),r=rooms[c];if(!r)return;
       renderRealSeats(r);
       // شروع از سمت گرداننده از طریق کانال Net/Voice به بازیکنان می‌رسد؛ اتاق همچنان منبع حضور مشترک است.
@@ -2957,5 +2964,51 @@ button[title], [role="button"][title]{cursor:pointer}button:focus-visible{outlin
  $('bmChatForm').addEventListener('submit',async e=>{e.preventDefault();const text=input.value.trim();if(!text||!db()||!code())return;input.disabled=true;try{await req('roomsV23/'+encodeURIComponent(code())+'/chat','POST',{uid:me(),name:name(),text:text.slice(0,300),at:Date.now()});input.value='';await prune();await refresh()}catch(e){$('bmChatHint').textContent='ارسال نشد؛ اتصال اتاق را بررسی کن.'}finally{input.disabled=false;input.focus()}});
  async function prune(){try{const path='roomsV23/'+encodeURIComponent(code())+'/chat',data=await req(path);const rows=Object.entries(data||{}).sort((a,b)=>(a[1]?.at||0)-(b[1]?.at||0));for(const [id] of rows.slice(0,Math.max(0,rows.length-40)))await req(path+'/'+encodeURIComponent(id),'DELETE')}catch(e){}}
  setInterval(syncVisibility,700);document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh()});
+})();
+</script>
+
+<!-- BLACK MAFIA: restore lobby controls and shared-room role flow -->
+<style id="bm-lobby-controls-restore">
+#lobbyRoom .roomActions{display:flex!important;align-items:center!important;gap:5px!important;flex-wrap:nowrap!important;justify-content:space-between!important}
+#lobbyRoom .roomActions #readyBtn{display:none!important}
+#lobbyRoom .roomActions #roomStartBtn{flex:1 1 auto;min-width:0!important}
+#lobbyRoom .roomActions #roomMic{flex:0 0 38px!important;min-width:38px!important}
+#lobbyRoom .roomActions #deckBtn{flex:1 1 auto;min-width:0!important;white-space:nowrap;padding:7px 5px!important;font-size:10px!important}
+#lobbyRoom .roomActions #bmChatToggle{position:static!important;right:auto!important;bottom:auto!important;z-index:61!important;flex:1 1 auto;min-width:0!important;white-space:nowrap;padding:7px 5px!important;font:700 10px inherit!important;border-radius:10px!important;box-shadow:none!important}
+#lobbyRoom .roomActions #roomTimer{position:static!important;right:auto!important;bottom:auto!important;min-width:52px!important;width:auto!important;flex:0 0 auto!important;margin:0!important;padding:5px 6px!important;border:1px solid #c9972f!important;border-radius:9px!important;font-size:12px!important;line-height:1.1!important;text-align:center!important}
+#lobbyRoom .roomActions #roomTimer small{display:none!important}
+#bmChatPanel{bottom:68px!important}
+@media(max-width:390px){
+ #lobbyRoom .roomActions{gap:3px!important;padding-left:6px!important;padding-right:6px!important}
+ #lobbyRoom .roomActions #roomMic{flex-basis:32px!important;min-width:32px!important}
+ #lobbyRoom .roomActions #deckBtn,#lobbyRoom .roomActions #bmChatToggle{font-size:9px!important;padding:6px 3px!important}
+ #lobbyRoom .roomActions #roomTimer{min-width:45px!important;font-size:11px!important;padding:4px 3px!important}
+}
+</style>
+<script id="bm-lobby-controls-restore-js">
+(()=> {
+ const $=id=>document.getElementById(id);
+ const acts=document.querySelector('#lobbyRoom .roomActions');
+ const deck=$('deckBtn'),chat=$('bmChatToggle'),timer=$('roomTimer'),mic=$('roomMic'),start=$('roomStartBtn'),ready=$('readyBtn');
+ if(ready)ready.style.display='none';
+ if(acts&&timer&&timer.parentElement!==acts)acts.insertBefore(timer,deck?deck.nextSibling:mic?.nextSibling||null);
+ if(acts&&chat&&chat.parentElement!==acts)acts.insertBefore(chat,timer?timer.nextSibling:deck?.nextSibling||null);
+ function syncRole(){
+   const god=window.lobbyMode==='god';
+   if(start){start.style.display=god?'inline-flex':'none';start.textContent='🎭 شروع بازی';start.disabled=false}
+   if(ready)ready.style.display='none';
+   if(typeof lobbyReady!=='undefined'&&!god)lobbyReady=true;
+ }
+ const oldEnter=window.enterLobby;
+ if(typeof oldEnter==='function'&&!window.__bmEnterRoleGuard){window.__bmEnterRoleGuard=true;window.enterLobby=function(kind){return oldEnter.apply(this,arguments)}}
+ const oldStart=window.roomStartGame;
+ if(typeof oldStart==='function'&&!window.__bmGodOnlyStart){
+   window.__bmGodOnlyStart=true;
+   window.roomStartGame=function(){if(window.lobbyMode!=='god'){try{toast('فقط گردانندهٔ اتاق می‌تواند بازی را شروع کند.')}catch(e){}return false}return oldStart.apply(this,arguments)}
+ }
+ syncRole();
+ const watch=new MutationObserver(syncRole);
+ const room=$('lobbyRoom');if(room)watch.observe(room,{attributes:true,attributeFilter:['class']});
+ setInterval(()=>{if(room?.classList.contains('on'))syncRole()},700);
 })();
 </script>
