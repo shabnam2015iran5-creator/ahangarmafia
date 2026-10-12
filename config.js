@@ -108,6 +108,9 @@ window.MAFIA_ONE_ROOM_ALL=true;     // true: هر سه لابی یک اتاق‌
    if(!room||!room.classList.contains('on'))return;
    const joinAvailable=bmVoiceEval("typeof Voice!=='undefined' && typeof Voice.join==='function'");
    if(!joinAvailable)return;
+   // Re-apply the configured STUN/TURN list immediately before joining. This is
+   // needed because a later inline default can overwrite VOICE_CFG.ice.
+   bmVoiceEval("if(typeof VOICE_CFG!=='undefined'){VOICE_CFG.peer={host:'0.peerjs.com',port:443,path:'/',secure:true};VOICE_CFG.ice=[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'}].concat(Array.isArray(window.MAFIA_TURN)?window.MAFIA_TURN:[])}");
    const key=String(window.MAFIA_ROOM_CODE||window.__voiceKey||'main');
    if(key!==bmVoiceRoomKey){bmVoiceRoomKey=key;bmVoiceLastAttempt=0}
    const status=document.getElementById('voiceStatus');
