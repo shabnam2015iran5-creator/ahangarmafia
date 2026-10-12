@@ -49,29 +49,36 @@ async function init(){
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{showLawBanner();init()},{once:true});else{showLawBanner();init()}
 
+
 function enhanceMainProfileForm(){
- const full=$('playerFullName'),nick=$('playerNick'),age=$('playerAge'),account=$('playerAccount'),saveBtn=$('savePlayerRegistration');
- if(!account||account.dataset.bmEditableReady)return;
- account.dataset.bmEditableReady='1';account.readOnly=false;account.removeAttribute('readonly');account.setAttribute('maxlength','24');account.setAttribute('autocomplete','off');account.setAttribute('spellcheck','false');
- const fields=[['full',full,el=>el.value.trim().length>=2&&el.value.trim().length<=60],['nick',nick,el=>el.value.trim().normalize('NFKC').length>=2&&el.value.trim().normalize('NFKC').length<=18],['age',age,el=>el.value.trim()!==''&&Number.isInteger(Number(el.value))&&Number(el.value)>=1&&Number(el.value)<=99],['account',account,el=>/^[A-Z0-9_-]{3,24}$/.test(el.value.trim().toUpperCase())]];
- for(const [key,el] of fields){if(!el)continue;let state=document.getElementById('bmMainState_'+key);if(!state){state=document.createElement('span');state.id='bmMainState_'+key;state.className='bmRegFieldState';state.textContent='○';el.insertAdjacentElement('afterend',state)}}
- const status=document.getElementById('playerRegistrationStatus');
- const check=()=>{
-  const ok={};for(const [key,el,test] of fields){ok[key]=!!el&&test(el);const state=document.getElementById('bmMainState_'+key);if(state){state.textContent=ok[key]?'✓':'○';state.className='bmRegFieldState '+(ok[key]?'ok':'')}}
-  if(saveBtn)saveBtn.disabled=!fields.every(([key,el])=>ok[key]);
-  if(status&&fields.some(([key,el])=>!ok[key]))status.textContent='برای ثبت، همهٔ موارد را کامل کن تا کنار هرکدام تیک سبز بیاید.';
-  return ok;
- };
- account.addEventListener('input',()=>{const p=account.selectionStart;account.value=account.value.toUpperCase().replace(/[^A-Z0-9_-]/g,'').slice(0,24);try{account.setSelectionRange(p,p)}catch(e){}check()});
- for(const [key,el] of fields)if(el&&el!==account)el.addEventListener('input',check);
- if(saveBtn)saveBtn.addEventListener('click',e=>{
-  const ok=check();if(!fields.every(([key,el])=>ok[key])){e.preventDefault();e.stopImmediatePropagation();if(status)status.textContent='موارد بدون تیک سبز را اصلاح کن.';return}
-  const code=account.value.trim().toUpperCase();
-  try{localStorage.setItem('mafia_account',code)}catch(_){}
-  try{eval("if(typeof S!=='undefined'){S.account="+JSON.stringify(code)+";S.fullName="+JSON.stringify(full?full.value.trim():'')+";S.nick="+JSON.stringify(nick?nick.value.trim():'')+";S.age="+Number(age?age.value:0)+";}")}catch(_){}
- },true);
- check();
+ const $id=id=>document.getElementById(id);
+ const styleId='bmLiveFieldFixStyle';
+ if(!$id(styleId)){const st=document.createElement('style');st.id=styleId;st.textContent='.bmRegFieldState{display:inline-flex!important;min-width:26px;min-height:24px;align-items:center;justify-content:center;font-size:19px;font-weight:900;margin:3px 6px;color:#e7d7b7}.bmRegFieldState.ok{color:#35e783!important}.bmRegFieldState.bad{color:#ff8a9a!important}#bmRegAccount,#playerAccount{pointer-events:auto!important;user-select:text!important;-webkit-user-select:text!important;opacity:1!important}';document.head.appendChild(st)}
+ function enhanceOverlay(){
+  const a=$id('bmRegAccount');if(!a)return;
+  a.readOnly=false;a.removeAttribute('readonly');a.disabled=false;a.removeAttribute('disabled');a.style.pointerEvents='auto';
+  const inputs=[['Full',$id('bmRegFull'),v=>v.trim().length>=2&&v.trim().length<=60],['Nick',$id('bmRegNick'),v=>v.trim().normalize('NFKC').length>=2&&v.trim().normalize('NFKC').length<=18],['Age',$id('bmRegAge'),v=>v.trim()!==''&&Number.isInteger(Number(v))&&Number(v)>=1&&Number(v)<=99],['Account',a,v=>/^[A-Z0-9_-]{3,24}$/.test(v.trim().toUpperCase())]];
+  const b=$id('bmRegSubmit');
+  const check=()=>{let all=true;for(const [key,el,test] of inputs){const ok=!!el&&test(el.value);all=all&&ok;const state=$id('bmState'+key);if(state){state.textContent=ok?'✓':'✗';state.className='bmRegFieldState '+(ok?'ok':'bad')}}if(b)b.disabled=!all;return all};
+  if(!a.dataset.bmAccountInputFix){a.dataset.bmAccountInputFix='1';a.addEventListener('input',()=>{const p=a.selectionStart; a.value=a.value.toUpperCase().replace(/[^A-Z0-9_-]/g,'').slice(0,24);try{a.setSelectionRange(p,p)}catch(e){}check()})}
+  for(const [key,el] of inputs)if(el&&!el.dataset.bmLiveCheck){el.dataset.bmLiveCheck='1';el.addEventListener('input',check);el.addEventListener('change',check)}
+  check();
+ }
+ function enhanceMain(){
+  const full=$id('playerFullName'),nick=$id('playerNick'),age=$id('playerAge'),account=$id('playerAccount'),saveBtn=$id('savePlayerRegistration');
+  if(account){account.readOnly=false;account.removeAttribute('readonly');account.disabled=false;account.removeAttribute('disabled');account.style.pointerEvents='auto';account.style.userSelect='text';account.style.webkitUserSelect='text';account.setAttribute('maxlength','24');account.setAttribute('autocomplete','off');account.setAttribute('spellcheck','false');}
+  const fields=[['full',full,el=>el.value.trim().length>=2&&el.value.trim().length<=60],['nick',nick,el=>el.value.trim().normalize('NFKC').length>=2&&el.value.trim().normalize('NFKC').length<=18],['age',age,el=>el.value.trim()!==''&&Number.isInteger(Number(el.value))&&Number(el.value)>=1&&Number(el.value)<=99],['account',account,el=>/^[A-Z0-9_-]{3,24}$/.test(el.value.trim().toUpperCase())]];
+  for(const [key,el] of fields){if(!el)continue;let state=$id('bmMainState_'+key);if(!state){state=document.createElement('span');state.id='bmMainState_'+key;state.className='bmRegFieldState';state.textContent='✗';el.insertAdjacentElement('afterend',state)}}
+  const status=$id('playerRegistrationStatus');
+  const check=()=>{let all=true;for(const [key,el,test] of fields){const ok=!!el&&test(el);all=all&&ok;const state=$id('bmMainState_'+key);if(state){state.textContent=ok?'✓':'✗';state.className='bmRegFieldState '+(ok?'ok':'bad')}}if(saveBtn)saveBtn.disabled=!all;if(status&& !all)status.textContent='موارد دارای ضربدر را اصلاح کن؛ هر مورد درست با تیک سبز مشخص می‌شود.';return all};
+  if(account&&!account.dataset.bmMainAccountInputFix){account.dataset.bmMainAccountInputFix='1';account.addEventListener('input',()=>{const p=account.selectionStart;account.value=account.value.toUpperCase().replace(/[^A-Z0-9_-]/g,'').slice(0,24);try{account.setSelectionRange(p,p)}catch(e){}try{localStorage.setItem('mafia_account',account.value)}catch(_){}check()})}
+  for(const [key,el] of fields)if(el&&!el.dataset.bmMainLiveCheck){el.dataset.bmMainLiveCheck='1';el.addEventListener('input',check);el.addEventListener('change',check)}
+  if(saveBtn&&!saveBtn.dataset.bmMainSaveFix){saveBtn.dataset.bmMainSaveFix='1';saveBtn.addEventListener('click',e=>{if(!check()){e.preventDefault();e.stopImmediatePropagation();return}try{localStorage.setItem('mafia_account',account.value.trim().toUpperCase())}catch(_){}},true)}
+  check();
+ }
+ enhanceOverlay();enhanceMain();
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',enhanceMainProfileForm,{once:true});else enhanceMainProfileForm();
+if(window.MutationObserver){const bmObserver=new MutationObserver(()=>enhanceMainProfileForm());bmObserver.observe(document.documentElement,{childList:true,subtree:true});}
 window.BMAccount={getProfile(){try{return JSON.parse(localStorage.getItem('mafia_profile')||'null')}catch(e){return null}},getUid};
 })();
