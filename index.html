@@ -1510,7 +1510,7 @@ function adjustLocalCoins(){const d=Number($('bpCoinDelta')?.value||0);if(!Numbe
 })();
 
 document.querySelectorAll('#bpQuality button').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('#bpQuality button').forEach(x=>x.classList.remove('on'));b.classList.add('on');}));
-window.addEventListener('load',()=>{let p=0,el=document.getElementById('bpPercent');const t=setInterval(()=>{p=Math.min(100,p+Math.floor(Math.random()*13)+4);if(el)el.textContent=p+'%';if(p>=100){clearInterval(t);setTimeout(()=>document.getElementById('bpSplash')?.classList.add('hide'),450)}},120);});
+const runSplashProgress=()=>{if(window.__bmSplashProgressStarted)return;window.__bmSplashProgressStarted=true;let p=0,el=document.getElementById('bpPercent');const t=setInterval(()=>{p=Math.min(100,p+Math.floor(Math.random()*13)+4);if(el)el.textContent=p+'%';const bar=document.querySelector('#bpSplash .bpProgress i');if(bar)bar.style.width=p+'%';if(p>=100){clearInterval(t);setTimeout(()=>document.getElementById('bpSplash')?.classList.add('hide'),450)}},120)};if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',runSplashProgress,{once:true});else runSplashProgress();setTimeout(runSplashProgress,150);
 </script>
 <!-- ===== END BLACK PRO UPGRADE ===== -->
 
