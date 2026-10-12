@@ -58,7 +58,14 @@ export default {
       try { return await handleAdmin(request, env, url); } catch (e) { return json({error:e.message || "خطای پنل مدیریت"},502); }
     }
     if (!url.pathname.startsWith("/api/db/")) {
-      return env.ASSETS.fetch(request);
+      const asset = await env.ASSETS.fetch(request);
+      if (request.method === "GET" && (url.pathname === "/" || url.pathname.endsWith("/index.html")) && asset.ok) {
+        const html = await asset.text();
+        const injected = html.includes("/account-ui.js") ? html : html.replace(/<\/body\s*>/i, '<script src="/account-ui.js" defer></script></body>');
+        const headers = new Headers(asset.headers); headers.delete("Content-Length"); headers.set("Cache-Control", "no-store");
+        return new Response(injected, { status: asset.status, statusText: asset.statusText, headers });
+      }
+      return asset;
     }
 
     const method = request.method.toUpperCase();
