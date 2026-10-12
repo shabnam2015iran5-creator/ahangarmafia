@@ -118,9 +118,12 @@ function allowedPath(path) {
     if (p[2] === "players") {
       return p.length === 3 || (p.length === 4 && /^[A-Za-z0-9_-]{1,80}$/.test(p[3]));
     }
-    if (p[2] === "chat") {
+    if (p[2] === "chat" || p[2] === "players") {
       return p.length === 3 || (p.length === 4 && /^[A-Za-z0-9_-]{1,80}$/.test(p[3]));
     }
+    // Room state fields used by the lobby, game-start flow, and observer panel.
+    if (["status","kind","code","name","roomName","createdAt","updatedAt","startedAt","host","hostName"].includes(p[2])) return p.length === 3;
+    if (p[2] === "moderatorActions") return p.length === 3 || (p.length === 4 && /^[A-Za-z0-9_-]{1,80}$/.test(p[3]));
     return false;
   }
 
