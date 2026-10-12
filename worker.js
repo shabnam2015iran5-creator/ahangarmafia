@@ -38,7 +38,7 @@ async function handleAlliance(req,url){
     let code="",exists=true;
     for(let i=0;i<12&&exists;i++){code=newAllianceCode();exists=!!(await dbRead("alliancesV1/"+code)).data}
     if(exists)return json({error:"ساخت کد اتحاد ناموفق بود؛ دوباره تلاش کن"},503);
-    const now=Date.now(),member={uid,nick:String(user.nick||"بازیکن").slice(0,18),account:String(user.account||""),joinedAt:now};
+    const now=Date.now(),member={uid,nick:String(user.nick||"بازیکن").slice(0,18),joinedAt:now};
     const alliance={code,name,ownerUid:uid,ownerName:member.nick,createdAt:now,open:true,members:{[uid]:member}};
     const save=await dbWrite("alliancesV1/"+code,"PUT",alliance);
     if(!save.ok)return json({error:"ذخیرهٔ اتحاد انجام نشد"},502);
@@ -54,7 +54,7 @@ async function handleAlliance(req,url){
     if(existing&&existing.uid&&String(existing.uid)!==code)return json({error:"از قبل عضو اتحاد دیگری هستی"},409);
     if(existing&&String(existing.uid)===code)return json({ok:true,alliance});
     if(!await reserveIndex(indexPath,code))return json({error:"عضویت در اتحاد دیگری همزمان ثبت شد"},409);
-    const member={uid,nick:String(user.nick||"بازیکن").slice(0,18),account:String(user.account||""),joinedAt:Date.now()};
+    const member={uid,nick:String(user.nick||"بازیکن").slice(0,18),joinedAt:Date.now()};
     const add=await dbWrite("alliancesV1/"+code+"/members/"+uid,"PUT",member);
     if(!add.ok){await dbWrite(indexPath,"DELETE");return json({error:"ثبت عضویت ناموفق بود"},502)}
     const updated=(await dbRead("alliancesV1/"+code)).data||alliance;
