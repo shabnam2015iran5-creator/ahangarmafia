@@ -107,7 +107,7 @@ export default {
       }
     }
 
-    if (/^usersV1\//.test(rawPath) && method !== "GET") return json({error:"برای ثبت مشخصات از مسیر امن ثبت‌نام استفاده کن"},405);
+    if (/^usersV1(?:\/|\.json$)/.test(rawPath)) return json({error:"اطلاعات حساب‌ها فقط از مسیرهای امن سرور قابل دسترسی است"},403);
     const playerPath = rawPath.match(/^roomsV23\/(\d{5})\/players\/([A-Za-z0-9_-]{1,80})\.json$/);
     if (playerPath && ["PUT","PATCH"].includes(method)) {
       let player = {}; try { player = JSON.parse(body || "{}"); } catch { return json({error:"اطلاعات بازیکن نامعتبر است"},400); }
