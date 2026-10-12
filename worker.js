@@ -149,6 +149,28 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     if (url.pathname === "/api/alliances") { try { return await handleAlliance(request, url); } catch (e) { return json({error:e.message || "خطای اتاق اتحاد"},502); } }
+    if (url.pathname === "/api/profile" && request.method === "GET") {
+      try {
+        const account = String(url.searchParams.get("account") || "").trim().toUpperCase();
+        const uidHint = String(url.searchParams.get("uid") || "");
+        if (!/^[A-Z0-9_-]{3,24}$/.test(account)) return json({error:"کد کاربری معتبر نیست"},400);
+        let uid = "";
+        if (/^[A-Za-z0-9_-]{1,80}$/.test(uidHint)) {
+          const hinted = (await dbRead("usersV1/" + uidHint)).data;
+          if (hinted && hinted.registered && String(hinted.account || "").toUpperCase() === account) uid = uidHint;
+        }
+        if (!uid) {
+          const idx = (await dbRead("accountIndexV1/" + keyOf(account))).data;
+          if (idx && /^[A-Za-z0-9_-]{1,80}$/.test(String(idx.uid || ""))) uid = String(idx.uid);
+        }
+        if (!uid) return json({error:"پروفایل ذخیره‌شده پیدا نشد"},404);
+        const user = (await dbRead("usersV1/" + uid)).data;
+        if (!user || !user.registered || String(user.account || "").toUpperCase() !== account) return json({error:"پروفایل ذخیره‌شده معتبر نیست"},404);
+        const ban = await banFor({uid, nick:user.nick, account:user.account});
+        if (ban) return json({error:ban.type === "permanent" ? "این حساب برای همیشه مسدود شده است" : "این حساب موقتاً مسدود است"},403);
+        return json({ok:true,user});
+      } catch (e) { return json({error:"بازیابی پروفایل از سرور ناموفق بود"},502); }
+    }
     if (url.pathname === "/api/register" && request.method === "POST") {
       if (Number(request.headers.get("Content-Length") || 0) > 40000) return json({error:"اطلاعات بیش از حد بزرگ است"},413);
       try { return await handleRegister(request); } catch (e) { return json({error:e.message || "ثبت‌نام ناموفق بود"},502); }
