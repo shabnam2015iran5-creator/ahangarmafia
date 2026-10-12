@@ -17,3 +17,72 @@ window.MAFIA_BP_ADMIN_PASS='00100900'; // رمز مرکز مدیریت؛ حتم�
 window.MAFIA_SINGLE_ROOM=false;
 window.MAFIA_ROOM_NAME='main';      // نام اتاق مشترک
 window.MAFIA_ONE_ROOM_ALL=true;     // true: هر سه لابی یک اتاق‌اند؛ false: برای هر لابی یک اتاق جدا
+
+/* BLACK MAFIA: player-ready UI, God-only start, shared start fallback, compact controls */
+(()=>{
+ if(window.__bmLobbyHotfixLoaded)return;window.__bmLobbyHotfixLoaded=true;
+ const $=id=>document.getElementById(id),db=()=>String(window.MAFIA_DB_URL||'').replace(/\/$/,'');
+ const uid=()=>{try{return localStorage.getItem('mafia_uid')||''}catch(e){return ''}};
+ const nick=()=>{try{return String((window.S&&S.nick)||$('playerNick')?.value||'').trim().slice(0,18)}catch(e){return String($('playerNick')?.value||'').trim().slice(0,18)}};
+ function layout(){
+  const room=$('lobbyRoom'),acts=room?.querySelector('.roomActions'),ready=$('readyBtn'),start=$('roomStartBtn'),timer=$('roomTimer'),deck=$('deckBtn'),chat=$('bmChatToggle');
+  if(ready)ready.style.setProperty('display','none','important');
+  if(!acts)return;
+  if(timer&&timer.parentElement!==acts)acts.insertBefore(timer,deck?deck.nextSibling:start||null);
+  if(chat&&chat.parentElement!==acts)acts.appendChild(chat);
+  const god=window.lobbyMode==='god';
+  if(start){start.style.setProperty('display',god?'inline-flex':'none','important');start.textContent='🎭 شروع بازی';start.disabled=false}
+  acts.style.setProperty('display','flex','important');
+  acts.style.setProperty('align-items','center','important');
+  acts.style.setProperty('gap','4px','important');
+  acts.style.setProperty('flex-wrap','nowrap','important');
+  if(timer){timer.style.position='static';timer.style.minWidth='44px';timer.style.width='auto';timer.style.flex='0 0 auto';timer.style.margin='0';timer.style.padding='4px 5px';timer.style.fontSize='11px';timer.style.lineHeight='1.1';timer.style.textAlign='center'}
+  if(deck){deck.style.flex='1 1 auto';deck.style.minWidth='0';deck.style.padding='6px 4px';deck.style.fontSize='10px';deck.style.whiteSpace='nowrap'}
+  if(chat){chat.style.position='static';chat.style.right='auto';chat.style.bottom='auto';chat.style.flex='1 1 auto';chat.style.minWidth='0';chat.style.padding='6px 4px';chat.style.fontSize='10px';chat.style.whiteSpace='nowrap';chat.style.boxShadow='none'}
+  if(start){start.style.flex='1 1 auto';start.style.minWidth='0';start.style.padding='6px 4px';start.style.fontSize='11px'}
+ }
+ function install(){
+  layout();
+  if(typeof window.roomStartGame==='function'&&!window.__bmGodOnlyStartInstalled){
+   const old=window.roomStartGame;window.__bmGodOnlyStartInstalled=true;
+   window.roomStartGame=function(){
+    if(window.lobbyMode!=='god'){try{window.toast&&toast('فقط گاد می‌تواند بازی را شروع کند.')}catch(e){}return false}
+    return old.apply(this,arguments)
+   };
+  }
+ }
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
+ setInterval(layout,500);
+ // Backup start-state watcher: if the live voice/PeerJS "go" event is missed, move the player into the game.
+ let checkedRoom='',entering=false;
+ setInterval(async()=>{
+  const code=String(window.MAFIA_ROOM_CODE||''),room=$('lobbyRoom');
+  if(!code||window.lobbyMode!=='player'||entering||!room||!room.classList.contains('on')||!db())return;
+  if(checkedRoom!==code)checkedRoom=code;
+  try{
+   const res=await fetch(db()+'/roomsV23/'+encodeURIComponent(code)+'.json',{cache:'no-store'});
+   if(!res.ok)return;const data=await res.json();
+   if(!data||data.status!=='started'||!room.classList.contains('on'))return;
+   entering=true;
+   try{window.lobbyReady=true;if(window.Net&&typeof Net.enter==='function')Net.enter();else if(typeof window.roomStartGame==='function')window.roomStartGame()}
+   finally{entering=false}
+  }catch(e){}
+ },1000);
+ // Ensure chat messages carry the actual player's profile name when the UI state is not populated.
+ const nativeFetch=window.fetch.bind(window);
+ window.fetch=function(resource,options){
+  try{
+   const url=typeof resource==='string'?resource:(resource&&resource.url)||'';
+   const method=String(options&&options.method||'GET').toUpperCase();
+   if(method==='POST'&&url.includes('/roomsV23/')&&url.includes('/chat.json')&&options&&typeof options.body==='string'){
+    const payload=JSON.parse(options.body);
+    if(!payload.name||payload.name==='بازیکن'){
+     const n=nick();if(n)payload.name=n;
+     else if(uid())payload.name='بازیکن '+uid().slice(-4);
+     options={...options,body:JSON.stringify(payload)};
+    }
+   }
+  }catch(e){}
+  return nativeFetch(resource,options);
+ };
+})();
