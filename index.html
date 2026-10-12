@@ -781,7 +781,7 @@ const Voice=(()=>{
    s.src=C.scripts[i++];s.onload=()=>fin(true);s.onerror=()=>fin(false);document.head.appendChild(s)})()});
  }
  function openPeer(id){return new Promise(res=>{
-  let d=false;const p=new Peer(id,{config:{iceServers:C.ice},debug:0,...C.peer});
+  let d=false;const p=new Peer(id,{config:{iceServers:C.ice,iceCandidatePoolSize:10},debug:0,...C.peer});
   const fin=v=>{if(d)return;d=true;clearTimeout(tm);if(v!==p){try{p.destroy()}catch(e){}}res(v)};
   const tm=setTimeout(()=>fin(undefined),9000);
   p.on('open',()=>fin(p));
