@@ -99,6 +99,18 @@ window.MAFIA_ONE_ROOM_ALL=true;     // true: هر سه لابی یک اتاق‌
  };
  // Voice lobby recovery: retain TURN relays and retry PeerJS connection while a player is waiting.
  let voiceConfigApplied=false,voiceLastJoinKey='';
+ // Restore TURN settings after the later inline voice script's defaults run, before its delayed Voice.join.
+ let voiceConfigTries=0;
+ const voiceConfigTimer=setInterval(()=>{
+  try{
+   if(typeof VOICE_CFG!=='undefined'){
+    VOICE_CFG.peer={host:'0.peerjs.com',port:443,path:'/',secure:true};
+    VOICE_CFG.ice=[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'}].concat(Array.isArray(window.MAFIA_TURN)?window.MAFIA_TURN:[]);
+    voiceConfigApplied=true;clearInterval(voiceConfigTimer);
+   }
+  }catch(e){}
+  if(++voiceConfigTries>120)clearInterval(voiceConfigTimer);
+ },50);
  setInterval(()=>{
   try{
    if(typeof VOICE_CFG!=='undefined'){
