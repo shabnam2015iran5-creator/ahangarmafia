@@ -854,13 +854,18 @@ const Voice=(()=>{
  function playRemote(r,st){
   try{if(r.audio){r.audio.pause();r.audio.srcObject=null;r.audio.remove()}}catch(e){}
   const a=document.createElement('audio');
-  a.autoplay=true;a.playsInline=true;a.setAttribute('playsinline','');a.muted=false;a.volume=1;
-  a.srcObject=st;
-  // بعض مرورگرهای موبایل خروجی audio با display:none را مسدود می‌کنند.
-  a.style.cssText='position:fixed;width:1px;height:1px;opacity:.01;left:0;bottom:0;pointer-events:none;z-index:-1';
-  document.body.appendChild(a);r.audio=a;
-  const play=()=>{try{a.muted=false;a.volume=1;const p=a.play();if(p&&p.catch)p.catch(()=>{})}catch(e){}};
-  a.onloadedmetadata=play;a.oncanplay=play;play();
+  a.autoplay=true;a.playsInline=true;a.setAttribute('playsinline','');a.setAttribute('webkit-playsinline','');
+  a.muted=false;a.defaultMuted=false;a.volume=1;
+  // نگه‌داشتن audio داخل صفحه (نه پشت صفحه) برای سازگاری بهتر با مرورگر موبایل
+  a.style.cssText='position:fixed;width:2px;height:2px;opacity:.05;left:0;bottom:0;pointer-events:none;z-index:2147483647';
+  document.body.appendChild(a);r.audio=a;a.srcObject=st;
+  const play=()=>{try{
+    a.muted=false;a.defaultMuted=false;a.volume=1;
+    if(ctx&&ctx.state==='suspended')ctx.resume().catch(()=>{});
+    const p=a.play();if(p&&p.catch)p.catch(()=>{});
+  }catch(e){}};
+  st.getAudioTracks().forEach(t=>{t.enabled=true});
+  a.onloadedmetadata=play;a.oncanplay=play;a.onplaying=()=>{r.playing=true};play();
   try{const n=ctx.createAnalyser();n.fftSize=512;const src=ctx.createMediaStreamSource(st);src.connect(n);r.an=n;r.buf=new Uint8Array(n.fftSize)}catch(e){}
  }
  function drop(s,quiet){
