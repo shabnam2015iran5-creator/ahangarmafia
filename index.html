@@ -221,14 +221,6 @@ nav{background:#0009;border:1px solid var(--g2);border-radius:12px;padding:3px}n
 </style>
 <script src="config.js"></script>
 <link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#000000"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><link rel="apple-touch-icon" href="icon-192.png">
-<style id="bm-emergency-loading-fix">
-/* Emergency recovery: never let the decorative boot splash block the game. */
-#bpSplash{display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important}
-#app{visibility:visible!important;opacity:1!important}
-</style>
-<script id="bm-emergency-loading-script">
-(()=>{const release=()=>{const s=document.getElementById('bpSplash');if(s){s.classList.add('hide');s.style.setProperty('display','none','important');s.style.setProperty('visibility','hidden','important');s.style.setProperty('opacity','0','important');s.setAttribute('aria-hidden','true')}const p=document.getElementById('bpPercent');if(p)p.textContent='100%';const a=document.getElementById('app');if(a){a.style.setProperty('visibility','visible','important');a.style.setProperty('opacity','1','important')}};release();document.addEventListener('DOMContentLoaded',release);window.addEventListener('pageshow',release);setInterval(release,500)})();
-</script>
 </head><body>
 <div id="fx"></div><div id="toast"></div>
 <div id="app">
@@ -679,33 +671,18 @@ function openLobbyDoor(){if(!$('doorScreen').classList.contains('on'))return;doo
 function doorSfx(){try{const A=new (window.AudioContext||window.webkitAudioContext)(),t=A.currentTime;const o=A.createOscillator(),g=A.createGain();o.type='triangle';o.frequency.setValueAtTime(90,t);o.frequency.exponentialRampToValueAtTime(48,t+.42);g.gain.setValueAtTime(.001,t);g.gain.exponentialRampToValueAtTime(.32,t+.03);g.gain.exponentialRampToValueAtTime(.001,t+.5);o.connect(g);g.connect(A.destination);o.start(t);o.stop(t+.55);const o2=A.createOscillator(),g2=A.createGain();o2.type='sine';o2.frequency.value=420;g2.gain.setValueAtTime(.001,t+.18);g2.gain.exponentialRampToValueAtTime(.08,t+.22);g2.gain.exponentialRampToValueAtTime(.001,t+.5);o2.connect(g2);g2.connect(A.destination);o2.start(t+.18);o2.stop(t+.55);setTimeout(()=>A.close(),800)}catch(e){}}
 function openLobbyGate(){
  $('lobbyGate').classList.add('on');$('gateTitle').textContent=lobbyMode==='player'?'🎭 انتخاب آواتار و لابی':'🎙 انتخاب لابی گرداننده';
- $('playerNick').value=S.nick||'';$('playerAge').value=S.age||'';$('playerAccount').value=S.account||makeAccountId();selectedAvSeed=S.avatarSeed||1;renderAvatarGallery();updateAgeStatus();
- const saved=lobbyMode==='player'&&S.profileComplete===true;
- const setup=$('profileSetupBlock'),setupTitle=$('profileSetupTitle'),gallery=$('proAvGallery'),summary=$('profileSavedSummary');
- if(setup)setup.style.display=saved?'none':'grid';if(setupTitle)setupTitle.style.display=saved?'none':'block';if(gallery)gallery.style.display=saved?'none':'grid';
- if(summary){summary.style.display=saved?'block':'none';summary.innerHTML=saved?'<div style="display:flex;gap:10px;align-items:center"><div class="setupAv">'+(S.photo?'<div class="avi avme"></div>':proAvatar(S.avatarSeed||1,(S.avatarSeed||1)%3===0))+'</div><div style="min-width:0;flex:1"><b>پروفایل ذخیره‌شده</b><div>'+esc(S.nick||'بازیکن')+' · '+esc(String(S.age||'—'))+' سال</div><small>اکانت: '+esc(S.account||makeAccountId())+'</small></div><button class="btn" onclick="editSavedProfile()">تغییر</button></div>':''}
+ $('playerNick').value=S.nick||'رضا';$('playerAge').value=S.age||'';selectedAvSeed=S.avatarSeed||1;renderAvatarGallery();updateAgeStatus();
  if(lobbyMode==='god'){$('playerAge').value=18;$('playerAge').disabled=true;$('playerNick').value='گرداننده';$('gateNotice').textContent='به‌عنوان گاد می‌توانید لابی را مدیریت کنید. مدیر بعداً می‌تواند کمک‌گاد را تعیین کند.'}else $('playerAge').disabled=false;
 }
-function makeAccountId(){let id='';try{id=localStorage.getItem('mafia_uid')||''}catch(e){}if(!id){id='u'+Math.random().toString(36).slice(2,12);try{localStorage.setItem('mafia_uid',id)}catch(e){}}return 'BM-'+id.slice(-8).toUpperCase()}
-function editSavedProfile(){S.profileComplete=false;save();openLobbyGate()}
 function updateAgeStatus(){const age=+(($('playerAge')||{}).value||0);const ok=age>=16||S.released;if($('ageStatus')){$('ageStatus').textContent=age?((age>=16||S.released)?'✓ مجاز برای دوستانه و حرفه‌ای':'🔒 فقط آموزشی'):'سن وارد نشده';$('ageStatus').className='ageGate '+((age>=16||S.released)?'release':'')}}
-function apiRoot(){return String(window.MAFIA_DB_URL||'').replace(/\/$/,'').replace(/\/api\/db$/,'')||location.origin}
-async function syncRegisteredProfile(){
- try{const uid=localStorage.getItem('mafia_uid')||'';if(!uid)throw Error('شناسهٔ کاربر ساخته نشده است');
- const response=await fetch(apiRoot()+'/api/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({uid,nick:String(S.nick||'بازیکن').trim(),account:String(S.account||''),age:Number(S.age||0),avatarSeed:Number(S.avatarSeed||1),photo:(String(S.photo||'').length<30000?String(S.photo||''):''),profileComplete:!!S.profileComplete})});
- const result=await response.json().catch(()=>({}));if(!response.ok)throw Error(result.error||('ثبت آنلاین ناموفق بود ('+response.status+')'));
- S.serial=Number(result.user&&result.user.serial||S.serial||0);S.account=String(result.user&&result.user.account||S.account||'');save();return true
- }catch(e){console.warn('syncRegisteredProfile',e);toast(e.message||'ذخیره آنلاین انجام نشد');return false}
-}
-async function ensureRegisteredOnline(){if(!S.profileComplete||!String(S.nick||'').trim()||!String(S.account||'').trim()||!Number(S.age))return false;const ok=await syncRegisteredProfile();if(!ok){toast('تا وقتی مشخصات با موفقیت در سرور ذخیره نشود، ورود به بازی مجاز نیست');return false}return true}
-function saveProfile(){const n=$('playerNick').value.trim();const fullName=($('playerFullName')?.value||S.fullName||'').trim();const a=+$('playerAge').value||0;const account=$('playerAccount').value.trim();if(n.length<2){toast('نام کاربری بازی را وارد کنید');return false}if(lobbyMode==='player'){if(fullName.length<2||fullName.length>60){toast('نام و نام خانوادگی را کامل وارد کنید');return false}if(a<1||a>99){toast('سن را درست وارد کنید');return false}if(account.length<3){toast('کد اکانت معتبر نیست؛ صفحه را دوباره باز کن');return false}S.fullName=fullName;S.age=a;S.account=account.slice(0,24);S.profileComplete=false}else{S.account=S.account||makeAccountId()}S.nick=n;S.avatarSeed=selectedAvSeed;save();return true}
+function saveProfile(){const n=$('playerNick').value.trim();const a=+$('playerAge').value||0;if(n)S.nick=n;if(lobbyMode==='player'){if(a<1||a>99){toast('سن را درست وارد کنید');return false}S.age=a}S.avatarSeed=selectedAvSeed;save();return true}
 $('playerAge')?.addEventListener('input',updateAgeStatus);
 $('playerNick')?.addEventListener('input',()=>{S.nick=$('playerNick').value.trim()||'رضا'});
-async function enterLobby(kind){if(window.BMGuest){if(kind!=='edu'&&kind!=='training'){toast('مهمان فقط اجازهٔ ورود به لابی آموزشی را دارد.');return}lobbyMode='player';lobbyKind='edu';S.nick='';S.fullName='';S.account='';S.age=0;S.profileComplete=false;$('doorScreen').classList.remove('on');buildLobbyRoom();$('lobbyGate').classList.remove('on');$('lobbyRoom').classList.add('on');return}if(lobbyMode==='player'){if(!await savePlayerRegistration())return}else if(!saveProfile())return;const age=+S.age||0;if(kind!=='edu' && age<16 && !S.released){toast('این لابی فقط برای بالای ۱۵ سال است؛ فعلاً لابی آموزشی برای شما فعال است');return}lobbyKind=kind;buildLobbyRoom();$('lobbyGate').classList.remove('on');$('lobbyRoom').classList.add('on');}
+function enterLobby(kind){if(!saveProfile())return;const age=+S.age||0;if(kind!=='edu' && age<16 && !S.released){toast('این لابی فقط برای بالای ۱۵ سال است؛ فعلاً لابی آموزشی برای شما فعال است');return}lobbyKind=kind;buildLobbyRoom();$('lobbyGate').classList.remove('on');$('lobbyRoom').classList.add('on');}
 function lobbyLabel(k){return k==='edu'?['🎓 لابی آموزشی','آموزش قوانین، نقش‌ها و تمرین قبل از بازی']:k==='friendly'?['🤝 لابی دوستانه','بازی دوستانه با فضای سبک و قوانین کامل']:['🏆 لابی حرفه‌ای','بازی رقابتی با گرداننده و قوانین کامل']}
 function buildLobbyRoom(){const [title,sub]=lobbyLabel(lobbyKind);$('roomTitle').textContent=title;$('roomBanner').innerHTML=title+`<small>${sub}</small>`;const names=lobbyKind==='pro'?['Rafael','ARIANA','MHD-SH','اربابی','Parissa','کیان','مهسا','بهروز','یلدا','آرمان','سارا']:lobbyKind==='friendly'?['دلارام','آرمان','سارا','کیان','مهسا','بهروز','نیلوفر','امیر','ستایش','فرهاد','یلدا']:['آموزش ۱','آموزش ۲','آموزش ۳','آموزش ۴','آموزش ۵','آموزش ۶','آموزش ۷','آموزش ۸','آموزش ۹','آموزش ۱۰','آموزش ۱۱'];
  lobbyRoomSeats=(lobbyMode==='player'?names.slice(0,10):names).map((n,i)=>({n,id:i+1,f:i%3===1,bot:true,seed:(i%12)+1}));
- if(lobbyMode==='player')lobbyRoomSeats[0]={n:window.BMGuest?'':(S.nick||'رضا'),id:7,f:selectedAvSeed%3===0,bot:false,seed:selectedAvSeed};
+ if(lobbyMode==='player')lobbyRoomSeats[0]={n:S.nick||'رضا',id:7,f:selectedAvSeed%3===0,bot:false,seed:selectedAvSeed};
  else lobbyRoomSeats[0]={n:'گاد',id:999,f:false,bot:false,seed:8,role:'god'};
  lobbyReady=false;$('readyBtn').style.display=lobbyMode==='player'?'inline-block':'none';$('roomStartBtn').textContent=lobbyMode==='god'?'🎭 شروع لابی':'🎭 شروع بازی';
  $('roomCount').textContent='👥 '+lobbyRoomSeats.filter(s=>s&&s.role!=='god').length+'/10';$('modName').textContent=lobbyMode==='god'?(S.nick||'گاد'):'گاد اصلی';$('modRole').textContent=lobbyMode==='god'?'گاد اصلی':'گرداننده لابی';$('modAvatar').innerHTML=proAvatar(lobbyMode==='god'?selectedAvSeed:8,false);renderLobbyChairs();
@@ -714,8 +691,7 @@ function renderLobbyChairs(){const g=$('chairGrid');if(!g)return;g.innerHTML=lob
 function toggleLobbyReady(){lobbyReady=!lobbyReady;$('readyBtn').textContent=lobbyReady?'✓ آماده‌ام':'✅ آماده‌ام';$('readyBtn').classList.toggle('on',lobbyReady);toast(lobbyReady?'آمادگی شما ثبت شد':'آمادگی لغو شد')}
 function closeLobbyFlow(){$('lobbyGate').classList.remove('on');$('doorScreen').classList.remove('on');}
 function closeRoom(){$('lobbyRoom').classList.remove('on');closeLobbyFlow();role=null;document.body.classList.remove('ingame')}
-function showStartingGame(){let el=$('roomStartStatus');if(!el){el=document.createElement('div');el.id='roomStartStatus';el.style.cssText='margin:8px 0;text-align:center;color:#efd487;font-weight:700';$('roomStartBtn')?.parentNode?.insertAdjacentElement('afterend',el)}el.textContent='⏳ در حال وارد شدن به بازی؛ تا ورود همهٔ بازیکنان منتظر بمانید';}
-async function roomStartGame(){if(window.MAFIA_ROOM_ONLINE){if(lobbyMode==='god'){if(window.MafiaRoomsV23&&window.MafiaRoomsV23.startGame){await window.MafiaRoomsV23.startGame();return}toast('مدیریت شروع آنلاین آماده نیست');return}if(!lobbyReady){toast('اول روی «آماده‌ام» بزنید');return}if(window.MAFIA_ROOM_META&&window.MAFIA_ROOM_META.status==='starting'){showStartingGame();return}toast('منتظر شروع گاد بمان');return}if(lobbyMode==='player'&&!lobbyReady){toast('اول روی «آماده‌ام» بزنید');return}$('lobbyRoom').classList.remove('on');if(lobbyMode==='god'){role='god';__baseStart('god')}else{role='player';__baseStart('player')}setTimeout(()=>{$('gt').textContent='گرداننده: '+(lobbyKind==='pro'?'لابی حرفه‌ای':'لابی '+lobbyLabel(lobbyKind)[0].replace(/^.. /,''))},100)}
+function roomStartGame(){if(lobbyMode==='player'&&!lobbyReady){toast('اول روی «آماده‌ام» بزنید');return} $('lobbyRoom').classList.remove('on'); if(lobbyMode==='god'){role='god';__baseStart('god')}else{role='player';__baseStart('player')}setTimeout(()=>{$('gt').textContent='گرداننده: '+(lobbyKind==='pro'?'لابی حرفه‌ای':'لابی '+lobbyLabel(lobbyKind)[0].replace(/^.. /,''))},100)}
 function start(r){lobbyMode=r==='god'?'god':'player';openDoorFlow(lobbyMode)}
 
 function updateVoiceStage(){const v=seats.find(s=>s&&s.sp);const box=$('voiceStage');if(!box)return;if(!v){box.classList.remove('on');return}box.classList.add('on');$('vsName').textContent='🎙 '+v.n+' در حال صحبت است';$('vsAv').innerHTML=v===me()&&S.photo?'<div class="avi avme"></div>':proAvatar(v.id||1,!!v.f);}
@@ -731,33 +707,30 @@ save();buildNav();rHome();injectMe();try{startFx()}catch(e){};renderAvatarGaller
 </script>
 <div id="doorScreen">
   <div class="doorWrap" onclick="openLobbyDoor()">
-    <div class="doorTitle">ورود</div>
+    <div class="doorTitle">ورود به مافیا</div>
     <div class="doorFrame" id="doorFrame"><div class="doorPanel"></div><div class="doorHandle"></div></div>
+    <div class="doorSub">برای باز شدن در، روی در بزنید</div>
+    <div class="doorHint">صدای باز شدن در پخش می‌شود و سپس وارد انتخاب لابی می‌شوید</div>
   </div>
 </div>
 <div id="lobbyGate">
   <div class="lgBox">
     <div class="lgHead"><h2 id="gateTitle">🎭 ورود به لابی‌ها</h2><button class="lgClose" onclick="closeLobbyFlow()">×</button></div>
-    <div id="profileSetupBlock" class="profileSetup">
+    <div class="profileSetup">
       <div class="setupAv" id="setupPreview"></div>
       <div style="display:flex;flex-direction:column;gap:7px">
-        <input id="playerFullName" maxlength="60" autocomplete="name" placeholder="نام و نام خانوادگی">
-        <input id="playerNick" maxlength="18" autocomplete="nickname" placeholder="نام کاربری بازی">
-        <input id="playerAccount" maxlength="24" placeholder="کد اکانت شما" readonly>
+        <input id="playerNick" maxlength="18" placeholder="نام بازیکن">
         <div class="ageLine"><label>سن:</label><input id="playerAge" class="ageInput" type="number" min="1" max="99" placeholder="مثلاً 16"><span id="ageStatus" class="ageGate">سن وارد نشده</span></div>
-        <div style="display:flex;gap:7px;flex-wrap:wrap"><button class="btn" type="button" onclick="pickPhoto()">📷 انتخاب عکس شخصی</button><button class="btn gold" type="button" id="savePlayerRegistration" onclick="savePlayerRegistration()">💾 ثبت و بررسی مشخصات</button></div>
-        <small id="playerRegistrationStatus" style="display:block;color:#ffe5a0;line-height:1.8">مشخصات را وارد کن و «ثبت و بررسی مشخصات» را بزن.</small>
+        <button class="btn" onclick="pickPhoto()">📷 انتخاب عکس شخصی</button>
       </div>
     </div>
-    <div id="profileSetupTitle" style="margin-top:10px;font-size:12px;font-weight:bold">انتخاب آواتار حرفه‌ای</div>
-    <div id="profileSavedSummary" style="display:none;margin-top:10px;padding:10px;border:1px solid #a87528;border-radius:12px;background:#0005"></div>
+    <div style="margin-top:10px;font-size:12px;font-weight:bold">انتخاب آواتار حرفه‌ای</div>
     <div class="avGallery" id="proAvGallery"></div>
     <div class="lobbyCards">
       <div class="lobbyCard"><h3>🎓 لابی آموزشی</h3><p>برای بازیکنان جدید و تمام سنین. قوانین، نقش‌ها و نحوه رأی‌گیری را یاد بگیرید.</p><span class="badge">همه سنین</span><button class="btn gold go" onclick="enterLobby('edu')">ورود</button></div>
       <div class="lobbyCard" id="friendlyCard"><h3>🤝 لابی دوستانه</h3><p>برای بازی دوستانه و فضای سبک‌تر. شرط سنی: بالای ۱۵ سال.</p><span class="badge">۱۶ سال به بالا</span><button class="btn gold go" onclick="enterLobby('friendly')">ورود</button></div>
       <div class="lobbyCard" id="proCard"><h3>🏆 لابی حرفه‌ای</h3><p>بازی جدی‌تر با قوانین کامل، گرداننده و امکانات حرفه‌ای. شرط سنی: بالای ۱۵ سال.</p><span class="badge">۱۶ سال به بالا</span><button class="btn gold go" onclick="enterLobby('pro')">ورود</button></div>
     </div>
-    <div class="gateExtraActions"><button class="btn gold" onclick="openRoomDirectory('list')">🎮 بازی‌های در حال اجرا</button></div>
     <div id="gateNotice" style="margin-top:9px;text-align:center;font-size:11px;color:#d7c49c;line-height:1.7">برای ورود به دوستانه و حرفه‌ای، سن باید ۱۶ سال یا بیشتر باشد؛ اگر مدیر آزادسازی را فعال کند، بازیکن زیر ۱۶ سال هم می‌تواند وارد شود.</div>
   </div>
 </div>
@@ -808,7 +781,7 @@ const Voice=(()=>{
    s.src=C.scripts[i++];s.onload=()=>fin(true);s.onerror=()=>fin(false);document.head.appendChild(s)})()});
  }
  function openPeer(id){return new Promise(res=>{
-  let d=false;const p=new Peer(id,{config:{iceServers:C.ice,iceCandidatePoolSize:10},debug:0,...C.peer});
+  let d=false;const p=new Peer(id,{config:{iceServers:C.ice},debug:0,...C.peer});
   const fin=v=>{if(d)return;d=true;clearTimeout(tm);if(v!==p){try{p.destroy()}catch(e){}}res(v)};
   const tm=setTimeout(()=>fin(undefined),9000);
   p.on('open',()=>fin(p));
@@ -879,21 +852,9 @@ const Voice=(()=>{
   else if(typeof H[d.t]==='function'&&(d.t==='act'||r.role==='god')){H[d.t](s,d)}});
  }
  function playRemote(r,st){
-  try{if(r.audio){r.audio.pause();r.audio.srcObject=null;r.audio.remove()}}catch(e){}
-  const a=document.createElement('audio');
-  a.autoplay=true;a.playsInline=true;a.setAttribute('playsinline','');a.setAttribute('webkit-playsinline','');
-  a.muted=false;a.defaultMuted=false;a.volume=1;
-  // نگه‌داشتن audio داخل صفحه (نه پشت صفحه) برای سازگاری بهتر با مرورگر موبایل
-  a.style.cssText='position:fixed;width:2px;height:2px;opacity:.05;left:0;bottom:0;pointer-events:none;z-index:2147483647';
-  document.body.appendChild(a);r.audio=a;a.srcObject=st;
-  const play=()=>{try{
-    a.muted=false;a.defaultMuted=false;a.volume=1;
-    if(ctx&&ctx.state==='suspended')ctx.resume().catch(()=>{});
-    const p=a.play();if(p&&p.catch)p.catch(()=>{});
-  }catch(e){}};
-  st.getAudioTracks().forEach(t=>{t.enabled=true});
-  a.onloadedmetadata=play;a.oncanplay=play;a.onplaying=()=>{r.playing=true};play();
-  try{const n=ctx.createAnalyser();n.fftSize=512;const src=ctx.createMediaStreamSource(st);src.connect(n);r.an=n;r.buf=new Uint8Array(n.fftSize)}catch(e){}
+  const a=document.createElement('audio');a.autoplay=true;a.playsInline=true;a.srcObject=st;a.style.display='none';document.body.appendChild(a);
+  const p=a.play&&a.play();if(p&&p.catch)p.catch(()=>{});r.audio=a;
+  try{const n=ctx.createAnalyser();n.fftSize=256;ctx.createMediaStreamSource(st).connect(n);r.an=n;r.buf=new Uint8Array(n.frequencyBinCount)}catch(e){}
  }
  function drop(s,quiet){
   const r=R[s];if(!r)return;delete R[s];
@@ -901,7 +862,7 @@ const Voice=(()=>{
   if(r.audio){r.audio.srcObject=null;r.audio.remove()}
   if(!quiet)refresh();
  }
- const lvl=(n,b)=>{try{n.getByteTimeDomainData(b);let t=0;for(let i=0;i<b.length;i++){const v=(b[i]-128)/128;t+=v*v}return Math.sqrt(t/b.length)*100}catch(e){return 0}};
+ const lvl=(n,b)=>{n.getByteFrequencyData(b);let t=0;for(let i=0;i<b.length;i++)t+=b[i];return t/b.length};
  function enforce(){
   const mu0=!!(muted||!micOk||!allowed());if(mu0!==lastMu){lastMu=mu0;try{broadcast({t:'mu',v:mu0?1:0})}catch(e){}}
   if(!rawTrack)return;
@@ -911,8 +872,8 @@ const Voice=(()=>{
  }
  function tick(){
   let ch=false;
-  const ms=!!(micOk&&rawTrack&&rawTrack.enabled&&an&&lvl(an,anBuf)>4);if(ms!==meSp){meSp=ms;ch=true}
-  Object.values(R).forEach(r=>{const sp=!!(r.live&&r.an&&lvl(r.an,r.buf)>3.5);if(sp!==r.sp){r.sp=sp;ch=true}});
+  const ms=!!(micOk&&rawTrack&&rawTrack.enabled&&an&&lvl(an,anBuf)>12);if(ms!==meSp){meSp=ms;ch=true}
+  Object.values(R).forEach(r=>{const sp=!!(r.live&&r.an&&lvl(r.an,r.buf)>10);if(sp!==r.sp){r.sp=sp;ch=true}});
   enforce();if(ch)refresh();
  }
  function humans(){return Object.values(R).filter(r=>r.live).sort((a,b)=>a.slot-b.slot)}
@@ -946,23 +907,13 @@ const Voice=(()=>{
   if(!on)return;
   if(Array.isArray(seats))seats.forEach((s,i)=>{if(s&&s.hv){const t=document.querySelector('#s'+i+' .tg');if(t){t.textContent='🎙';t.classList.add('h')}}});
   if(Array.isArray(seats))seats.forEach((s,i)=>{const c=document.querySelector('#s'+i+' .cell');if(!c)return;let b=c.querySelector('.vmic');const mine=(i==0&&typeof role!=='undefined'&&role==='player'),hv=s&&s.hv;if(s&&(hv||mine)){const off=mine?!!(muted||!micOk||!allowed()):!!s.mu;if(!b){b=document.createElement('i');c.appendChild(b)}b.className='vmic '+(off?'off':'on');b.textContent=off?'🔇':'🎙'}else if(b)b.remove()});
-  if(typeof role!=='undefined'&&role==='god'&&started&&Array.isArray(seats))seats.forEach(s=>{if(!s||!s.hv)return;const el=document.querySelector('#s'+seats.indexOf(s));if(!el)return;let k=el.querySelector('.vKick');if(!k){k=document.createElement('button');k.className='vKick';k.textContent='🚫 کیک';k.onclick=e=>{e.stopPropagation();Net.kick(s.hv)};el.appendChild(k)}});
   enforce();
- }
- function syncLobbySpeaking(){
-  const active=new Set();
-  if(on&&micOk&&meSp)active.add(clean(myName()));
-  Object.values(R).forEach(r=>{if(r.live&&r.sp&&r.n)active.add(clean(r.n))});
-  document.querySelectorAll('#chairGrid .lSeat').forEach(el=>{
-   const label=el.querySelector('.seatName'),name=label&&clean(label.textContent||'');
-   el.classList.toggle('speaking',!!name&&active.has(name));
-  });
  }
  function refresh(){
   const n=humans().length+(on?1:0);
   setStatus(on?'🎙 وویس متصل · '+n+' نفر در کانال'+(micOk?'':' · (بدون میکروفن)'):'');
   const lr=g('lobbyRoom');
-  if(lr&&lr.classList.contains('on')){applyLobbySeats();renderLobbyChairs();syncLobbySpeaking();
+  if(lr&&lr.classList.contains('on')){applyLobbySeats();renderLobbyChairs();
    const sb=g('roomStartBtn');if(sb&&typeof lobbyMode!=='undefined'&&lobbyMode==='player'){const gd=on&&godHere();sb.textContent=gd?'⏳ منتظر گرداننده':'🎭 شروع بازی';sb.disabled=gd}}
   if(inGame())try{render()}catch(e){}
  }
@@ -1003,7 +954,7 @@ const Voice=(()=>{
  }
  // یک بار لمس صفحه: اگر مرورگر پخش خودکار صدا را بلاک کرده بود، دوباره تلاش می‌کند
  document.addEventListener('click',()=>{if(ctx&&ctx.state==='suspended')ctx.resume();Object.values(R).forEach(r=>{if(r.audio&&r.audio.paused)r.audio.play().catch(()=>{})})},true);
- return{join,leave:leaveVoice,toggleMute,isMuted:()=>!!(muted||!micOk),byUid:u=>{if(u&&u===myUid)return{sp:meSp,mu:!!(muted||!micOk)};const r=Object.values(R).find(x=>x.uid&&x.uid===u);return r?{sp:!!r.sp,mu:!!r.mu,live:!!r.live}:null},uidOf:sl=>R[sl]&&R[sl].uid||'',captureBase,patchSeats,afterRender,active:()=>on,broadcast,refresh,godHere,onGo:f=>{H.go=f},onMsg:(t,f)=>{H[t]=f},send,liveSlots:()=>humans().map(r=>r.slot),speakingOf:sl=>sl===slot?meSp:!!(R[sl]&&R[sl].sp),mySlot:()=>slot,godInfo,isLive:sl=>!!(R[sl]&&R[sl].live),godSlot:()=>{const r=humans().find(x=>x.role==='god');return r?r.slot:0}};
+ return{join,leave:leaveVoice,toggleMute,isMuted:()=>!!(muted||!micOk),byUid:u=>{if(u&&u===myUid)return{sp:meSp,mu:!!(muted||!micOk)};const r=Object.values(R).find(x=>x.uid&&x.uid===u);return r?{sp:!!r.sp,mu:!!r.mu,live:!!r.live}:null},captureBase,patchSeats,afterRender,active:()=>on,broadcast,refresh,godHere,onGo:f=>{H.go=f},onMsg:(t,f)=>{H[t]=f},send,liveSlots:()=>humans().map(r=>r.slot),speakingOf:sl=>sl===slot?meSp:!!(R[sl]&&R[sl].sp),mySlot:()=>slot,godInfo,isLive:sl=>!!(R[sl]&&R[sl].live),godSlot:()=>{const r=humans().find(x=>x.role==='god');return r?r.slot:0}};
 })();
 
 const Net=(()=>{
@@ -1110,7 +1061,6 @@ const Net=(()=>{
   lastCur=d.cur;lastPh=d.ph;lastSt=!!d.st;
   const vb=vbFor(d);if(vb!==lastVb){lastVb=vb;g('vb').innerHTML=vb}
   if(d.win){
-   try{window.MafiaRoomsV23&&MafiaRoomsV23.setRoomStatus('finished')}catch(e){}
    let msg=String(d.win.r||'').slice(0,200);
    if(m&&m.ro){const mine=m.ro.r=='m'?'m':'c';
     if(!wonShown){wonShown=true;if(mine==d.win.w){S.wins++;S.coins+=150;S.gems+=2;S.xp+=30}else{S.coins+=30;S.xp+=10}save()}
@@ -1125,7 +1075,6 @@ const Net=(()=>{
  function reset(){client=false;snap=null;clearInterval(hostT);clearInterval(wd)}
  /* پیام‌های دریافتی از گرداننده */
  Voice.onMsg('st',(s,d)=>apply(d));
- Voice.onMsg('kick',()=>{if(!client)return;try{localStorage.removeItem('mafia_active_room_v23')}catch(e){}reset();setTimeout(()=>window.leave(),0);toast('گرداننده شما را از بازی خارج کرد')});
  Voice.onMsg('tl',(s,d)=>{if(client&&d&&typeof d.m==='string')toast(d.m.slice(0,200))});
  Voice.onMsg('fx',(s,d)=>{if(client&&d&&Number.isInteger(d.i)&&d.i>=0&&d.i<N)fl(d.i,String(d.e).slice(0,4))});
  Voice.onMsg('bn',(s,d)=>{if(client&&d&&typeof d.x==='string')banner(d.x.slice(0,40))});
@@ -1135,7 +1084,6 @@ const Net=(()=>{
   g('vpn').style.display='block';clearTimeout(vpT);vpT=setTimeout(()=>g('vpn').style.display='none',5500)});
  Voice.onMsg('act',onAct);
  return{enter,hostStart,reset,bcast,canSpeak,snapshot:()=>snap,isClient:()=>client,mySeat:()=>snap?snap.my:-1,
-  kick(sl){if(role!=='god')return;const i=seats.findIndex(s=>s&&s.hv===sl);if(i<0)return;const uid0=Voice.uidOf(sl);Voice.send(sl,{t:'kick'});if(uid0&&window.MafiaRoomsV23)MafiaRoomsV23.kickPlayer(uid0);seats[i].d=true;seats[i].hv=0;render();toast('بازیکن از بازی کیک شد')},
   tap(i){if(client&&snap&&snap.st)toHost({t:'act',a:'pick',i})},
   mode(m){toHost({t:'act',a:'mode',m})},rv(y){toHost({t:'act',a:'rv',y:y?1:0});g('vb').innerHTML='';lastVb=''},
   challenge(){if(!snap||!snap.st){toast('چالش فقط در بحث روز بازی ممکن است');return}toHost({t:'act',a:'ch'})},
@@ -1148,14 +1096,14 @@ const Net=(()=>{
  window.enterLobby=function(k){_enter(k);if(document.getElementById('lobbyRoom').classList.contains('on'))Voice.join(k)};
  window.buildLobbyRoom=function(){_build();Voice.captureBase()};
  window.closeRoom=function(){Voice.leave();_close()};
- window.leave=function(){if(Net.isClient()&&Net.snapshot()&&Net.snapshot().st&&!Net.snapshot().win){toast('تا پایان این بازی نمی‌توانی خارج شوی؛ اگر قطع شدی دوباره وارد همین بازی می‌شوی');return}Net.reset();Voice.leave();_leave()};
+ window.leave=function(){Net.reset();Voice.leave();_leave()};
  window.render=function(){if(Net.isClient())return;Voice.patchSeats();_render();Voice.afterRender()};
  window.sayAs=function(i,t){const s=seats[i];if(s&&s.hv)return;return _say(i,t)};
  window.toggleMic=function(){return Voice.active()?Voice.toggleMute():_mic()};
  window.toggleRoomMic=function(){Voice.toggleMute()};
  window.toggleLobbyReady=function(){_tr();Voice.broadcast({t:'rdy',v:!!lobbyReady});Voice.refresh()};
  window.roomStartGame=function(){
-  if(lobbyMode==='god'){try{window.MafiaRoomsV23&&MafiaRoomsV23.setRoomStatus('started')}catch(e){}Voice.broadcast({t:'go'});const r=_rsg();Net.hostStart();return r}
+  if(lobbyMode==='god'){Voice.broadcast({t:'go'});const r=_rsg();Net.hostStart();return r}
   if(Voice.active()&&Voice.godHere()){toast('منتظر شروع بازی توسط گرداننده باشید');return}
   return _rsg()};
  Voice.onGo(()=>{if(document.getElementById('lobbyRoom').classList.contains('on')&&lobbyMode==='player'){lobbyReady=true;Net.enter()}});
@@ -1271,10 +1219,10 @@ window.musicMode=function(m){if(!MU.mg)return;if(MU.mode==m&&MU.tm)return;MU.mod
 (()=>{
  const _ms=musicStart,_tm=toggleMusic;
  const vol=()=>{if(MU.mg)MU.mg.gain.value=MU.on?(Voice.active()?.7:1.4):0};
- window.musicStart=function(){const lobby=document.getElementById('lobbyRoom');if(lobby&&lobby.classList.contains('on')){clearInterval(MU.tm);MU.tm=null;if(MU.mg)MU.mg.gain.value=0;return}_ms();vol()};
+ window.musicStart=function(){_ms();vol()};
  window.toggleMusic=function(){_tm();vol()};
  const _e=enterLobby,_c=closeRoom;
- window.enterLobby=function(k){_e(k);if(document.getElementById('lobbyRoom').classList.contains('on')){clearInterval(MU.tm);MU.tm=null;if(MU.mg)MU.mg.gain.value=0}};
+ window.enterLobby=function(k){_e(k);if(document.getElementById('lobbyRoom').classList.contains('on')){musicStart();musicMode('lobby');setTimeout(vol,1500)}};
  window.closeRoom=function(){_c();if(typeof started==='undefined'||!started){clearInterval(MU.tm);MU.tm=null}};
 })();
 
@@ -1376,7 +1324,7 @@ setInterval(()=>{try{
 })();
 
 // Make the free PeerJS cloud endpoint explicit and robust; HTTPS hosting is required for mic access.
-try{if(typeof VOICE_CFG!=='undefined'){VOICE_CFG.peer={host:'0.peerjs.com',port:443,path:'/',secure:true};VOICE_CFG.ice=[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'}].concat(Array.isArray(window.MAFIA_TURN)?window.MAFIA_TURN:[]);VOICE_CFG.rtcConfig={iceTransportPolicy:'all'}}}catch(e){}
+try{if(typeof VOICE_CFG!=='undefined'){VOICE_CFG.peer={host:'0.peerjs.com',port:443,path:'/',secure:true};VOICE_CFG.ice=[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'}]}}catch(e){}
 </script>
 
 <!-- ===== BLACK PRO STARTUP / ROOMS / ADMIN UPGRADE ===== -->
@@ -1499,26 +1447,20 @@ const BP=(()=>{
  function setVol(v){localStorage.setItem(key+'vol',(v/100).toFixed(2));if(master)master.gain.value=v/100}
  function saveSettings(){let q=document.querySelector('#bpQuality button.on')?.dataset.q||'high';localStorage.setItem(key+'q',q);localStorage.setItem(key+'vol',($('bpVol').value/100).toFixed(2));localStorage.setItem(key+'voice',($('bpVoiceVol').value/100).toFixed(2));localStorage.setItem(key+'music',$('bpMusic').value);tone('click');alert('تنظیمات ذخیره شد')}
  function resetSettings(){localStorage.removeItem(key+'q');localStorage.removeItem(key+'vol');loadSettings()}
- function loginAdmin(){if($('bpAdminPass').value===(window.MAFIA_BP_ADMIN_PASS||'00100900')){sessionStorage.setItem('bp_admin','1');sessionStorage.setItem('bp_admin_pw',$('bpAdminPass').value);$('bpAdminLogin').style.display='none';$('bpAdminPanel').style.display='block';tone('click')}else{alert('رمز مدیر اشتباه است');tone('challenge')}}
- function logoutAdmin(){sessionStorage.removeItem('bp_admin');sessionStorage.removeItem('bp_admin_pw');sessionStorage.removeItem('bp_server_admin_pw');$('bpAdminLogin').style.display='block';$('bpAdminPanel').style.display='none';$('bpAdminPass').value=''}
- function goLobby(k){if(k==='training')k='edu';if(window.BMGuest){if(k!=='edu'){try{toast('برای ورود به این لابی باید ثبت‌نام کنی.')}catch(e){}return}try{enterLobby('edu')}catch(e){}return}close('rooms');try{if(typeof openDoorFlow==='function'){openDoorFlow('player');setTimeout(()=>{try{enterLobby(k)}catch(e){}},1100)}else alert('ماژول لابی در حال آماده‌سازی است')}catch(e){}}
+ function loginAdmin(){if($('bpAdminPass').value===(window.MAFIA_BP_ADMIN_PASS||'00100900')){sessionStorage.setItem('bp_admin','1');$('bpAdminLogin').style.display='none';$('bpAdminPanel').style.display='block';tone('click')}else{alert('رمز مدیر اشتباه است');tone('challenge')}}
+ function logoutAdmin(){sessionStorage.removeItem('bp_admin');$('bpAdminLogin').style.display='block';$('bpAdminPanel').style.display='none';$('bpAdminPass').value=''}
+ function goLobby(k){close('rooms');try{if(typeof openDoorFlow==='function'){openDoorFlow('player');setTimeout(()=>{try{enterLobby(k)}catch(e){}},1100)}else alert('ماژول لابی در حال آماده‌سازی است')}catch(e){}}
  function voiceTest(){tone('click');try{navigator.mediaDevices.getUserMedia({audio:true}).then(s=>{alert('میکروفن فعال است. اجازه دسترسی داده شد.');s.getTracks().forEach(t=>t.stop())}).catch(()=>alert('اجازه میکروفن داده نشد یا محیط فعلی HTTPS نیست.'))}catch(e){alert('مرورگر امکان تست میکروفن را ندارد')}}
  function sfx(t){tone(t)}
  function testAll(){tone('challenge');setTimeout(()=>tone('vote'),350);setTimeout(()=>tone('click'),800);alert('تست افکت‌ها انجام شد')}
  function avatarInfo(){alert('گالری آواتارهای بازی فعال است. برای شخصیت‌های اختصاصی، از طراحی‌های اورجینال با حال‌وهوای مافیایی و فانتزی استفاده می‌کنیم؛ نه کپی مستقیم شخصیت‌های دارای حق نشر.')}
- async function adminApi(path,method='GET',data){let pw=sessionStorage.getItem('bp_server_admin_pw')||'';if(!pw){pw=prompt('رمز امن مدیریت سرور را وارد کن:')||'';if(!pw)throw Error('رمز مدیریت سرور وارد نشد');sessionStorage.setItem('bp_server_admin_pw',pw)}const root=String(window.MAFIA_DB_URL||'').replace(/\/$/,'').replace(/\/api\/db$/,'')||location.origin;const r=await fetch(root+'/api/admin/'+path,{method,headers:{'Content-Type':'application/json','X-Admin-Password':pw},body:data===undefined?undefined:JSON.stringify(data),cache:'no-store'});const j=await r.json().catch(()=>({}));if(!r.ok){if(r.status===403)sessionStorage.removeItem('bp_server_admin_pw');throw Error(j.error||('خطای سرور '+r.status))}return j}
-function renderAdminUserResults(list,total){const box=$('bpAdminDetails');if(!box)return;const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));box.innerHTML='<b style="color:#efd487">👥 کل کاربران ثبت‌شده: '+Number(total||list.length)+'</b><p style="font-size:12px;color:#aaa">کاربران بر اساس شمارهٔ ثبت‌نام مرتب شده‌اند.</p><div style="display:flex;gap:6px;margin:10px 0"><input id="bpUserSearch" placeholder="جستجو با نام، اکانت یا کد کاربری" style="min-width:0;flex:1;background:#161616;color:white;border:1px solid #5a4726;border-radius:8px;padding:10px"><button class="bpPrimary" onclick="BP.searchUsers()">جستجو</button></div>'+(list.length?list.map(u=>'<div style="padding:10px 0;border-bottom:1px solid #302719"><b>'+esc(u.nick||'بازیکن')+'</b> <span style="color:#e3c56b">#'+esc(u.serial||'—')+'</span><div style="font-size:12px;color:#cbbd9b">اکانت: '+esc(u.account||'—')+' · سن: '+esc(u.age||'—')+'</div><small style="color:#888">کد: '+esc(u.uid||'—')+' · ثبت‌نام: '+(u.createdAt?new Date(u.createdAt).toLocaleString('fa-IR'):'—')+'</small><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px"><button class="bpDanger" onclick="BP.banUser(\''+esc(u.uid||'')+'\',\'permanent\')">بن دائم</button><button class="bpDanger" onclick="BP.banUser(\''+esc(u.uid||'')+'\',\'temporary\')">بن ۳۰ دقیقه</button><button class="bpDanger" onclick="BP.banUser(\''+esc(u.uid||'')+'\',\'days\')">بن چندروزه</button><button class="bpPrimary" onclick="BP.unbanUser(\''+esc(u.uid||'')+'\')">رفع بن</button></div></div>').join(''):'<p>کاربری پیدا نشد.</p>')}
-async function searchUsers(){try{const q=String($('bpUserSearch')?.value||'').trim();const r=await adminApi('users?q='+encodeURIComponent(q));renderAdminUserResults(r.users||[],r.total||0)}catch(e){const b=$('bpAdminDetails');if(b)b.innerHTML='<b style="color:#ffb6b6">جستجو انجام نشد</b><p>'+String(e.message||e)+'</p><small>رمز ADMIN_PASSWORD باید در تنظیمات Cloudflare تعریف شود.</small>'}}
-async function banUser(uid,type){let days=0;if(type==='days'){const v=prompt('مدت بن از ۱ تا ۱۸۰ روز:','1');if(v===null)return;days=Math.max(1,Math.min(180,Math.floor(Number(v)||1)))}const reason=prompt('دلیل بن (اختیاری):','')||'';try{await adminApi('ban','POST',{uid,type,days,reason});toast(type==='permanent'?'بن دائم ثبت شد':type==='temporary'?'بن ۳۰ دقیقه‌ای ثبت شد':'بن '+days+' روزه ثبت شد');await searchUsers()}catch(e){alert('ثبت بن انجام نشد: '+(e.message||e))}}
-async function unbanUser(uid){if(!confirm('بن این کاربر برداشته شود؟'))return;try{await adminApi('unban','POST',{uid});toast('بن کاربر برداشته شد');await searchUsers()}catch(e){alert('رفع بن انجام نشد: '+(e.message||e))}}
-async function adminAction(x){const host=$('bpAdminPanel');if(!host)return;let box=$('bpAdminDetails');if(!box){box=document.createElement('div');box.id='bpAdminDetails';box.style.cssText='margin-top:14px;padding:12px;border:1px solid #5a4726;border-radius:12px;background:#080808;color:#eee;max-height:42vh;overflow:auto';host.appendChild(box)}const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));box.innerHTML='<b style="color:#efd487">'+esc(x)+'</b><p style="color:#aaa">در حال بارگذاری…</p>';try{if(x==='بازیکنان'||x==='آمار'){const r=await adminApi('users');renderAdminUserResults(r.users||[],r.total||0)}else if(x==='اتاق‌ها'){const r=await adminApi('rooms');box.innerHTML='<b style="color:#efd487">🏛 اتاق‌ها ('+(r.rooms||[]).length+')</b>'+(r.rooms||[]).map(q=>'<div style="padding:9px 0;border-bottom:1px solid #28231a"><b>اتاق '+esc(q.code)+'</b><div style="font-size:12px;color:#aaa">وضعیت: '+esc(q.status)+' · بازیکنان: '+q.players+'</div></div>').join('')}else if(x==='ویس'){box.innerHTML='<b>🎙 بررسی ویس</b><p>برای آزمایش میکروفن اجازهٔ مرورگر را بده.</p><button class="bpPrimary" onclick="BP.voiceTest()">تست میکروفن</button>'}else if(x==='اقتصاد'){box.innerHTML='<b>🎁 اقتصاد و کیف پول</b><p>موجودی این دستگاه: '+Number((typeof S!=='undefined'&&S.coins)||0)+' سکه</p><div class="bpField"><label>تغییر سکه محلی</label><input id="bpCoinDelta" type="number" value="100"></div><button class="bpPrimary" onclick="BP.adjustLocalCoins()">اعمال</button><small>این تغییر هنوز روی حساب‌های دیگر اعمال نمی‌شود.</small>'}else if(x==='آواتارها'){box.innerHTML='<b>🧑‍🎨 آواتارها</b><button class="bpPrimary" onclick="BP.adminAction(\'بازیکنان\')">مشاهده کاربران</button>'}else if(x==='صداها'){box.innerHTML='<b>🔊 صداها</b><button class="bpPrimary" onclick="BP.open(\'settings\')">تنظیمات صدا</button><button class="bpPrimary" onclick="BP.testAll()">تست صداها</button>'}else if(x==='تنظیمات کامل'){box.innerHTML='<b>⚙ تنظیمات</b><button class="bpPrimary" onclick="BP.open(\'settings\')">باز کردن</button><button class="bpDanger" onclick="BP.resetSettings()">بازنشانی صدا</button>'}else{box.innerHTML='<b>'+esc(x)+'</b><p>این بخش هنوز به کنترل امن سمت سرور متصل نیست.</p>'}}catch(e){box.innerHTML='<b style="color:#ffb6b6">خطا</b><p>'+esc(e.message||e)+'</p><small>رمز ADMIN_PASSWORD باید در Cloudflare تنظیم شود.</small>'}}
-function adjustLocalCoins(){const d=Number($('bpCoinDelta')?.value||0);if(!Number.isFinite(d))return;S.coins=Math.max(0,Number(S.coins||0)+d);save();adminAction('اقتصاد')}
+ function adminAction(x){alert('بخش «'+x+'» برای اتصال به پنل واقعی سرور آماده شده است.')}
  document.addEventListener('click',e=>{if(e.target.closest('button'))tone('click')},{capture:true});
- return {open,close,setVol,saveSettings,resetSettings,loginAdmin,logoutAdmin,goLobby,voiceTest,sfx,testAll,avatarInfo,adminAction,adminCloseRoom,adjustLocalCoins,searchUsers,banUser,unbanUser}
+ return {open,close,setVol,saveSettings,resetSettings,loginAdmin,logoutAdmin,goLobby,voiceTest,sfx,testAll,avatarInfo,adminAction}
 })();
 
 document.querySelectorAll('#bpQuality button').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('#bpQuality button').forEach(x=>x.classList.remove('on'));b.classList.add('on');}));
-const runSplashProgress=()=>{if(window.__bmSplashProgressStarted)return;window.__bmSplashProgressStarted=true;let p=0,el=document.getElementById('bpPercent');const t=setInterval(()=>{p=Math.min(100,p+Math.floor(Math.random()*13)+4);if(el)el.textContent=p+'%';const bar=document.querySelector('#bpSplash .bpProgress i');if(bar)bar.style.width=p+'%';if(p>=100){clearInterval(t);setTimeout(()=>document.getElementById('bpSplash')?.classList.add('hide'),450)}},120)};if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',runSplashProgress,{once:true});else runSplashProgress();setTimeout(runSplashProgress,150);
+window.addEventListener('load',()=>{let p=0,el=document.getElementById('bpPercent');const t=setInterval(()=>{p=Math.min(100,p+Math.floor(Math.random()*13)+4);if(el)el.textContent=p+'%';if(p>=100){clearInterval(t);setTimeout(()=>document.getElementById('bpSplash')?.classList.add('hide'),450)}},120);});
 </script>
 <!-- ===== END BLACK PRO UPGRADE ===== -->
 
@@ -2490,20 +2432,18 @@ window.APP_VERSION='27.0';
 #roomDirectory{position:fixed;inset:0;z-index:10050;display:none;align-items:center;justify-content:center;padding:14px;background:#000d;backdrop-filter:blur(5px)}
 #roomDirectory.on{display:flex}.rdBox{width:min(100%,430px);max-height:92vh;overflow:auto;background:linear-gradient(#43250f,#130804);border:2px solid #e0b255;border-radius:18px;padding:16px;box-shadow:0 20px 70px #000}
 .rdHead{display:flex;align-items:center;gap:8px;margin-bottom:12px}.rdHead h2{margin:0;font-size:18px;flex:1}.rdClose{width:34px;height:34px;border-radius:10px;border:1px solid #a8741f;background:#160b06;color:#f6ead0;font-size:20px}
-.rdTabs{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}.rdTabs button{flex:1;min-width:27%}.rdTabs button.on{background:linear-gradient(#f0c35f,#a8741f);color:#251207}
-.gateExtraActions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0 2px}.gateExtraActions button{font-size:12px;padding:10px 6px}
-.rdPanel{display:none}.rdPanel.on{display:block}.rdInput{width:100%;padding:11px;border-radius:10px;border:1.5px solid #c9972f;background:#000b;color:#f6ead0;font-family:inherit;font-size:16px;text-align:center;letter-spacing:4px;direction:ltr}.rdKind{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:9px 0}.rdKind button{min-height:58px}.rdKind button.on{border-color:#75ff9e;background:#173d24}.rdRoom{display:flex;align-items:center;gap:8px;padding:9px;border:1px solid #6d4f21;background:#0007;border-radius:10px;margin-top:7px}.rdRoom .rinfo{flex:1;min-width:0}.rdRoom b{display:block}.rdRoom small{color:#cdbd9c}.rdCode{direction:ltr;letter-spacing:3px;color:#f4cf76;font-weight:900}.rdEmpty{text-align:center;color:#bfa97d;padding:14px}.vKick{position:absolute;right:2px;top:2px;z-index:12;border:1px solid #ff7777;background:#650d0d;color:#fff;border-radius:7px;padding:3px 5px;font:700 10px inherit}.seat{position:relative}
-.roomCodeBadge{display:inline-flex;align-items:center;gap:6px;margin:0 auto 3px;padding:4px 10px;border:1px solid #d0a54d;border-radius:10px;background:#0008;color:#f6dc8d;font-weight:900;letter-spacing:2px;direction:ltr}.roomOnlineBadge{font-size:10px;color:#73ff9c}.roomBanner .roomCodeBadge{float:left;margin-top:-2px}.roomBanner{overflow:hidden}.roomBanner small{clear:both}.rdNote{font-size:11px;line-height:1.7;color:#cbbd9d;margin-top:8px;text-align:center}.rdWarn{color:#ffcf68}.rdGood{color:#73ff9c}
+.rdTabs{display:flex;gap:6px;margin-bottom:10px}.rdTabs button{flex:1}.rdTabs button.on{background:linear-gradient(#f0c35f,#a8741f);color:#251207}
+.rdPanel{display:none}.rdPanel.on{display:block}.rdInput{width:100%;padding:11px;border-radius:10px;border:1.5px solid #c9972f;background:#000b;color:#f6ead0;font-family:inherit;font-size:16px;text-align:center;letter-spacing:4px;direction:ltr}.rdKind{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:9px 0}.rdKind button{min-height:58px}.rdKind button.on{border-color:#75ff9e;background:#173d24}.rdRoom{display:flex;align-items:center;gap:8px;padding:9px;border:1px solid #6d4f21;background:#0007;border-radius:10px;margin-top:7px}.rdRoom .rinfo{flex:1;min-width:0}.rdRoom b{display:block}.rdRoom small{color:#cdbd9c}.rdCode{direction:ltr;letter-spacing:3px;color:#f4cf76;font-weight:900}.rdEmpty{text-align:center;color:#bfa97d;padding:14px}.roomCodeBadge{display:inline-flex;align-items:center;gap:6px;margin:0 auto 3px;padding:4px 10px;border:1px solid #d0a54d;border-radius:10px;background:#0008;color:#f6dc8d;font-weight:900;letter-spacing:2px;direction:ltr}.roomOnlineBadge{font-size:10px;color:#73ff9c}.roomBanner .roomCodeBadge{float:left;margin-top:-2px}.roomBanner{overflow:hidden}.roomBanner small{clear:both}.rdNote{font-size:11px;line-height:1.7;color:#cbbd9d;margin-top:8px;text-align:center}.rdWarn{color:#ffcf68}.rdGood{color:#73ff9c}
 </style>
 <div id="roomDirectory"><div class="rdBox">
  <div class="rdHead"><h2>🏠 اتاق‌های آنلاین</h2><button class="rdClose" onclick="closeRoomDirectory()">×</button></div>
- <div class="rdTabs"><button class="btn gold on" id="rdCreateTab" onclick="rdTab('create')">ساخت اتاق</button><button class="btn" id="rdJoinTab" onclick="rdTab('join')">ورود با کد</button><button class="btn" id="rdListTab" onclick="rdTab('list')">بازی‌های در حال اجرا</button></div>
+ <div class="rdTabs"><button class="btn gold on" id="rdCreateTab" onclick="rdTab('create')">ساخت اتاق</button><button class="btn" id="rdJoinTab" onclick="rdTab('join')">ورود با کد</button><button class="btn" id="rdListTab" onclick="rdTab('list')">اتاق‌های فعال</button></div>
  <div class="rdPanel on" id="rdCreate">
    <div style="font-size:12px;margin-bottom:6px">نوع بازی</div><div class="rdKind"><button class="btn on" data-kind="friendly" onclick="rdKind('friendly')">🤝<br>دوستانه</button><button class="btn" data-kind="pro" onclick="rdKind('pro')">🏆<br>حرفه‌ای</button><button class="btn" data-kind="edu" onclick="rdKind('edu')">🎓<br>آموزشی</button></div>
    <button class="btn gold" style="width:100%;padding:11px" onclick="rdCreate()">➕ ساخت اتاق جدید</button><div class="rdNote">کد ۵ رقمی ساخته می‌شود. برای شروع بازی حرفه‌ای، گرداننده باید در همین اتاق حضور داشته باشد.</div>
  </div>
  <div class="rdPanel" id="rdJoin"><input id="rdCodeInput" class="rdInput" maxlength="5" inputmode="numeric" placeholder="12345"><div class="rdKind"><button class="btn on" data-jkind="friendly" onclick="rdJoinKind('friendly')">🤝 دوستانه</button><button class="btn" data-jkind="pro" onclick="rdJoinKind('pro')">🏆 حرفه‌ای</button><button class="btn" data-jkind="edu" onclick="rdJoinKind('edu')">🎓 آموزشی</button></div><button class="btn gold" style="width:100%;padding:11px" onclick="rdJoin()">🚪 ورود به اتاق</button></div>
- <div class="rdPanel" id="rdList"><div id="rdRooms"><div class="rdEmpty">در حال دریافت بازی‌ها...</div></div></div>
+ <div class="rdPanel" id="rdList"><div id="rdRooms"><div class="rdEmpty">در حال دریافت اتاق‌ها...</div></div></div>
  <div class="rdNote" id="rdStatus"></div>
  </div></div>
 <script id="v23-room-js">
@@ -2515,7 +2455,7 @@ window.APP_VERSION='27.0';
  const esc=x=>String(x==null?'':x).replace(/[&<>"'`]/g,c=>'&#'+c.charCodeAt(0)+';');
  const code5=()=>String(Math.floor(10000+Math.random()*90000)); const now=()=>Date.now();
  const api=async(method,path,data)=>{if(!hasDb())return null;const r=await fetch(base()+'/'+path+'.json',{method,headers:{'Content-Type':'application/json'},body:data===undefined?undefined:JSON.stringify(data)});if(!r.ok)throw new Error('db '+r.status);return method==='GET'?r.json():true};
- const profile=()=>({uid,n:String(S.nick||'بازیکن').slice(0,18),account:String(S.account||''),seed:+(S.avatarSeed||1),age:+(S.age||0),ready:!!lobbyReady,role:lobbyMode==='god'?'god':'player',inGame:!!window.__mafiaInGameV23,mu:(()=>{try{return Voice.isMuted()}catch(e){return false}})(),at:now()});
+ const profile=()=>({uid,n:String(S.nick||'بازیکن').slice(0,18),seed:+(S.avatarSeed||1),age:+(S.age||0),ready:!!lobbyReady,role:lobbyMode==='god'?'god':'player',mu:(()=>{try{return Voice.isMuted()}catch(e){return false}})(),at:now()});
  function setStatus(t,cls=''){const e=$('rdStatus');if(e)e.innerHTML='<span class="'+cls+'">'+esc(t)+'</span>'}
  function panels(){return {create:$('rdCreate'),join:$('rdJoin'),list:$('rdList')}}
  window.rdTab=t=>{const p=panels();Object.keys(p).forEach(k=>p[k]?.classList.toggle('on',k===t));['create','join','list'].forEach(k=>$('rd'+k[0].toUpperCase()+k.slice(1)+'Tab')?.classList.toggle('on',k===t));if(t==='list')refreshList()};
@@ -2528,33 +2468,22 @@ window.APP_VERSION='27.0';
  function getLocal(c){let all={};try{all=JSON.parse(lg('mafia_local_rooms_v23')||'{}')}catch(e){};return all[c]||null}
  function setLocal(r){let all={};try{all=JSON.parse(lg('mafia_local_rooms_v23')||'{}')}catch(e){};all[r.code]=r;ls('mafia_local_rooms_v23',JSON.stringify(all))}
  async function create(){const c=code5();try{const r=hasDb()?await writeRoom(c,createKind):localRoom(c,createKind);enterOnlineRoom(r)}catch(e){setStatus('ساخت اتاق ناموفق بود: '+(e.message||'خطا'),'rdWarn')}}
- window.rdCreate=async()=>{if(!saveProfile())return;if(!(await ensureRegisteredOnline()))return;if(createKind!=='edu'&&+S.age<16&&!S.released){toast('برای این لابی باید ۱۶ سال یا بیشتر باشید');return}create()};
+ window.rdCreate=()=>{if(!saveProfile())return;if(createKind!=='edu'&&+S.age<16&&!S.released){toast('برای این لابی باید ۱۶ سال یا بیشتر باشید');return}create()};
  async function loadRoom(c){return hasDb()?await api('GET','roomsV23/'+c):getLocal(c)}
- async function join(){const c=String($('rdCodeInput')?.value||'').replace(/\D/g,'').slice(0,5);if(c.length!==5){toast('کد ۵ رقمی را وارد کنید');return}if(!saveProfile())return;if(!(await ensureRegisteredOnline()))return;try{const r=await loadRoom(c);if(!r){toast('اتاق پیدا نشد یا منقضی شده است');return}if(r.kind!==joinKind){toast('نوع این اتاق با انتخاب شما یکی نیست');return}const ps=r.players||{};if(ps[uid]&&ps[uid].kicked){toast('شما از این بازی کیک شده‌اید');return}if(r.status!=='started'&&Object.keys(ps).filter(k=>ps[k]).length>=10&&!ps[uid]){toast('ظرفیت اتاق تکمیل است');return}ps[uid]=profile();r.players=ps;r.updatedAt=now();if(hasDb())await api('PUT','roomsV23/'+c+'/players/'+uid,ps[uid]);else setLocal(r);enterOnlineRoom(r);if(r.status==='started'){let n=0;const t=setInterval(()=>{n++;try{if(Voice.active()){clearInterval(t);Net.enter();toast('به بازی در حال اجرا وصل شدی')}}catch(e){}if(n>35)clearInterval(t)},800)}}catch(e){toast('ورود به اتاق ناموفق بود')}}
+ async function join(){const c=String($('rdCodeInput')?.value||'').replace(/\D/g,'').slice(0,5);if(c.length!==5){toast('کد ۵ رقمی را وارد کنید');return}if(!saveProfile())return;try{const r=await loadRoom(c);if(!r){toast('اتاق پیدا نشد یا منقضی شده است');return}if(r.kind!==joinKind){toast('نوع این اتاق با انتخاب شما یکی نیست');return}const ps=r.players||{};if(Object.keys(ps).filter(k=>ps[k]).length>=10&&!ps[uid]){toast('ظرفیت اتاق تکمیل است');return}ps[uid]=profile();r.players=ps;r.updatedAt=now();if(hasDb())await api('PUT','roomsV23/'+c+'/players/'+uid,ps[uid]);else setLocal(r);enterOnlineRoom(r)}catch(e){toast('ورود به اتاق ناموفق بود')}}
  window.rdJoin=join;
- function enterOnlineRoom(r){try{ls('mafia_active_room_v23',r.code)}catch(e){}window.MAFIA_ROOM_CODE=r.code;window.MAFIA_ROOM_META=r;window.MAFIA_ROOM_ONLINE=true;lobbyKind=r.kind;buildLobbyRoom();lobbyRoomSeats=Array(10).fill(null);renderLobbyChairs();try{Voice.captureBase()}catch(e){}$('lobbyGate').classList.remove('on');$('roomDirectory').classList.remove('on');$('lobbyRoom').classList.add('on');decorateRoom(r);syncPresence();if(poll)clearInterval(poll);poll=setInterval(syncPresence,2200);window.__voiceKey=r.kind+'-'+r.code;setTimeout(()=>Voice.join(r.kind),150)}
+ function enterOnlineRoom(r){window.MAFIA_ROOM_CODE=r.code;window.MAFIA_ROOM_META=r;window.MAFIA_ROOM_ONLINE=true;lobbyKind=r.kind;buildLobbyRoom();lobbyRoomSeats=Array(10).fill(null);renderLobbyChairs();try{Voice.captureBase()}catch(e){}$('lobbyGate').classList.remove('on');$('roomDirectory').classList.remove('on');$('lobbyRoom').classList.add('on');decorateRoom(r);syncPresence();if(poll)clearInterval(poll);poll=setInterval(syncPresence,2200);window.__voiceKey=r.kind+'-'+r.code;setTimeout(()=>Voice.join(r.kind),150)}
  function decorateRoom(r){const [title,sub]=lobbyLabel(r.kind);$('roomTitle').innerHTML=title+' <span class="roomCodeBadge">#'+esc(r.code)+'</span>';$('roomBanner').innerHTML='<span class="roomCodeBadge">اتاق '+esc(r.code)+'</span>'+title+'<small>'+sub+' · <span class="roomOnlineBadge">● آنلاین</span></small>';$('roomStartBtn').textContent=lobbyMode==='god'?'🎭 شروع بازی':'🎭 آماده‌سازی بازی';$('modName').textContent=lobbyMode==='god'?(S.nick||'گاد'):(r.hostName||'منتظر گرداننده');$('modRole').textContent='گرداننده اتاق'}
- async function syncPresence(){
- if(!window.MAFIA_ROOM_CODE)return;const r=await loadRoom(window.MAFIA_ROOM_CODE);if(!r){toast('اتاق حذف شده است');closeOnlineRoom();return}
- if(r.players&&r.players[uid]&&r.players[uid].kicked){try{ls('mafia_active_room_v23','')}catch(e){}toast('گرداننده شما را از این بازی کیک کرده است');if(poll){clearInterval(poll);poll=null}window.__voiceKey=null;window.MAFIA_ROOM_ONLINE=false;window.MAFIA_ROOM_CODE='';window.MAFIA_ROOM_META=null;try{Voice.leave()}catch(e){}return}
- const me=profile();try{if(hasDb()){await api('PUT','roomsV23/'+r.code+'/players/'+uid,{...me,at:now()});await api('PATCH','roomsV23/'+r.code,{updatedAt:now()})}else{r.players=r.players||{};r.players[uid]={...me,at:now()};r.updatedAt=now();setLocal(r)}}catch(e){}
- const ps=hasDb()?((await api('GET','roomsV23/'+r.code+'/players'))||{}):(r.players||{});const alive=Object.values(ps).filter(x=>x&&now()-(x.at||0)<12000);renderPresence(alive,r);window.MAFIA_ROOM_META=r;
- if(r.status==='starting'&&lobbyMode==='player'&&!window.__mafiaInGameV23){showStartingGame();window.__mafiaInGameV23=true;try{if(poll){clearInterval(poll);poll=null}$('lobbyRoom').classList.remove('on');role='player';Net.enter();setTimeout(()=>{if(window.MAFIA_ROOM_CODE)api('PATCH','roomsV23/'+r.code+'/players/'+uid,{inGame:true,at:now()}).catch(()=>{})},180);if(!poll)poll=setInterval(syncPresence,700)}catch(e){window.__mafiaInGameV23=false;showStartingGame();if(!poll)poll=setInterval(syncPresence,700)}}
- if(r.status==='waiting'&&window.__mafiaInGameV23)window.__mafiaInGameV23=false;
-}
+ async function syncPresence(){if(!window.MAFIA_ROOM_CODE)return;const r=await loadRoom(window.MAFIA_ROOM_CODE);if(!r){toast('اتاق حذف شده است');closeOnlineRoom();return}const me=profile();try{if(hasDb())await api('PUT','roomsV23/'+r.code+'/players/'+uid,{...me,at:now()});else{r.players=r.players||{};r.players[uid]={...me,at:now()};r.updatedAt=now();setLocal(r)}}catch(e){}const ps=hasDb()?((await api('GET','roomsV23/'+r.code+'/players'))||{}):(r.players||{});const alive=Object.values(ps).filter(x=>x&&now()-(x.at||0)<12000);renderPresence(alive,r)}
  function renderPresence(players,r){window.__lastPres=[players,r];const arr=players.filter(p=>p.role!=='god').sort((a,b)=>String(a.uid).localeCompare(String(b.uid))).slice(0,10);const slots=Array(10).fill(null);arr.forEach((p,i)=>{let vu=null;try{vu=Voice.byUid(p.uid)}catch(e){}slots[i]={n:p.n,id:1000+i,seed:p.seed||1,f:(p.seed||1)%3===0,human:true,ready:!!p.ready,online:true,uid:p.uid,speaking:!!(vu&&vu.sp),mu:vu?!!vu.mu:!!p.mu}});lobbyRoomSeats=slots;renderLobbyChairs();$('roomCount').textContent='👥 '+arr.length+'/10';const host=players.find(p=>p.uid===r.host);if(host&&host.role==='god'){$('modName').textContent=host.n;$('modRole').textContent='گرداننده رسمی'}}
- async function refreshList(){const box=$('rdRooms');if(!box)return;let data={};try{data=hasDb()?((await api('GET','roomsV23'))||{}):(()=>{try{return JSON.parse(lg('mafia_local_rooms_v23')||'{}')}catch(e){return{}}})()}catch(e){box.innerHTML='<div class="rdEmpty">اتصال به سرور ناموفق بود.</div>';return}const t=now(),live=p=>p&&Number(p.at||0)>t-12000,rs=Object.values(data||{}).filter(r=>r&&r.code&&['waiting','starting','started'].includes(r.status)&&t-Number(r.updatedAt||r.createdAt||0)<30*60*1000&&Object.values(r.players||{}).some(live)).sort((a,b)=>Number(b.updatedAt||0)-Number(a.updatedAt||0));if(!rs.length){box.innerHTML='<div class="rdEmpty">اتاق فعالی پیدا نشد؛ می‌توانی یک اتاق تازه بسازی.</div>';return}box.innerHTML=rs.slice(0,30).map(r=>{const count=Object.values(r.players||{}).filter(live).length,title=lobbyLabel(r.kind)[0],state=r.status==='started'?'در حال اجرا':r.status==='starting'?'در حال ورود بازیکنان':'در انتظار بازیکن';return '<div class="rdRoom"><div class="rinfo"><b>🎮 '+esc(title)+'</b><small><span class="rdCode">#'+esc(r.code)+'</span> · '+count+'/10 نفر آنلاین · '+state+'</small></div><button class="btn gold" onclick="rdQuickJoin(\''+r.code+'\',\''+r.kind+'\')">ورود</button></div>'}).join('')}
+ async function refreshList(){const box=$('rdRooms');if(!box)return;let data={};try{data=hasDb()?((await api('GET','roomsV23'))||{}):(()=>{try{return JSON.parse(lg('mafia_local_rooms_v23')||'{}')}catch(e){return{}}})()}catch(e){box.innerHTML='<div class="rdEmpty">اتصال به سرور ناموفق بود.</div>';return}const rs=Object.values(data||{}).filter(r=>r&&r.code&&now()-(r.updatedAt||r.createdAt||0)<30000);if(!rs.length){box.innerHTML='<div class="rdEmpty">اتاق فعالی پیدا نشد.<br>می‌توانید یک اتاق جدید بسازید.</div>';return}box.innerHTML=rs.slice(0,20).map(r=>{const count=Object.keys(r.players||{}).filter(k=>r.players[k]).length;const title=lobbyLabel(r.kind)[0];return '<div class="rdRoom"><div class="rinfo"><b>'+esc(title)+'</b><small><span class="rdCode">#'+esc(r.code)+'</span> · '+count+'/10 نفر</small></div><button class="btn gold" onclick="rdQuickJoin(\''+r.code+'\',\''+r.kind+'\')">ورود</button></div>'}).join('')}
  window.rdQuickJoin=(c,k)=>{$('rdCodeInput').value=c;rdJoinKind(k);rdTab('join')};
- const legacyEnter=window.enterLobby;window.enterLobby=async function(kind){if(!saveProfile())return;if(!(await ensureRegisteredOnline()))return;if(window.MAFIA_SINGLE_ROOM)return legacyEnter(kind);const age=+S.age||0;if(kind!=='edu'&&age<16&&!S.released){toast('این لابی فقط برای ۱۶ سال به بالا است');return}createKind=kind;joinKind=kind;openRoomDirectory('create');rdKind(kind);rdJoinKind(kind)};
+ const legacyEnter=window.enterLobby;window.enterLobby=function(kind){if(window.MAFIA_SINGLE_ROOM)return legacyEnter(kind);if(!saveProfile())return;const age=+S.age||0;if(kind!=='edu'&&age<16&&!S.released){toast('این لابی فقط برای ۱۶ سال به بالا است');return}createKind=kind;joinKind=kind;openRoomDirectory('create');rdKind(kind);rdJoinKind(kind)};
  const legacyClose=window.closeRoom;window.closeRoom=function(){closeOnlineRoom();return legacyClose&&legacyClose()};
  async function closeOnlineRoom(){try{if(window.MAFIA_ROOM_CODE){if(hasDb())await api('DELETE','roomsV23/'+window.MAFIA_ROOM_CODE+'/players/'+uid);else{const r=getLocal(window.MAFIA_ROOM_CODE);if(r){delete r.players[uid];r.updatedAt=now();setLocal(r)}}}}catch(e){}if(poll){clearInterval(poll);poll=null}window.__voiceKey=null;window.MAFIA_ROOM_ONLINE=false;window.MAFIA_ROOM_CODE='';window.MAFIA_ROOM_META=null;try{Voice.leave()}catch(e){}}
  const oldReady=window.toggleLobbyReady;window.toggleLobbyReady=function(){const r=oldReady&&oldReady();setTimeout(syncPresence,100);return r};
  window.__rePresence=()=>{if(window.__lastPres)renderPresence(window.__lastPres[0],window.__lastPres[1])};
- async function setRoomStatus(status){const c=window.MAFIA_ROOM_CODE;if(!c)return;try{if(hasDb())await api('PATCH','roomsV23/'+c,{status,updatedAt:now()});else{const r=getLocal(c);if(r){r.status=status;r.updatedAt=now();setLocal(r)}}}catch(e){}}
- async function startGame(){const c=window.MAFIA_ROOM_CODE;if(!c||lobbyMode!=='god')return;try{await setRoomStatus('starting');const verifyRoom=await loadRoom(c);if(!verifyRoom||verifyRoom.status!=='starting')throw Error('سرور نتوانست شروع اجباری را ثبت کند');showStartingGame();$('lobbyRoom').classList.add('on');if(poll){clearInterval(poll);poll=null}poll=setInterval(syncPresence,700);const started=Date.now();while(true){const r=await loadRoom(c);if(!r)throw Error('اتاق پیدا نشد');const ps=hasDb()?((await api('GET','roomsV23/'+c+'/players'))||{}):(r.players||{});const live=Object.values(ps).filter(p=>p&&p.role!=='god'&&Date.now()-Number(p.at||0)<12000);if(live.length>0&&live.every(p=>p.inGame===true)){await setRoomStatus('started');if(hasDb())await api('PATCH','roomsV23/'+c,{startedAt:Date.now(),startRequestedAt:started});if(poll){clearInterval(poll);poll=null}window.__mafiaInGameV23=true;$('lobbyRoom').classList.remove('on');role='god';__baseStart('god');setTimeout(()=>{const e=$('gt');if(e)e.textContent='گرداننده: '+(lobbyKind==='pro'?'لابی حرفه‌ای':'لابی '+lobbyLabel(lobbyKind)[0].replace(/^.. /,''))},100);return}const status=$('roomStartStatus');if(status)status.textContent='⏳ در حال وارد شدن به بازی؛ '+live.filter(p=>p.inGame===true).length+'/'+live.length+' بازیکن وارد شده‌اند.';await new Promise(resolve=>setTimeout(resolve,800))}const status=$('roomStartStatus');if(status)status.textContent='⚠️ هنوز همه وارد نشده‌اند؛ بازی شروع نشد.';await setRoomStatus('waiting');if(poll){clearInterval(poll);poll=null}poll=setInterval(syncPresence,2200)}catch(e){toast('شروع بازی انجام نشد: '+(e.message||e));await setRoomStatus('waiting')}}
- async function kickPlayer(uid0){const c=window.MAFIA_ROOM_CODE;if(!c||!uid0)return;try{if(hasDb())await api('PATCH','roomsV23/'+c+'/players/'+uid0,{kicked:true,at:now()});else{const r=getLocal(c);if(r&&r.players&&r.players[uid0]){r.players[uid0].kicked=true;r.players[uid0].at=now();setLocal(r)}}}catch(e){}}
- window.MafiaRoomsV23={create,join,refreshList,syncPresence,closeOnlineRoom,setRoomStatus,kickPlayer,startGame,get code(){return window.MAFIA_ROOM_CODE||''}};
- setTimeout(async()=>{const c=lg('mafia_active_room_v23');if(!c||window.MAFIA_ROOM_CODE)return;try{const r=await loadRoom(c);if(!r||r.status!=='started'||!r.players||!r.players[uid]||r.players[uid].role!=='player')return;lobbyMode='player';lobbyKind=r.kind;enterOnlineRoom(r);let n=0;const t=setInterval(()=>{n++;try{if(Voice.active()){clearInterval(t);Net.enter();toast('به بازی قبلی برگشتی')}}catch(e){}if(n>35)clearInterval(t)},800)}catch(e){}},2500);
+ window.MafiaRoomsV23={create,join,refreshList,syncPresence,closeOnlineRoom,get code(){return window.MAFIA_ROOM_CODE||''}};
 })();
 </script>
 
@@ -2625,7 +2554,7 @@ window.APP_VERSION='27.0';
   function ageOK(kind){return kind==='edu'||(+S.age>=16)||S.released}
   function validProfile(){const n=String(S.nick||'').trim(),a=+S.age||0;if(!n){toast('لطفاً نام خود را وارد کنید؛ اول نامت را در پروفایل بگذار.');return false}if(a<1||a>99){toast('لطفاً سن خود را وارد کنید؛ اول سنت را در پروفایل بگذار.');return false}return true}
   window.saveProfile=function(){const n=String($('playerNick')?.value||'').trim(),a=+$('playerAge')?.value||0;if(!n){toast('لطفاً نام خود را وارد کنید؛ اول نامت را در پروفایل بگذار.');return false}if(a<1||a>99){toast('لطفاً سن خود را وارد کنید؛ اول سنت را در پروفایل بگذار.');return false}S.nick=n;S.age=a;S.avatarSeed=selectedAvSeed||1;save();return true};
-  function loading(next){const ov=$('ovLoad');if(!ov)return next();const m=ov.querySelector('.msg');if(m)m.innerHTML='سیستم در حال راه‌اندازی است<br>لطفاً صبور باشید...';ov.classList.add('s');setTimeout(()=>{ov.classList.remove('s');try{Promise.resolve(next()).catch(e=>{console.error('BLACK MAFIA room entry failed:',e);try{toast('خطای ورود به اتاق: '+String(e&&e.message||e).slice(0,140))}catch(_){alert('خطای ورود به اتاق: '+String(e&&e.message||e).slice(0,140))}})}catch(e){console.error('BLACK MAFIA room entry failed:',e);try{toast('خطای ورود به اتاق: '+String(e&&e.message||e).slice(0,140))}catch(_){alert('خطای ورود به اتاق: '+String(e&&e.message||e).slice(0,140))}}},2000)}
+  function loading(next){const ov=$('ovLoad');if(!ov)return next();const m=ov.querySelector('.msg');if(m)m.innerHTML='سیستم در حال راه‌اندازی است<br>لطفاً صبور باشید...';ov.classList.add('s');setTimeout(()=>{ov.classList.remove('s');try{next()}catch(e){console.error(e)}},2000)}
   window.v24Load=loading;
   async function autoRoom(kind){
     if(!validProfile()||!ageOK(kind)){if(!ageOK(kind))toast('برای این لابی باید ۱۶ سال یا بیشتر باشید');return}
@@ -2636,7 +2565,7 @@ window.APP_VERSION='27.0';
     const active=Object.values(rooms||{}).filter(r=>{
       if(!r||!r.code||r.kind!==kind||now-(r.updatedAt||r.createdAt||0)>43200000)return false;
       const players=Object.values(r.players||{});
-      return players.some(p=>p&&now-(p.at||0)<60000);
+      return players.some(p=>p&&now-(p.at||0)<15000);
     }).sort((a,b)=>(b.updatedAt||b.createdAt||0)-(a.updatedAt||a.createdAt||0));
     let c='',createNew=!active.length;
     if(active.length){
@@ -2674,7 +2603,7 @@ window.APP_VERSION='27.0';
       }
       if(asGod){
         const oldHost=found.host&&found.players&&found.players[found.host];
-        const hostIsActive=!!(oldHost&&now-(oldHost.at||0)<60000);
+        const hostIsActive=!!(oldHost&&now-(oldHost.at||0)<15000);
         if(found.host&&found.host!==uid()&&hostIsActive){
           const makeAnother=confirm('این اتاق گردانندهٔ فعالی دارد.\nبرای اینکه گرداننده روی کارت پایین نمایش داده شود و دو گرداننده در یک اتاق نباشند، اتاق جدید بسازیم؟');
           if(!makeAnother){toast('برای ورود به این اتاق، نقش بازیکن را انتخاب کن.');return}
@@ -2714,10 +2643,8 @@ window.APP_VERSION='27.0';
     if(window.__v25Poll)clearInterval(window.__v25Poll);
     window.__v25Poll=setInterval(refreshRealRoom,2200);
   }
-  let refreshingRoom=false;
   async function refreshRealRoom(){
-    const c=window.MAFIA_ROOM_CODE;if(!c||refreshingRoom)return;
-    refreshingRoom=true;
+    const c=window.MAFIA_ROOM_CODE;if(!c)return;
     try{
       const mine=me(),now=Date.now();
       await updatePlayer(c,{...mine,at:now});
@@ -2726,10 +2653,10 @@ window.APP_VERSION='27.0';
       const rooms=await getRooms(),r=rooms[c];if(!r)return;
       renderRealSeats(r);
       // شروع از سمت گرداننده از طریق کانال Net/Voice به بازیکنان می‌رسد؛ اتاق همچنان منبع حضور مشترک است.
-    }catch(e){}finally{refreshingRoom=false}
+    }catch(e){}
   }
   function renderRealSeats(r){
-    const now=Date.now(),arr=Object.values(r.players||{}).filter(p=>p&&now-(p.at||0)<60000&&p.role!=='god').slice(0,10);
+    const now=Date.now(),arr=Object.values(r.players||{}).filter(p=>p&&now-(p.at||0)<15000&&p.role!=='god').slice(0,10);
     lobbyRoomSeats=Array(10).fill(null);arr.forEach((p,i)=>lobbyRoomSeats[i]={n:p.n,id:i+1,seed:p.seed||1,f:(p.seed||1)%3===0,human:true,ready:!!p.ready,online:true,uid:p.uid});
     renderLobbyChairs();$('roomCount').textContent='👥 '+arr.length+'/10';
     const host=r.host&&r.players[r.host];const card=$('modCard');
@@ -2937,151 +2864,6 @@ body.ingame #gFoot #gEqReserve>*{display:none!important}
 body.ingame .grid .seat .av.sp{animation:none!important;box-shadow:none!important;outline:none!important;background:linear-gradient(145deg,#f8dc82,#8a5f1e 48%,#f8dc82)!important}
 @media(max-height:700px){body.ingame #gFoot{height:clamp(92px,17vh,118px)!important;min-height:92px!important}}
 </style>
-
-<style id="bm-extra-css">
-#bmLobbyExtras{margin:12px 0;padding:12px;border:1px solid #8f672b;border-radius:14px;background:#090604aa}
-#bmLobbyExtras .bmBtns{display:grid;grid-template-columns:1fr 1fr;gap:7px}
-.bmExtraRow{display:flex;align-items:center;gap:8px;padding:8px;margin-top:6px;border-radius:10px;background:#0008;border:1px solid #65491f}
-.bmExtraInfo{flex:1;min-width:0;font-size:12px}.bmExtraInfo small{display:block;color:#cbbd9d;margin-top:3px}
-#bmGodManage{margin:8px 10px;padding:10px;border:1px solid #a57a2e;border-radius:12px;background:#100903}
-.bmKickRow{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:6px;padding:6px;background:#0007;border-radius:8px}
-</style>
-<script id="bm-extra-js">
-(()=> {
-if(window.__bmExtraInstalled)return;window.__bmExtraInstalled=true;
-const $=id=>document.getElementById(id),db=()=>String(window.MAFIA_DB_URL||'').replace(/\/$/,''),key='bm_active_started_room_v1';
-const uid=()=>{try{return localStorage.getItem('mafia_uid')||''}catch(e){return ''}},nick=()=>String((window.S&&S.nick)||$('playerNick')?.value||'بازیکن').slice(0,18);
-const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
-const req=async(m,p,d)=>{const r=await fetch(db()+'/'+p+'.json',{method:m,headers:{'Content-Type':'application/json'},body:d===undefined?undefined:JSON.stringify(d),cache:'no-store'});if(!r.ok)throw Error('db');return m==='GET'?r.json():true};
-const prof=()=>({uid:uid(),n:nick(),name:nick(),at:Date.now()});let reconnecting=false;
-function installUI(){const cards=$('lobbyGate')?.querySelector('.lobbyCards');if(cards&&!$('bmLobbyExtras')){const x=document.createElement('div');x.id='bmLobbyExtras';x.innerHTML='<div class="bmBtns"><button class="btn" id="bmRefreshGames">🎮 تازه‌سازی بازی‌های در حال اجرا</button></div><b style="display:block;margin-top:10px">🎮 بازی‌های در حال اجرا</b><div id="bmRunningGames"><div class="rdEmpty">در حال دریافت...</div></div>';cards.insertAdjacentElement('afterend',x);x.querySelector('#bmRefreshGames').onclick=games}
-const wrap=$('lobbyRoom')?.querySelector('.lobbyRoomWrap');if(wrap&&!$('bmGodManage')){const m=document.createElement('div');m.id='bmGodManage';m.style.display='none';m.innerHTML='<b>🛡 مدیریت بازیکنان (گاد)</b><div id="bmGodKickList"></div>';wrap.appendChild(m)}}
-async function games(){const b=$('bmRunningGames');if(!b)return;b.innerHTML='<div class="rdEmpty">در حال بررسی بازی‌های واقعاً فعال...</div>';try{const d=await req('GET','roomsV23')||{},t=Date.now(),live=p=>p&&Number(p.at||0)>t-12000,a=Object.values(d).filter(r=>{if(!r||!r.code||r.status!=='started')return false;const started=Number(r.startedAt||0);if(!started||t-started>6*60*60*1000)return false;return Object.values(r.players||{}).some(live)});if(!a.length){b.innerHTML='<div class="rdEmpty">فعلاً بازیِ شروع‌شده با بازیکن آنلاین پیدا نشد.</div>';return}b.innerHTML=a.slice(0,12).map(r=>{const ps=Object.entries(r.players||{}).filter(([k,p])=>live(p)),mine=ps.some(([k,p])=>k===uid()||p.uid===uid()),n=ps.length;return '<div class="bmExtraRow"><div class="bmExtraInfo"><b>'+esc(({friendly:'🤝 دوستانه',pro:'🏆 حرفه‌ای',edu:'🎓 آموزشی'})[r.kind]||'🎭 مافیا')+'</b><small>کد '+esc(r.code)+' · '+n+'/10 نفر آنلاین'+(mine?' · عضو هستی':'')+'</small></div><button class="btn gold" data-rejoin="'+esc(r.code)+'" '+(mine?'':'disabled')+'>ورود مجدد</button></div>'}).join('')}catch(e){b.innerHTML='<div class="rdEmpty">دریافت بازی‌ها ناموفق بود؛ دیتابیس را بررسی کن.</div>'}}
-document.addEventListener('click',e=>{const b=e.target.closest('[data-rejoin]');if(b)rejoin(b.dataset.rejoin);const k=e.target.closest('[data-kick]');if(k)kick(k.dataset.room,k.dataset.kick)});
-async function rejoin(c){try{const r=await req('GET','roomsV23/'+c);if(!r||r.status!=='started'||!r.players||!r.players[uid()]||await req('GET','roomsV23/'+c+'/kicked/'+uid())){toast('نمی‌توانی به این بازی برگردی.');return}localStorage.setItem(key,c);if($('rdCodeInput'))$('rdCodeInput').value=c;rdJoinKind(r.kind);openRoomDirectory('join');await rdJoin()}catch(e){toast('بازگشت به بازی ناموفق بود')}}
-async function kickList(){const panel=$('bmGodManage'),b=$('bmGodKickList'),c=String(window.MAFIA_ROOM_CODE||'');if(!panel||!b)return;if(!c||window.lobbyMode!=='god'||!window.MAFIA_ROOM_ONLINE){panel.style.display='none';return}panel.style.display='block';try{const ps=await req('GET','roomsV23/'+c+'/players')||{},list=Object.values(ps).filter(p=>p&&p.uid&&p.uid!==uid());b.innerHTML=list.length?list.map(p=>'<div class="bmKickRow"><span>'+esc(p.n||p.name||'بازیکن')+'</span><button class="btn" data-room="'+esc(c)+'" data-kick="'+esc(p.uid)+'">⛔ کیک</button></div>').join(''):'<small>بازیکن دیگری نیست.</small>'}catch(e){b.textContent='فهرست در دسترس نیست.'}}
-async function kick(c,u){if(window.lobbyMode!=='god'||c!==String(window.MAFIA_ROOM_CODE||''))return;try{await req('PUT','roomsV23/'+c+'/kicked/'+u,true);await req('DELETE','roomsV23/'+c+'/players/'+u);const v=Voice.byUid(u);if(v&&v.slot)Voice.send(v.slot,{t:'kick'});toast('بازیکن کیک شد.');kickList()}catch(e){toast('ثبت کیک ناموفق بود')}}
-async function reconnect(){if(reconnecting||window.MAFIA_ROOM_CODE||!db())return;const c=localStorage.getItem(key);if(!c)return;reconnecting=true;try{const r=await req('GET','roomsV23/'+c);if(!r||r.status!=='started'||!r.players||!r.players[uid()]||await req('GET','roomsV23/'+c+'/kicked/'+uid())){localStorage.removeItem(key);return}if(!window.S||!S.nick)return;if($('rdCodeInput'))$('rdCodeInput').value=c;rdJoinKind(r.kind);await rdJoin()}catch(e){}finally{setTimeout(()=>reconnecting=false,5000)}}
-setInterval(()=>{const c=String(window.MAFIA_ROOM_CODE||'');if(c)localStorage.setItem(key,c);if($('lobbyGate')?.classList.contains('on'))installUI()},700);
-setInterval(()=>{if($('lobbyGate')?.classList.contains('on'))games()},20000);setInterval(kickList,3000);setInterval(reconnect,3000);
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{installUI();games()},{once:true});else{installUI();games()}
-const oldClose=window.closeRoom;window.closeRoom=function(){const c=String(window.MAFIA_ROOM_CODE||'');if(!c)return oldClose&&oldClose();req('GET','roomsV23/'+c).then(r=>{if(r&&r.status==='started'){toast('بعد از شروع بازی، فقط گاد می‌تواند شما را خارج کند.');return}oldClose&&oldClose()}).catch(()=>toast('وضعیت بازی بررسی نشد.'))};
-const oldLeave=window.leave;window.leave=function(){const c=String(window.MAFIA_ROOM_CODE||'');if(!c)return oldLeave&&oldLeave();req('GET','roomsV23/'+c).then(r=>{if(r&&r.status==='started'){toast('بعد از شروع بازی، فقط گاد می‌تواند شما را خارج کند.');return}oldLeave&&oldLeave()}).catch(()=>toast('وضعیت بازی بررسی نشد.'))};
-try{Voice.onMsg('kick',()=>{localStorage.removeItem(key);toast('گاد شما را از بازی خارج کرد.');try{Net.reset()}catch(e){}try{MafiaRoomsV23.closeOnlineRoom()}catch(e){}document.body.classList.remove('ingame');$('lobbyRoom')?.classList.remove('on');$('lobbyGate')?.classList.add('on')})}catch(e){}
-})();
-</script>
-
-
-<script id="bm-real-registration-and-startup-law">
-(()=> {
- 'use strict';
- if(window.__bmRealRegistrationAndLaw)return;window.__bmRealRegistrationAndLaw=true;
- const $=id=>document.getElementById(id);
- const accountUid=()=>{let uid='';try{uid=localStorage.getItem('mafia_uid')||''}catch(e){}if(!/^[A-Za-z0-9_-]{1,80}$/.test(uid)){uid='u_'+Array.from(crypto.getRandomValues(new Uint8Array(12))).map(x=>x.toString(16).padStart(2,'0')).join('');try{localStorage.setItem('mafia_uid',uid)}catch(e){}}return uid};
- const status=t=>{const e=$('playerRegistrationStatus');if(e)e.textContent=t};
- window.savePlayerRegistration=async function(){
-  if(typeof saveProfile==='function'&&!saveProfile())return false;
-  const button=$('savePlayerRegistration'),uid=accountUid();
-  const payload={uid,fullName:String(S.fullName||$('playerFullName')?.value||'').trim(),nick:String(S.nick||$('playerNick')?.value||'').trim(),account:String(S.account||$('playerAccount')?.value||'').trim().toUpperCase(),age:Number(S.age||$('playerAge')?.value||0),avatarSeed:Number(S.avatarSeed||selectedAvSeed||1),photo:(String(S.photo||'').length<30000?String(S.photo||''):''),profileComplete:true};
-  if(payload.fullName.length<2||payload.nick.length<2||payload.age<1||payload.age>99||payload.account.length<3){status('نام کامل، نام کاربری و سن را درست وارد کن.');return false}
-  if(button){button.disabled=true;button.textContent='⏳ در حال ثبت و بررسی…'}
-  status('در حال بررسی و ذخیرهٔ مشخصات در سرور…');
-  try{
-   const response=await fetch('/api/register',{method:'POST',cache:'no-store',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
-   const result=await response.json().catch(()=>({}));
-   if(!response.ok)throw new Error(result.error||('ثبت انجام نشد ('+response.status+')'));
-   const user=result.user||{};
-   S.fullName=user.fullName||payload.fullName;S.nick=user.nick||payload.nick;S.account=user.account||payload.account;S.age=Number(user.age||payload.age);S.avatarSeed=Number(user.avatarSeed||payload.avatarSeed);S.profileComplete=true;S.serial=Number(user.serial||S.serial||0);
-   save();
-   try{localStorage.setItem('mafia_profile',JSON.stringify({...user,registered:true,uid:uid}));localStorage.setItem('mafia_account',S.account)}catch(e){}
-   if($('playerFullName'))$('playerFullName').value=S.fullName;
-   if($('playerNick'))$('playerNick').value=S.nick;
-   if($('playerAccount'))$('playerAccount').value=S.account;
-   if($('playerAge'))$('playerAge').value=String(S.age);
-   status('✅ ثبت شد و سرور تأیید کرد · شماره ثبت: '+(S.serial||'ثبت‌شده')+' · با همین کد اکانت برگرد.');
-   const summary=$('profileSavedSummary');if(summary){summary.style.display='block';summary.innerHTML='<div style="display:flex;gap:10px;align-items:center"><div class="setupAv">'+(S.photo?'<div class="avi avme"></div>':proAvatar(S.avatarSeed||1,(S.avatarSeed||1)%3===0))+'</div><div><b>✅ پروفایل ثبت و از سرور تأیید شد</b><div>'+String(S.nick).replace(/[&<>"]/g,'')+' · '+S.age+' سال</div><small>کد اکانت: '+S.account+' · شماره ثبت: '+S.serial+'</small></div></div>'}
-   toast('مشخصات با موفقیت در سرور ثبت و بررسی شد');
-   return true;
-  }catch(e){status('❌ '+(e.message||'ثبت انجام نشد؛ اتصال اینترنت را بررسی کن.'));toast(e.message||'ثبت آنلاین انجام نشد');return false}
-  finally{if(button){button.disabled=false;button.textContent='💾 ثبت و بررسی مشخصات'}}
- };
- async function restoreProfile(){
-  try{
-   const uid=accountUid();
-   const account=String((typeof S!=='undefined'&&S.account)||localStorage.getItem('mafia_account')||'').trim().toUpperCase();
-   if(!account||account.length<3)return;
-   const r=await fetch('/api/profile?account='+encodeURIComponent(account)+'&uid='+encodeURIComponent(uid),{cache:'no-store'});
-   const d=await r.json().catch(()=>({}));
-   if(!r.ok||!d.user||!d.user.registered){S.profileComplete=false;save();status('برای ثبت اولیه، مشخصات را وارد کن و دکمهٔ ثبت را بزن.');return}
-   const u=d.user;
-   S.fullName=u.fullName||'';S.nick=u.nick||S.nick;S.account=u.account||account;S.age=Number(u.age||S.age||0);S.avatarSeed=Number(u.avatarSeed||S.avatarSeed||1);S.profileComplete=true;S.serial=Number(u.serial||0);if(u.photo)S.photo=u.photo;save();
-   try{localStorage.setItem('mafia_account',S.account);localStorage.setItem('mafia_profile',JSON.stringify(u))}catch(e){}
-   if($('playerFullName'))$('playerFullName').value=S.fullName;
-   if($('playerNick'))$('playerNick').value=S.nick;
-   if($('playerAccount'))$('playerAccount').value=S.account;
-   if($('playerAge'))$('playerAge').value=String(S.age);
-   status('✅ پروفایل قبلی از سرور بازیابی شد؛ نیازی به ثبت دوباره نیست.');
-  }catch(e){console.warn('profile restore',e)}
- }
- function showLaw(){
-  if($('bmIranLawStartup'))return;
-  const overlay=document.createElement('div');overlay.id='bmIranLawStartup';overlay.dir='rtl';
-  overlay.style.cssText='position:fixed;inset:0;z-index:2147483647;display:flex;align-items:center;justify-content:center;padding:18px;background:#000e;backdrop-filter:blur(9px);font-family:Tahoma,Arial,sans-serif;box-sizing:border-box';
-  overlay.innerHTML='<section style="width:min(94vw,450px);border:2px solid #d8b35e;border-radius:18px;background:linear-gradient(160deg,#173021,#070a08);color:#fff8e8;padding:22px;text-align:center;box-sizing:border-box;box-shadow:0 10px 44px #000"><div style="font-size:42px">🇮🇷</div><h2 style="color:#f2d98e;margin:8px 0 12px">اطلاعیهٔ قوانین بازی</h2><p style="font-size:14px;line-height:2;margin:0 0 18px">استفاده از این بازی تابع قوانین و مقررات جمهوری اسلامی ایران است. به قوانین کشور و سایر بازیکنان احترام بگذارید و از توهین و آزار دیگران خودداری کنید.</p><button id="bmIranLawContinue" type="button" style="width:100%;min-height:50px;border:1px solid #fff0a8;border-radius:10px;background:linear-gradient(#fff0a8,#c8922c);color:#201305;font:900 15px Tahoma,Arial,sans-serif">خواندم؛ ادامه بازی</button></section>';
-  document.body.appendChild(overlay);$('bmIranLawContinue').addEventListener('click',()=>overlay.remove());
- }
- if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{restoreProfile();showLaw()},{once:true});else{restoreProfile();showLaw()}
-})();
-</script>
-
-<script id="bm-single-settings-admin-panel">
-(()=> {
- 'use strict';
- if(window.__bmSingleSettingsAdmin)return;window.__bmSingleSettingsAdmin=true;
- const $=id=>document.getElementById(id);
- function init(){
-  const hub=$('bpHub'),settingsWrap=$('bpSettings'),adminWrap=$('bpAdmin');
-  if(!hub||!settingsWrap||!adminWrap)return;
-  const settingsCard=settingsWrap.querySelector('.bpModal'),adminCard=adminWrap.querySelector('.bpModal');
-  if(!settingsCard||!adminCard)return;
-  const buttons=[...hub.querySelectorAll('.bpHubBtn')];
-  const settingsBtn=buttons.find(b=>(b.getAttribute('onclick')||'').includes("BP.open('settings')"));
-  const adminBtn=buttons.find(b=>(b.getAttribute('onclick')||'').includes("BP.open('admin')"));
-  if(settingsBtn){settingsBtn.textContent='⚙️ تنظیمات و مدیریت';settingsBtn.setAttribute('onclick',"BMOpenCombined('settings')");settingsBtn.setAttribute('aria-label','تنظیمات و مدیریت')}
-  if(adminBtn)adminBtn.remove();
-  const root=document.createElement('div');root.id='bmCombinedControl';root.dir='rtl';
-  root.style.cssText='position:fixed;inset:0;z-index:2147483200;display:none;align-items:center;justify-content:center;padding:12px;background:#000d;backdrop-filter:blur(10px);box-sizing:border-box;font-family:Tahoma,Arial,sans-serif';
-  root.innerHTML='<section style="width:min(96vw,650px);max-height:92dvh;overflow:auto;background:linear-gradient(180deg,#171719,#050506);border:1px solid #a77a30;border-radius:16px;padding:12px;box-shadow:0 14px 44px #000d;box-sizing:border-box"><header style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><b style="flex:1;color:#f3d98c;font-size:17px">⚙️ تنظیمات و مدیریت</b><button id="bmCombinedClose" type="button" style="border:1px solid #8e6a31;border-radius:8px;padding:7px 12px;background:#23170b;color:#fff0bd;font-size:18px">×</button></header><nav id="bmCombinedTabs" style="display:flex;gap:8px;margin:0 0 12px"><button type="button" data-pane="settings" style="flex:1;min-height:44px;border:1px solid #e0b255;border-radius:9px;background:linear-gradient(#e7bd5b,#9d6d1d);color:#1b1005;font-weight:800;font-family:inherit">⚙️ تنظیمات</button><button type="button" data-pane="admin" style="flex:1;min-height:44px;border:1px solid #8e6a31;border-radius:9px;background:#17120c;color:#f6e6bd;font-weight:800;font-family:inherit">🛡 مدیریت</button></nav><div id="bmCombinedSettings"></div><div id="bmCombinedAdmin" style="display:none"></div></section>';
-  document.body.appendChild(root);
-  const settingsPane=$('bmCombinedSettings'),adminPane=$('bmCombinedAdmin');
-  for(const card of [settingsCard,adminCard]){
-   card.style.setProperty('width','100%','important');card.style.setProperty('max-width','none','important');card.style.setProperty('max-height','none','important');card.style.setProperty('overflow','visible','important');card.style.setProperty('margin','0','important');card.style.setProperty('padding','0','important');card.style.setProperty('border','0','important');card.style.setProperty('box-shadow','none','important');card.style.setProperty('background','transparent','important');
-  }
-  settingsPane.appendChild(settingsCard);adminPane.appendChild(adminCard);
-  settingsWrap.style.display='none';adminWrap.style.display='none';
-  settingsCard.querySelectorAll('.bpX').forEach(b=>b.setAttribute('onclick','BMCloseCombined()'));
-  adminCard.querySelectorAll('.bpX').forEach(b=>b.setAttribute('onclick','BMCloseCombined()'));
-  const actions=settingsCard.querySelector('.bpActions');
-  if(actions){
-   actions.style.cssText+=';position:sticky;bottom:0;z-index:20;padding:10px 0 4px;margin-top:12px;border-top:1px solid #6f5228;background:linear-gradient(180deg,#111114f5,#050506);';
-   const save=actions.querySelector('.bpPrimary');if(save){save.textContent='💾 ذخیره تنظیمات';save.style.cssText+=';display:block!important;visibility:visible!important;opacity:1!important;min-height:48px;flex:1 1 170px;font-size:15px;font-weight:900'}
-  }
-  window.BMOpenCombined=function(which){
-   root.style.display='flex';const pane=which==='admin'?'admin':'settings';
-   settingsPane.style.display=pane==='settings'?'block':'none';adminPane.style.display=pane==='admin'?'block':'none';
-   $('bmCombinedTabs').querySelectorAll('[data-pane]').forEach(b=>{const on=b.dataset.pane===pane;b.style.background=on?'linear-gradient(#e7bd5b,#9d6d1d)':'#17120c';b.style.color=on?'#1b1005':'#f6e6bd';b.style.borderColor=on?'#e0b255':'#8e6a31'});
-   if(pane==='settings'){const key='mafia_bp_settings_v1';const q=localStorage.getItem(key+'q')||'high';document.querySelectorAll('#bpQuality button').forEach(b=>b.classList.toggle('on',b.dataset.q===q));const vol=$('bpVol');if(vol)vol.value=Math.round(Number(localStorage.getItem(key+'vol')||0.8)*100);const voice=$('bpVoiceVol');if(voice)voice.value=Math.round(Number(localStorage.getItem(key+'voice')||1)*100);const music=$('bpMusic');if(music)music.value=localStorage.getItem(key+'music')||'on'}
-   if(pane==='admin'){const logged=sessionStorage.getItem('bp_admin')==='1';if($('bpAdminLogin'))$('bpAdminLogin').style.display=logged?'none':'block';if($('bpAdminPanel'))$('bpAdminPanel').style.display=logged?'block':'none'}
-  };
-  window.BMCloseCombined=()=>{root.style.display='none'};
-  $('bmCombinedClose').addEventListener('click',window.BMCloseCombined);
-  root.addEventListener('click',e=>{if(e.target===root)window.BMCloseCombined()});
-  $('bmCombinedTabs').querySelectorAll('[data-pane]').forEach(b=>b.addEventListener('click',()=>window.BMOpenCombined(b.dataset.pane)));
-  document.querySelectorAll('[onclick]').forEach(el=>{const a=el.getAttribute('onclick')||'';if(a.includes("BP.open('settings')"))el.setAttribute('onclick',"BMOpenCombined('settings')");else if(a.includes("BP.open('admin')"))el.setAttribute('onclick',"BMOpenCombined('admin')")});
- }
- if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
-})();
-</script>
 </body></html>
 
 <!-- BLACK MAFIA v31: clean controls, open moderator entry, clearer friendly-lobby choices -->
@@ -3228,19 +3010,5 @@ button[title], [role="button"][title]{cursor:pointer}button:focus-visible{outlin
  const watch=new MutationObserver(syncRole);
  const room=$('lobbyRoom');if(room)watch.observe(room,{attributes:true,attributeFilter:['class']});
  setInterval(()=>{if(room?.classList.contains('on'))syncRole()},700);
-})();
-</script>
-
-<!-- BLACK MAFIA: silence background score in waiting lobby; keep player voices enabled -->
-<script id="bm-lobby-audio-fix">
-(()=>{
- if(window.__bmLobbyAudioFix)return;window.__bmLobbyAudioFix=true;
- const $=id=>document.getElementById(id);let lobbyMuted=false;
- function lobbyVisible(){const e=$('lobbyRoom');return !!(e&&e.classList.contains('on'))}
- function syncMusic(){try{if(typeof MU==='undefined'||!MU.mg)return;const inside=lobbyVisible(),now=MU.mg.context.currentTime;if(inside){lobbyMuted=true;MU.mg.gain.setTargetAtTime(0,now,.025)}else if(lobbyMuted){lobbyMuted=false;MU.mg.gain.setTargetAtTime(MU.on?1.5:0,now,.08)}}catch(e){}}
- function resumeRemoteAudio(){document.querySelectorAll('audio').forEach(a=>{if(!a.srcObject)return;a.muted=false;a.volume=1;a.playsInline=true;if(a.paused){const p=a.play();if(p&&p.catch)p.catch(()=>{})}});try{if(typeof ctx!=='undefined'&&ctx&&ctx.state==='suspended')ctx.resume()}catch(e){}}
- document.addEventListener('pointerdown',resumeRemoteAudio,{passive:true});document.addEventListener('touchend',resumeRemoteAudio,{passive:true});
- const room=$('lobbyRoom');if(room)new MutationObserver(()=>{syncMusic();if(lobbyVisible())resumeRemoteAudio()}).observe(room,{attributes:true,attributeFilter:['class']});
- setInterval(()=>{syncMusic();if(lobbyVisible())resumeRemoteAudio()},900);
 })();
 </script>
