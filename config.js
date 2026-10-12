@@ -260,10 +260,13 @@ window.MAFIA_ONE_ROOM_ALL=true;     // true: هر سه لابی یک اتاق‌
  badge.onclick=open;
  function addEntry(){
   if(document.getElementById('bmGhostEntry'))return;
-  const nodes=[...document.querySelectorAll('button,a,[role="button"]')];
-  const admin=nodes.find(n=>/مدیریت|تنظیمات مدیریت|پنل مدیریت/.test((n.innerText||n.textContent||'').trim()));
+  const candidates=[...document.querySelectorAll('button,a,[role="button"]')];
+  const admin=candidates.find(n=>/مرکز مدیریت\s*\/\s*ادمین|مرکز مدیریت|ورود به مدیریت|پنل مدیریت/.test((n.innerText||n.textContent||'').replace(/\s+/g,' ').trim()));
   if(!admin)return;
   const b=document.createElement('button');b.id='bmGhostEntry';b.textContent='👻 ورود روح ناظر';b.onclick=open;
+  b.style.cssText='display:block;width:100%;margin:10px 0;padding:12px;border-radius:12px;border:1px solid #7cecff;background:linear-gradient(135deg,#101d35,#263d5d);color:#dffcff;font-weight:800;cursor:pointer';
+  const adminPanel=[...document.querySelectorAll('[id]')].find(n=>/admin/i.test(n.id)&&n.offsetParent!==null&&/مدیریت|ادمین/i.test(n.innerText||n.textContent||''));
+  if(adminPanel){adminPanel.appendChild(b);return}
   (admin.parentElement||admin).insertAdjacentElement('afterend',b);
  }
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',addEntry,{once:true});else addEntry();
