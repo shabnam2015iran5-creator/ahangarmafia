@@ -25,17 +25,9 @@ function startTraining(){
  window.BMGuest=true;
  try{
   if(window.S){window.S.nick='';window.S.fullName='';window.S.account='';window.S.age=0;window.S.profileComplete=false;window.S.photo='';}
-  if(typeof window.lobbyMode!=='undefined')window.lobbyMode='player';
-  if(typeof window.lobbyKind!=='undefined')window.lobbyKind='edu';
-  if(typeof window.buildLobbyRoom==='function'&&$('lobbyRoom')){
-   window.buildLobbyRoom();
-   if($('lobbyGate'))$('lobbyGate').classList.remove('on');
-   if($('doorScreen'))$('doorScreen').classList.remove('on');
-   $('lobbyRoom').classList.add('on');
-   hideGate();
-  }else{
-   toastMsg('آموزش هنوز بارگذاری نشده است؛ چند لحظه دیگر دوباره بزن.');
-  }
+  if(typeof originalEnter==='function'){
+   Promise.resolve(originalEnter('edu')).then(()=>{if($('lobbyRoom')&&$('lobbyRoom').classList.contains('on'))hideGate();else toastMsg('آموزش هنوز بارگذاری نشده است؛ دوباره تلاش کن.')}).catch(()=>toastMsg('ورود به آموزش انجام نشد؛ دوباره تلاش کن.'));
+  }else toastMsg('آموزش هنوز بارگذاری نشده است؛ چند لحظه دیگر دوباره بزن.');
  }catch(e){toastMsg('ورود به آموزش انجام نشد؛ صفحه را یک‌بار تازه‌سازی کن.')}
 }
 window.BMGuestStart=showGate;
