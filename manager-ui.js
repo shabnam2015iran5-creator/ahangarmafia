@@ -12,4 +12,5 @@ function exitManager(){try{localStorage.removeItem('bm_manager_mode');for(const 
 launch.onclick=()=>{if(localStorage.getItem('bm_manager_mode')==='1'){if(confirm('از حالت مدیر خارج شوی و به حساب قبلی برگردی؟'))exitManager();return}modal.style.display='flex';$('bmmCode').value='';statusText('');$('bmmCode').focus()};$('bmmClose').onclick=()=>modal.style.display='none';modal.addEventListener('click',e=>{if(e.target===modal)modal.style.display='none'});
 $('bmmEnter').onclick=()=>{if($('bmmCode').value!=='1234'){statusText('کد ورود نادرست است.');return}enter()};
 if(localStorage.getItem('bm_manager_mode')==='1'){window.BMManagerMode=true;launch.textContent='🛡 مدیر فعال';setTimeout(enter,0)}
+const managerOverlayWatch=new MutationObserver(()=>{if(localStorage.getItem('bm_manager_mode')==='1'){const reg=$('bmRegOverlay');if(reg)reg.remove();const guest=$('bmGuestGate');if(guest)guest.style.display='none';document.body.classList.remove('bm-guest-mode')}});managerOverlayWatch.observe(document.documentElement,{childList:true,subtree:true});
 })();
