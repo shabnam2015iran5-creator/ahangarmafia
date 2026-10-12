@@ -278,3 +278,156 @@ window.MAFIA_ONE_ROOM_ALL=true;     // true: هر سه لابی یک اتاق‌
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',addEntry,{once:true});else addEntry();
  new MutationObserver(addEntry).observe(document.documentElement,{childList:true,subtree:true});
 })();
+
+/* BLACK MAFIA UI repair: unified settings/admin, visible save action, startup law notice. */
+(()=> {
+ 'use strict';
+ if(window.__bmUnifiedUiRepairV1)return;
+ window.__bmUnifiedUiRepairV1=true;
+ const byId=id=>document.getElementById(id);
+ function install(){
+  if(!document.body)return;
+  // Put the settings and admin cards inside one shared panel while keeping their original IDs/functions.
+  const settingsRoot=byId('bpSettings'),adminRoot=byId('bpAdmin');
+  const settingsCard=settingsRoot&&settingsRoot.querySelector('.bpModal');
+  const adminCard=adminRoot&&adminRoot.querySelector('.bpModal');
+  if(settingsCard&&adminCard&&!byId('bmUnifiedControl')){
+   const root=document.createElement('div');
+   root.id='bmUnifiedControl';
+   root.dir='rtl';
+   root.style.cssText='position:fixed;inset:0;z-index:2147483300;display:none;align-items:center;justify-content:center;padding:12px;background:#000d;backdrop-filter:blur(10px);font-family:Tahoma,Arial,sans-serif;box-sizing:border-box';
+   root.innerHTML='<section id="bmUnifiedSheet" style="width:min(96vw,650px);max-height:92dvh;overflow:auto;overscroll-behavior:contain;background:linear-gradient(180deg,#171719,#050506);border:1px solid #a77a30;border-radius:16px;padding:12px;box-shadow:0 14px 44px #000d;box-sizing:border-box"><header style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><b style="flex:1;color:#f3d98c;font-size:17px">⚙️ تنظیمات و مدیریت</b><button id="bmUnifiedClose" type="button" aria-label="بستن پنل" style="border:1px solid #8e6a31;border-radius:8px;padding:7px 12px;background:#23170b;color:#fff0bd;font-size:18px">×</button></header><nav id="bmUnifiedTabs" style="display:flex;gap:8px;margin:0 0 12px"><button type="button" data-pane="settings" style="flex:1;min-height:44px;border:1px solid #e0b255;border-radius:9px;background:linear-gradient(#e7bd5b,#9d6d1d);color:#1b1005;font-weight:800;font-family:inherit">⚙️ تنظیمات</button><button type="button" data-pane="admin" style="flex:1;min-height:44px;border:1px solid #8e6a31;border-radius:9px;background:#17120c;color:#f6e6bd;font-weight:800;font-family:inherit">🛡 مدیریت</button></nav><div id="bmUnifiedSettingsPane"></div><div id="bmUnifiedAdminPane" style="display:none"></div></section>';
+   document.body.appendChild(root);
+   const sheet=byId('bmUnifiedSheet'),settingsPane=byId('bmUnifiedSettingsPane'),adminPane=byId('bmUnifiedAdminPane');
+   settingsCard.style.setProperty('width','100%','important');
+   settingsCard.style.setProperty('max-width','none','important');
+   settingsCard.style.setProperty('max-height','none','important');
+   settingsCard.style.setProperty('overflow','visible','important');
+   settingsCard.style.setProperty('margin','0','important');
+   settingsCard.style.setProperty('padding','0','important');
+   settingsCard.style.setProperty('border','0','important');
+   settingsCard.style.setProperty('box-shadow','none','important');
+   settingsCard.style.setProperty('background','transparent','important');
+   adminCard.style.setProperty('width','100%','important');
+   adminCard.style.setProperty('max-width','none','important');
+   adminCard.style.setProperty('max-height','none','important');
+   adminCard.style.setProperty('overflow','visible','important');
+   adminCard.style.setProperty('margin','0','important');
+   adminCard.style.setProperty('padding','0','important');
+   adminCard.style.setProperty('border','0','important');
+   adminCard.style.setProperty('box-shadow','none','important');
+   adminCard.style.setProperty('background','transparent','important');
+   settingsPane.appendChild(settingsCard);
+   adminPane.appendChild(adminCard);
+   settingsRoot.remove();
+   adminRoot.remove();
+
+   const hub=byId('bpHub');
+   if(hub){
+    const controls=[...hub.querySelectorAll('.bpHubBtn')];
+    const settingsButton=controls.find(b=>(b.getAttribute('onclick')||'').includes("BP.open('settings')")||/تنظیمات/.test(b.textContent||''));
+    const adminButton=controls.find(b=>(b.getAttribute('onclick')||'').includes("BP.open('admin')")||/مدیر\s*\/\s*ادمین|مدیریت/.test(b.textContent||''));
+    if(settingsButton){
+     settingsButton.textContent='⚙️ تنظیمات و مدیریت';
+     settingsButton.setAttribute('onclick',"window.BMOpenControls('settings')");
+    }else{
+     const button=document.createElement('button');
+     button.className='bpHubBtn';button.textContent='⚙️ تنظیمات و مدیریت';
+     button.setAttribute('onclick',"window.BMOpenControls('settings')");
+     hub.appendChild(button);
+    }
+    if(adminButton&&adminButton!==settingsButton)adminButton.remove();
+   }
+
+   // Redirect every remaining settings/admin shortcut to the same combined panel.
+   document.querySelectorAll('[onclick]').forEach(el=>{
+    const action=el.getAttribute('onclick')||'';
+    if(action.includes("BP.open('settings')"))el.setAttribute('onclick',"window.BMOpenControls('settings')");
+    else if(action.includes("BP.open('admin')"))el.setAttribute('onclick',"window.BMOpenControls('admin')");
+    if(action.includes("BP.close('settings')")||action.includes("BP.close('admin')"))el.setAttribute('onclick','window.BMCloseControls()');
+   });
+   byId('bmUnifiedClose').addEventListener('click',()=>window.BMCloseControls());
+   root.addEventListener('click',e=>{if(e.target===root)window.BMCloseControls()});
+   byId('bmUnifiedTabs').querySelectorAll('[data-pane]').forEach(button=>button.addEventListener('click',()=>window.BMOpenControls(button.dataset.pane)));
+
+   // Keep the save/reset row pinned at the bottom on phone screens.
+   const actions=settingsCard.querySelector('.bpActions');
+   if(actions){
+    actions.style.setProperty('position','sticky','important');
+    actions.style.setProperty('bottom','0','important');
+    actions.style.setProperty('z-index','20','important');
+    actions.style.setProperty('display','flex','important');
+    actions.style.setProperty('gap','8px','important');
+    actions.style.setProperty('flex-wrap','wrap','important');
+    actions.style.setProperty('padding','10px 0 4px','important');
+    actions.style.setProperty('margin-top','12px','important');
+    actions.style.setProperty('border-top','1px solid #6f5228','important');
+    actions.style.setProperty('background','linear-gradient(180deg,#111114f5,#050506)','important');
+    const saveButton=actions.querySelector('.bpPrimary');
+    if(saveButton){
+     saveButton.textContent='💾 ذخیره تنظیمات';
+     saveButton.setAttribute('onclick','window.BMSaveSettings()');
+     saveButton.style.setProperty('display','block','important');
+     saveButton.style.setProperty('visibility','visible','important');
+     saveButton.style.setProperty('opacity','1','important');
+     saveButton.style.setProperty('min-height','46px','important');
+     saveButton.style.setProperty('flex','1 1 170px','important');
+     saveButton.style.setProperty('font-weight','900','important');
+     saveButton.style.setProperty('font-size','14px','important');
+    }
+    const resetButton=actions.querySelector('.bpDanger');
+    if(resetButton)resetButton.style.setProperty('flex','1 1 120px','important');
+   }
+
+   window.BMOpenControls=function(which){
+    root.style.display='flex';
+    const pane=which==='admin'?'admin':'settings';
+    settingsPane.style.display=pane==='settings'?'block':'none';
+    adminPane.style.display=pane==='admin'?'block':'none';
+    byId('bmUnifiedTabs').querySelectorAll('[data-pane]').forEach(b=>{
+     const selected=b.dataset.pane===pane;
+     b.style.background=selected?'linear-gradient(#e7bd5b,#9d6d1d)':'#17120c';
+     b.style.color=selected?'#1b1005':'#f6e6bd';
+     b.style.borderColor=selected?'#e0b255':'#8e6a31';
+    });
+    if(pane==='settings'){
+     const key='mafia_bp_settings_v1';
+     const q=localStorage.getItem(key+'q')||'high';
+     document.querySelectorAll('#bpQuality button').forEach(b=>b.classList.toggle('on',b.dataset.q===q));
+     const vol=byId('bpVol');if(vol)vol.value=Math.round(Number(localStorage.getItem(key+'vol')||0.8)*100);
+     const voice=byId('bpVoiceVol');if(voice)voice.value=Math.round(Number(localStorage.getItem(key+'voice')||1)*100);
+     const music=byId('bpMusic');if(music)music.value=localStorage.getItem(key+'music')||'on';
+    }else{
+     const logged=sessionStorage.getItem('bp_admin')==='1';
+     if(byId('bpAdminLogin'))byId('bpAdminLogin').style.display=logged?'none':'block';
+     if(byId('bpAdminPanel'))byId('bpAdminPanel').style.display=logged?'block':'none';
+    }
+   };
+   window.BMCloseControls=function(){root.style.display='none'};
+   window.BMSaveSettings=function(){
+    try{
+     if(typeof BP!=='undefined'&&typeof BP.saveSettings==='function')BP.saveSettings();
+     else{
+      const key='mafia_bp_settings_v1';
+      const q=document.querySelector('#bpQuality button.on')?.dataset.q||'high';
+      localStorage.setItem(key+'q',q);
+      localStorage.setItem(key+'vol',((Number(byId('bpVol')?.value)||0)/100).toFixed(2));
+      localStorage.setItem(key+'voice',((Number(byId('bpVoiceVol')?.value)||0)/100).toFixed(2));
+      localStorage.setItem(key+'music',byId('bpMusic')?.value||'on');
+     }
+    }catch(e){alert('ذخیره تنظیمات انجام نشد؛ دوباره تلاش کن.');return}
+   };
+  }
+
+  // Mandatory, visible Iranian-law notice at every fresh game start.
+  if(!byId('bmLawStartupOverlay')){
+   const law=document.createElement('div');
+   law.id='bmLawStartupOverlay';law.dir='rtl';
+   law.style.cssText='position:fixed;inset:0;z-index:2147483647;display:flex;align-items:center;justify-content:center;padding:18px;background:#000e;backdrop-filter:blur(10px);font-family:Tahoma,Arial,sans-serif;box-sizing:border-box';
+   law.innerHTML='<section style="width:min(94vw,460px);box-sizing:border-box;border:2px solid #d7b15b;border-radius:18px;background:linear-gradient(160deg,#172a1d,#080b09 65%);color:#fff8e8;padding:22px;text-align:center;box-shadow:0 0 40px #000"><div style="font-size:38px;line-height:1.5">🇮🇷</div><h2 style="color:#f2d98e;margin:4px 0 12px;font-size:20px">اطلاعیه قوانین بازی</h2><p style="font-size:14px;line-height:2;margin:0 0 18px">این بازی تابع قوانین و مقررات جمهوری اسلامی ایران است. با ادامهٔ بازی، رعایت قوانین کشور، احترام به سایر بازیکنان و پرهیز از توهین و آزار دیگران را می‌پذیرید.</p><button id="bmLawAccept" type="button" style="width:100%;min-height:50px;border:1px solid #fff0a8;border-radius:10px;background:linear-gradient(#fff0a8,#c8922c);color:#201305;font:900 15px Tahoma,Arial,sans-serif">قوانین را خواندم؛ ادامه بازی</button></section>';
+   document.body.appendChild(law);
+   byId('bmLawAccept').addEventListener('click',()=>law.remove());
+  }
+ }
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
+})();
