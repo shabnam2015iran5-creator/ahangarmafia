@@ -98,5 +98,30 @@ window.MAFIA_ONE_ROOM_ALL=true;     // true: هر سه لابی یک اتاق‌
   return nativeFetch(resource,options);
  };
 
+ // Voice connection watchdog: start the native voice flow if the lobby opened without invoking it,
+ // and retry only after a visible failure. Do not override PeerJS/ICE/audio internals.
+ let bmVoiceLastAttempt=0,bmVoiceRoomKey='';
+ const bmVoiceWatch=()=>{
+  try{
+   const room=document.getElementById('lobbyRoom');
+   if(!room||!room.classList.contains('on')||typeof window.Voice==='undefined'||typeof window.Voice.join!=='function')return;
+   const key=String(window.MAFIA_ROOM_CODE||window.__voiceKey||'main');
+   if(key!==bmVoiceRoomKey){bmVoiceRoomKey=key;bmVoiceLastAttempt=0}
+   const status=document.getElementById('voiceStatus');
+   const msg=String(status&&status.textContent||'').trim();
+   let active=false;
+   try{active=!!(window.Voice.active&&window.Voice.active())}catch(e){}
+   if(active)return;
+   const failed=!msg||/اتصال به سرور وویس برقرار نشد|کتابخانه وویس.*بارگذاری نشد|ظرفیت وویس این لابی پر است|خطا.*وویس/i.test(msg);
+   if(!failed)return;
+   const now=Date.now();
+   if(now-bmVoiceLastAttempt<15000)return;
+   bmVoiceLastAttempt=now;
+   window.Voice.join(window.__voiceKey||window.MAFIA_ROOM_CODE||'main');
+  }catch(e){}
+ };
+ setInterval(bmVoiceWatch,4000);
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(bmVoiceWatch,800)});
+ window.addEventListener('online',()=>setTimeout(bmVoiceWatch,1200));
 
 })();
