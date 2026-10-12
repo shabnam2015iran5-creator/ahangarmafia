@@ -690,7 +690,7 @@ async function syncRegisteredProfile(){
   const prevRes=await fetch(url,{cache:'no-store'});
   if(!prevRes.ok)throw Error('خواندن پروفایل ناموفق بود');
   const prev=await prevRes.json()||{};
-  const record={...prev,uid,nick:String(S.nick||'بازیکن').slice(0,18),account:String(S.account||''),age:Number(S.age||0),avatarSeed:Number(S.avatarSeed||1),photo:String(S.photo||''),registered:true,createdAt:Number(prev.createdAt||Date.now()),lastSeen:Date.now(),profileComplete:!!S.profileComplete};
+  const record={...prev,uid,nick:String(S.nick||'بازیکن').slice(0,18),account:String(S.account||''),age:Number(S.age||0),avatarSeed:Number(S.avatarSeed||1),photo:(String(S.photo||'').length<30000?String(S.photo||''):''),registered:true,createdAt:Number(prev.createdAt||Date.now()),lastSeen:Date.now(),profileComplete:!!S.profileComplete};
   const wr=await fetch(url,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(record)});
   if(!wr.ok)throw Error('ذخیرهٔ آنلاین ناموفق بود');
   return true;
@@ -1531,7 +1531,7 @@ const BP=(()=>{
    }else{box.innerHTML='<b>'+esc(x)+'</b><p>این بخش هنوز به کنترل امن سمت سرور متصل نیست.</p>'}
   }catch(e){box.innerHTML='<b style="color:#ffb6b6">خطا در دریافت اطلاعات</b><p>'+esc(e.message||e)+'</p><small>سرویس /api/db و قوانین دیتابیس را بررسی کنید.</small>'}
 }
-async function adminCloseRoom(code){try{const base=String(window.MAFIA_DB_URL||'').replace(/\/$/,'');const root=base+'/roomsV23/'+encodeURIComponent(code);for(const [k,v] of [['status','closed'],['updatedAt',Date.now()]]){const r=await fetch(root+'/'+k+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(v)});if(!r.ok)throw Error('خطای سرور '+r.status)}adminAction('اتاق‌ها')}catch(e){alert('بستن اتاق انجام نشد: '+(e.message||e))}}
+async function adminCloseRoom(code){try{const base=String(window.MAFIA_DB_URL||'').replace(/\/$/,'');const root=base+'/roomsV23/'+encodeURIComponent(code)+'.json';const read=await fetch(root,{cache:'no-store'});if(!read.ok)throw Error('خطای سرور '+read.status);const room=await read.json();if(!room)throw Error('اتاق پیدا نشد');room.status='closed';room.updatedAt=Date.now();const wr=await fetch(root,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(room)});if(!wr.ok)throw Error('خطای سرور '+wr.status);adminAction('اتاق‌ها')}catch(e){alert('بستن اتاق انجام نشد: '+(e.message||e))}}
 function adjustLocalCoins(){const d=Number($('bpCoinDelta')?.value||0);if(!Number.isFinite(d))return;S.coins=Math.max(0,Number(S.coins||0)+d);save();adminAction('اقتصاد')}
  document.addEventListener('click',e=>{if(e.target.closest('button'))tone('click')},{capture:true});
  return {open,close,setVol,saveSettings,resetSettings,loginAdmin,logoutAdmin,goLobby,voiceTest,sfx,testAll,avatarInfo,adminAction,adminCloseRoom,adjustLocalCoins}

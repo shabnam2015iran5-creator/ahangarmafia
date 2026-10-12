@@ -34,6 +34,11 @@ function allowedPath(path) {
     return p.length === 1 || (p.length === 2 && /^[A-Za-z0-9_-]{1,80}$/.test(p[1]));
   }
 
+  // Permanent player registry: one record per generated device account ID.
+  if (p[0] === "usersV1") {
+    return p.length === 1 || (p.length === 2 && /^[A-Za-z0-9_-]{1,80}$/.test(p[1]));
+  }
+
   return false;
 }
 
