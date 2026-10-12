@@ -32,7 +32,7 @@
   const target=matches.find(n=>/ورود\s*(?:به\s*)?لابی(?:‌| )?ها?|ورود\s*(?:به\s*)?اتاق|انتخاب\s*لابی/.test((n.innerText||n.textContent||'').replace(/\s+/g,' ').trim()));
   if(target){
    const group=target.parentElement||target;
-   if(btn.parentElement!==group)group.insertAdjacentElement('afterend',btn);
+   if(btn.parentElement!==group.parentElement||btn.previousElementSibling!==group)group.insertAdjacentElement('afterend',btn);
    btn.style.position='relative';btn.style.width='100%';btn.style.margin='8px 0';btn.style.zIndex='10';
   }else{
    btn.style.position='fixed';btn.style.right='12px';btn.style.bottom='74px';btn.style.zIndex='2147482990';btn.style.width='auto';btn.style.maxWidth='calc(100vw - 24px)';
