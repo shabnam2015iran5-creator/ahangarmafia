@@ -97,66 +97,6 @@ window.MAFIA_ONE_ROOM_ALL=true;     // true: هر سه لابی یک اتاق‌
   }catch(e){}
   return nativeFetch(resource,options);
  };
- // Voice lobby recovery: retain TURN relays and retry PeerJS connection while a player is waiting.
- let voiceConfigApplied=false,voiceLastJoinKey='';
- // Restore TURN settings after the later inline voice script's defaults run, before its delayed Voice.join.
- let voiceConfigTries=0;
- const voiceConfigTimer=setInterval(()=>{
-  try{
-   if(typeof VOICE_CFG!=='undefined'){
-    VOICE_CFG.peer={host:'0.peerjs.com',port:443,path:'/',secure:true};
-    VOICE_CFG.ice=[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'}].concat(Array.isArray(window.MAFIA_TURN)?window.MAFIA_TURN:[]);
-    voiceConfigApplied=true;clearInterval(voiceConfigTimer);
-   }
-  }catch(e){}
-  if(++voiceConfigTries>120)clearInterval(voiceConfigTimer);
- },50);
- setInterval(()=>{
-  try{
-   if(typeof VOICE_CFG!=='undefined'){
-    VOICE_CFG.peer={host:'0.peerjs.com',port:443,path:'/',secure:true};
-    const stun=[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'}];
-    VOICE_CFG.ice=stun.concat(Array.isArray(window.MAFIA_TURN)?window.MAFIA_TURN:[]);
-    voiceConfigApplied=true;
-   }
-   const room=$('lobbyRoom');
-   if(!room||!room.classList.contains('on')||typeof Voice==='undefined')return;
-   const code=String(window.MAFIA_ROOM_CODE||window.MAFIA_ROOM_NAME||'main');
-   if(!Voice.active()){
-    const key=code+'|'+String(window.lobbyMode||'player');
-    if(voiceLastJoinKey!==key)voiceLastJoinKey=key;
-    // Voice.join internally uses MAFIA_ROOM_CODE when available, keeping both phones in the same voice room.
-    Voice.join(code);
-   }
-  }catch(e){}
- },12000);
- // If the first autoplay attempt was blocked, retry remote audio after the next user interaction.
- const prepareRemoteAudio=a=>{
-  if(!a||!a.srcObject)return;
-  try{
-   a.autoplay=true;a.playsInline=true;a.muted=false;a.volume=1;
-   const play=()=>{if(a.srcObject&&!document.hidden)a.play().catch(()=>{})};
-   a.addEventListener('loadedmetadata',play,{passive:true});
-   a.addEventListener('canplay',play,{passive:true});
-   a.srcObject.getAudioTracks().forEach(t=>{t.addEventListener('unmute',play);t.addEventListener('ended',()=>{try{t.enabled=true}catch(e){}})});
-   play();
-  }catch(e){}
- };
- const resumeRemoteAudio=()=>{
-  try{document.querySelectorAll('audio').forEach(a=>{if(a.srcObject){a.muted=false;a.volume=1;if(a.paused)a.play().catch(()=>{})}})}catch(e){}
- };
- try{
-  const audioObserver=new MutationObserver(list=>list.forEach(m=>m.addedNodes.forEach(n=>{
-   if(n&&n.nodeType===1){if(n.tagName==='AUDIO')prepareRemoteAudio(n);n.querySelectorAll&&n.querySelectorAll('audio').forEach(prepareRemoteAudio)}
-  })));
-  audioObserver.observe(document.body,{childList:true,subtree:true});
-  document.querySelectorAll('audio').forEach(prepareRemoteAudio);
- }catch(e){}
- document.addEventListener('pointerdown',resumeRemoteAudio,true);
- document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(resumeRemoteAudio,300)});
- window.addEventListener('online',()=>{setTimeout(()=>{
-  try{if($('lobbyRoom')?.classList.contains('on')&&typeof Voice!=='undefined'&&!Voice.active())Voice.join(window.__voiceKey||window.MAFIA_ROOM_CODE||'main')}catch(e){}
- },1500)});
 
 
 })();
