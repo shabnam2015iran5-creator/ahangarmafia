@@ -127,4 +127,53 @@ window.MAFIA_ONE_ROOM_ALL=true;     // true: هر سه لابی یک اتاق‌
  document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(bmVoiceWatch,800)});
  window.addEventListener('online',()=>setTimeout(bmVoiceWatch,1200));
 
+ // Remote voice audio recovery: the voice controller creates hidden audio elements
+ // after WebRTC streams arrive. Android browsers may reject the first play() until
+ // a user gesture resumes media playback.
+ const bmTryPlayRemoteAudio=(a)=>{
+  try{
+   if(!a||!a.srcObject)return;
+   a.autoplay=true;a.playsInline=true;a.muted=false;a.volume=1;
+   const tracks=a.srcObject.getAudioTracks?a.srcObject.getAudioTracks():[];
+   tracks.forEach(t=>{try{if(t.readyState==='live')t.enabled=true}catch(e){}});
+   const play=()=>{
+    try{
+     const acs=[window.__bmVoiceAudioContext,window.voiceAudioContext].filter(Boolean);
+     acs.forEach(c=>{if(c.state==='suspended')c.resume().catch(()=>{})});
+     if(a.srcObject&&!document.hidden&&a.paused){const p=a.play();if(p&&p.catch)p.catch(()=>{})}
+    }catch(e){}
+   };
+   if(!a.__bmAudioRecovery){
+    a.__bmAudioRecovery=true;
+    a.addEventListener('loadedmetadata',play);
+    a.addEventListener('canplay',play);
+    a.addEventListener('playing',()=>{a.muted=false;a.volume=1});
+    tracks.forEach(t=>{t.addEventListener('unmute',play);t.addEventListener('ended',()=>{try{t.enabled=true}catch(e){}})});
+   }
+   play();
+  }catch(e){}
+ };
+ try{
+  const bmAudioObserver=new MutationObserver(ms=>ms.forEach(m=>m.addedNodes.forEach(n=>{
+   if(n&&n.nodeType===1){
+    if(n.tagName==='AUDIO')bmTryPlayRemoteAudio(n);
+    if(n.querySelectorAll)n.querySelectorAll('audio').forEach(bmTryPlayRemoteAudio);
+   }
+  })));
+  if(document.body)bmAudioObserver.observe(document.body,{childList:true,subtree:true});
+  document.querySelectorAll('audio').forEach(bmTryPlayRemoteAudio);
+ }catch(e){}
+ const bmResumeRemoteAudio=()=>{
+  try{
+   document.querySelectorAll('audio').forEach(a=>{
+    if(a.srcObject){a.muted=false;a.volume=1;if(a.paused){const p=a.play();if(p&&p.catch)p.catch(()=>{})}}
+   });
+   [window.__bmVoiceAudioContext,window.voiceAudioContext].filter(Boolean).forEach(c=>{if(c.state==='suspended')c.resume().catch(()=>{})});
+  }catch(e){}
+ };
+ document.addEventListener('pointerdown',bmResumeRemoteAudio,true);
+ document.addEventListener('touchend',bmResumeRemoteAudio,true);
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(bmResumeRemoteAudio,300)});
+
+
 })();
