@@ -9,6 +9,82 @@ async function reserveIndex(path,uid){for(let i=0;i<3;i++){const c=await dbRead(
 async function nextSerial(){for(let i=0;i<12;i++){const c=await dbRead("registeredCountV1",true);let current=Number(c.data||0);if(!c.data){const all=(await dbRead("usersV1")).data||{};current=Object.values(all).reduce((m,u)=>Math.max(m,Number(u&&u.serial||0)),Object.values(all).filter(u=>u&&u.registered).length)}const next=current+1,w=await dbWrite("registeredCountV1","PUT",next,{"If-Match":c.etag||"null_etag"});if(w.ok)return next;if(w.status!==412)throw Error("Could not allocate registration number")}throw Error("Registration counter busy; retry")}
 async function adminAuth(req,env){const expected=String(env.ADMIN_PASSWORD||"");return!!expected&&String(req.headers.get("X-Admin-Password")||"")===expected}
 async function handleRegister(req){let x;try{x=await req.json()}catch{return json({error:"اطلاعات ثبت‌نام معتبر نیست"},400)}const uid=String(x.uid||""),fullName=String(x.fullName||"").trim().normalize("NFKC"),nick=String(x.nick||"").trim().normalize("NFKC"),account=String(x.account||"").trim().toUpperCase(),age=Number(x.age||0);if(!/^[A-Za-z0-9_-]{1,80}$/.test(uid)||fullName.length<2||fullName.length>60||nick.length<2||nick.length>18||account.length<3||account.length>24||age<1||age>99||x.profileComplete!==true)return json({error:"نام، اکانت و سن را کامل و درست وارد کن"},400);const old=(await dbRead("usersV1/"+uid)).data||null,ban=await banFor({uid,nick,account});if(ban)return json({error:ban.type==="permanent"?"این حساب یا نام کاربری برای همیشه مسدود شده است":"این حساب مسدود است تا "+new Date(Number(ban.until||0)).toLocaleString("fa-IR"),ban},403);const namePath="nameIndexV1/"+keyOf(nick),accountPath="accountIndexV1/"+keyOf(account);if(!(await dbRead(namePath)).data){const all=(await dbRead("usersV1")).data||{};if(Object.values(all).some(u=>u&&u.registered&&u.uid!==uid&&String(u.nick||"").trim().normalize("NFKC").toLocaleLowerCase()===nick.toLocaleLowerCase()))return json({error:"این نام قبلاً ثبت شده است؛ نام دیگری انتخاب کن"},409)}if(!(await dbRead(accountPath)).data){const all=(await dbRead("usersV1")).data||{};if(Object.values(all).some(u=>u&&u.registered&&u.uid!==uid&&String(u.account||"").trim().toUpperCase()===account))return json({error:"این کد اکانت قبلاً استفاده شده است"},409)}if(!await reserveIndex(namePath,uid))return json({error:"این نام قبلاً ثبت شده است؛ نام دیگری انتخاب کن"},409);if(!await reserveIndex(accountPath,uid))return json({error:"این کد اکانت قبلاً استفاده شده است"},409);const serial=Number(old&&old.serial||0)||await nextSerial(),now=Date.now(),record={uid,fullName,nick,account,age,avatarSeed:Number(x.avatarSeed||1),photo:String(x.photo||"").length<30000?String(x.photo||""):"",registered:true,profileComplete:true,serial,createdAt:Number(old&&old.createdAt||now),lastSeen:now};const save=await dbWrite("usersV1/"+uid,"PUT",record);if(!save.ok)return json({error:"ذخیرهٔ دائمی اطلاعات انجام نشد"},502);if(!old||!old.registered)await dbWrite("adminNotificationsV1/"+String(serial).padStart(10,"0"),"PUT",{type:"registration",serial,uid,nick,fullName,account,age,createdAt:now,read:false});return json({ok:true,user:record})}
+const ALLIANCE_CHARS="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+function newAllianceCode(){const bytes=crypto.getRandomValues(new Uint8Array(6));return Array.from(bytes,b=>ALLIANCE_CHARS[b%ALLIANCE_CHARS.length]).join("")}
+async function handleAlliance(req,url){
+  let x={};
+  if(req.method==="POST"){try{x=await req.json()}catch{return json({error:"اطلاعات اتحاد معتبر نیست"},400)}}
+  const uid=String(req.method==="GET"?url.searchParams.get("uid")||"":x.uid||"");
+  if(!/^[A-Za-z0-9_-]{1,80}$/.test(uid))return json({error:"شناسهٔ کاربر معتبر نیست"},400);
+  const user=(await dbRead("usersV1/"+uid)).data;
+  if(!user||!user.registered)return json({error:"ابتدا ثبت‌نام را کامل کن"},403);
+  const ban=await banFor({uid,nick:user.nick,account:user.account});
+  if(ban)return json({error:"به دلیل مسدودیت، امکان استفاده از اتحاد را نداری."},403);
+  const indexPath="allianceMemberIndexV1/"+uid;
+  if(req.method==="GET"){
+    const idx=(await dbRead(indexPath)).data;
+    if(!idx||!idx.uid)return json({alliance:null});
+    const alliance=(await dbRead("alliancesV1/"+String(idx.uid))).data;
+    if(!alliance)return json({alliance:null});
+    return json({alliance});
+  }
+  if(req.method!=="POST")return json({error:"روش درخواست پشتیبانی نمی‌شود"},405);
+  const action=String(x.action||"");
+  if(action==="create"){
+    const name=String(x.name||"").trim().normalize("NFKC");
+    if(name.length<2||name.length>32)return json({error:"نام اتحاد باید بین ۲ تا ۳۲ نویسه باشد"},400);
+    const existing=(await dbRead(indexPath)).data;
+    if(existing&&existing.uid)return json({error:"از قبل عضو یک اتحاد هستی؛ ابتدا از اتحاد فعلی خارج شو."},409);
+    let code="",exists=true;
+    for(let i=0;i<12&&exists;i++){code=newAllianceCode();exists=!!(await dbRead("alliancesV1/"+code)).data}
+    if(exists)return json({error:"ساخت کد اتحاد ناموفق بود؛ دوباره تلاش کن"},503);
+    const now=Date.now(),member={uid,nick:String(user.nick||"بازیکن").slice(0,18),account:String(user.account||""),joinedAt:now};
+    const alliance={code,name,ownerUid:uid,ownerName:member.nick,createdAt:now,open:true,members:{[uid]:member}};
+    const save=await dbWrite("alliancesV1/"+code,"PUT",alliance);
+    if(!save.ok)return json({error:"ذخیرهٔ اتحاد انجام نشد"},502);
+    if(!await reserveIndex(indexPath,code)){await dbWrite("alliancesV1/"+code,"DELETE");return json({error:"عضویت کاربر همزمان در اتحاد دیگری ثبت شده است"},409)}
+    return json({ok:true,alliance});
+  }
+  if(action==="join"){
+    const code=String(x.code||"").trim().toUpperCase();
+    if(!/^[A-HJ-NP-Z2-9]{6}$/.test(code))return json({error:"کد اتحاد باید ۶ حرف یا عدد باشد"},400);
+    const alliance=(await dbRead("alliancesV1/"+code)).data;
+    if(!alliance||alliance.open===false)return json({error:"اتحاد پیدا نشد یا پذیرش عضو جدید بسته است"},404);
+    const existing=(await dbRead(indexPath)).data;
+    if(existing&&existing.uid&&String(existing.uid)!==code)return json({error:"از قبل عضو اتحاد دیگری هستی"},409);
+    if(existing&&String(existing.uid)===code)return json({ok:true,alliance});
+    if(!await reserveIndex(indexPath,code))return json({error:"عضویت در اتحاد دیگری همزمان ثبت شد"},409);
+    const member={uid,nick:String(user.nick||"بازیکن").slice(0,18),account:String(user.account||""),joinedAt:Date.now()};
+    const add=await dbWrite("alliancesV1/"+code+"/members/"+uid,"PUT",member);
+    if(!add.ok){await dbWrite(indexPath,"DELETE");return json({error:"ثبت عضویت ناموفق بود"},502)}
+    const updated=(await dbRead("alliancesV1/"+code)).data||alliance;
+    updated.members={...(updated.members||{}),[uid]:member};
+    const save=await dbWrite("alliancesV1/"+code,"PUT",updated);
+    if(!save.ok)return json({error:"عضویت ثبت شد اما به‌روزرسانی فهرست اتحاد کامل نشد؛ دوباره پنل را باز کن."},502);
+    return json({ok:true,alliance:updated});
+  }
+  if(action==="leave"){
+    const idx=(await dbRead(indexPath)).data;
+    const code=String(idx&&idx.uid||"");
+    if(!code)return json({error:"عضو هیچ اتحادی نیستی"},404);
+    const alliance=(await dbRead("alliancesV1/"+code)).data;
+    if(!alliance){await dbWrite(indexPath,"DELETE");return json({ok:true,alliance:null})}
+    const members=alliance.members&&typeof alliance.members==="object"?alliance.members:{};
+    const ids=Object.keys(members).filter(id=>members[id]);
+    if(alliance.ownerUid===uid&&ids.length>1)return json({error:"سازندهٔ اتحاد نمی‌تواند در حالی که عضو دیگری مانده خارج شود؛ ابتدا اعضا را خارج کن."},409);
+    if(alliance.ownerUid===uid){await dbWrite("alliancesV1/"+code,"DELETE")}
+    else{
+      await dbWrite("alliancesV1/"+code+"/members/"+uid,"DELETE");
+      delete members[uid];alliance.members=members;
+      const save=await dbWrite("alliancesV1/"+code,"PUT",alliance);
+      if(!save.ok)return json({error:"خروج از اتحاد کامل نشد"},502);
+    }
+    const after=(await dbRead(indexPath)).data;
+    if(after&&String(after.uid)===code)await dbWrite(indexPath,"DELETE");
+    return json({ok:true,alliance:null});
+  }
+  return json({error:"عملیات اتحاد ناشناخته است"},400);
+}
 async function handleAdmin(req,env,url){if(!await adminAuth(req,env))return json({error:env.ADMIN_PASSWORD?"رمز مدیریت سرور اشتباه است":"رمز امن ADMIN_PASSWORD هنوز در تنظیمات Cloudflare تعریف نشده است"},env.ADMIN_PASSWORD?403:503);const p=url.pathname.replace(/^\/api\/admin\/?/,"");if(req.method==="GET"&&p==="notifications"){const all=(await dbRead("adminNotificationsV1")).data||{};return json({notifications:Object.values(all).filter(Boolean).sort((a,b)=>Number(b.createdAt||0)-Number(a.createdAt||0)).slice(0,100)})}if(req.method==="GET"&&p==="users"){const all=(await dbRead("usersV1")).data||{},q=String(url.searchParams.get("q")||"").trim().toLocaleLowerCase(),registered=Object.values(all).filter(u=>u&&u.registered),users=registered.filter(u=>!q||[u.fullName,u.nick,u.account,u.uid,u.serial].some(v=>String(v==null?"":v).toLocaleLowerCase().includes(q))).sort((a,b)=>Number(a.serial||0)-Number(b.serial||0));return json({total:registered.length,users:users.slice(0,100)})}if(req.method==="GET"&&p==="rooms"){const all=(await dbRead("roomsV23")).data||{};return json({rooms:Object.values(all).filter(Boolean).map(r=>({code:r.code,status:r.status,players:Object.values(r.players||{}).filter(v=>v&&Date.now()-Number(v.at||0)<12000).length}))})}if(req.method==="POST"&&p==="ban"){let x;try{x=await req.json()}catch{return json({error:"درخواست نامعتبر است"},400)}const uid=String(x.uid||"");if(!/^[A-Za-z0-9_-]{1,80}$/.test(uid))return json({error:"کد کاربر نامعتبر است"},400);const u=(await dbRead("usersV1/"+uid)).data;if(!u)return json({error:"کاربر پیدا نشد"},404);const type=["permanent","temporary","days"].includes(x.type)?x.type:"temporary",days=Math.max(1,Math.min(180,Math.floor(Number(x.days||1)))),createdAt=Date.now(),until=type==="permanent"?0:createdAt+(type==="temporary"?1800000:days*86400000),ban={uid,nick:u.nick,account:u.account,type,days:type==="days"?days:0,createdAt,until,reason:String(x.reason||"").slice(0,300),active:true};for(const[k,v]of[["bansV1/"+uid,ban],["bansByNameV1/"+keyOf(u.nick),ban],["bansByAccountV1/"+keyOf(u.account),ban]]){if(!(await dbWrite(k,"PUT",v)).ok)return json({error:"ثبت بن در پایگاه داده ناموفق بود"},502)}return json({ok:true,ban})}if(req.method==="POST"&&p==="unban"){let x;try{x=await req.json()}catch{return json({error:"درخواست نامعتبر است"},400)}const uid=String(x.uid||""),ban=(await dbRead("bansV1/"+uid)).data,u=(await dbRead("usersV1/"+uid)).data;for(const k of["bansV1/"+uid,...(u?["bansByNameV1/"+keyOf(u.nick),"bansByAccountV1/"+keyOf(u.account)]:[]),...(ban&&ban.nick?["bansByNameV1/"+keyOf(ban.nick)]:[]),...(ban&&ban.account?["bansByAccountV1/"+keyOf(ban.account)]:[])])await dbWrite(k,"DELETE");return json({ok:true})}return json({error:"مسیر مدیریت پیدا نشد"},404)}
 
 
@@ -50,6 +126,7 @@ function allowedPath(path) {
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+    if (url.pathname === "/api/alliances") { try { return await handleAlliance(request, url); } catch (e) { return json({error:e.message || "خطای اتاق اتحاد"},502); } }
     if (url.pathname === "/api/register" && request.method === "POST") {
       if (Number(request.headers.get("Content-Length") || 0) > 40000) return json({error:"اطلاعات بیش از حد بزرگ است"},413);
       try { return await handleRegister(request); } catch (e) { return json({error:e.message || "ثبت‌نام ناموفق بود"},502); }
