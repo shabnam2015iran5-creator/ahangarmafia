@@ -131,12 +131,27 @@ window.MAFIA_ONE_ROOM_ALL=true;     // true: هر سه لابی یک اتاق‌
   }catch(e){}
  },12000);
  // If the first autoplay attempt was blocked, retry remote audio after the next user interaction.
- const resumeRemoteAudio=()=>{
+ const prepareRemoteAudio=a=>{
+  if(!a||!a.srcObject)return;
   try{
-   if(typeof ctx!=='undefined'&&ctx&&ctx.state==='suspended')ctx.resume().catch(()=>{});
-   document.querySelectorAll('audio').forEach(a=>{if(a.srcObject&&a.paused)a.play().catch(()=>{})});
+   a.autoplay=true;a.playsInline=true;a.muted=false;a.volume=1;
+   const play=()=>{if(a.srcObject&&!document.hidden)a.play().catch(()=>{})};
+   a.addEventListener('loadedmetadata',play,{passive:true});
+   a.addEventListener('canplay',play,{passive:true});
+   a.srcObject.getAudioTracks().forEach(t=>{t.addEventListener('unmute',play);t.addEventListener('ended',()=>{try{t.enabled=true}catch(e){}})});
+   play();
   }catch(e){}
  };
+ const resumeRemoteAudio=()=>{
+  try{document.querySelectorAll('audio').forEach(a=>{if(a.srcObject){a.muted=false;a.volume=1;if(a.paused)a.play().catch(()=>{})}})}catch(e){}
+ };
+ try{
+  const audioObserver=new MutationObserver(list=>list.forEach(m=>m.addedNodes.forEach(n=>{
+   if(n&&n.nodeType===1){if(n.tagName==='AUDIO')prepareRemoteAudio(n);n.querySelectorAll&&n.querySelectorAll('audio').forEach(prepareRemoteAudio)}
+  })));
+  audioObserver.observe(document.body,{childList:true,subtree:true});
+  document.querySelectorAll('audio').forEach(prepareRemoteAudio);
+ }catch(e){}
  document.addEventListener('pointerdown',resumeRemoteAudio,true);
  document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(resumeRemoteAudio,300)});
  window.addEventListener('online',()=>{setTimeout(()=>{
