@@ -260,13 +260,19 @@ window.MAFIA_ONE_ROOM_ALL=true;     // true: هر سه لابی یک اتاق‌
  badge.onclick=open;
  function addEntry(){
   if(document.getElementById('bmGhostEntry'))return;
+  const visible=n=>{
+   if(!n||!n.isConnected||n.closest('#bmGhostModal'))return false;
+   const s=getComputedStyle(n);
+   return s.display!=='none'&&s.visibility!=='hidden'&&Number(s.opacity)!==0&&(n.offsetWidth>0||n.offsetHeight>0||n.getClientRects().length>0);
+  };
   const candidates=[...document.querySelectorAll('button,a,[role="button"]')];
-  const admin=candidates.find(n=>/مرکز مدیریت\s*\/\s*ادمین|مرکز مدیریت|ورود به مدیریت|پنل مدیریت/.test((n.innerText||n.textContent||'').replace(/\s+/g,' ').trim()));
+  const isAdmin=n=>/مرکز مدیریت\s*\/\s*ادمین|مرکز مدیریت|ورود به مدیریت|پنل مدیریت/.test((n.innerText||n.textContent||'').replace(/\s+/g,' ').trim());
+  // Pick a visible management control, not the similarly named button in a hidden modal.
+  const admin=candidates.find(n=>visible(n)&&isAdmin(n));
   if(!admin)return;
-  const b=document.createElement('button');b.id='bmGhostEntry';b.textContent='👻 ورود روح ناظر';b.onclick=open;
-  b.style.cssText='display:block;width:100%;margin:10px 0;padding:12px;border-radius:12px;border:1px solid #7cecff;background:linear-gradient(135deg,#101d35,#263d5d);color:#dffcff;font-weight:800;cursor:pointer';
-  const adminPanel=[...document.querySelectorAll('[id]')].find(n=>/admin/i.test(n.id)&&n.offsetParent!==null&&/مدیریت|ادمین/i.test(n.innerText||n.textContent||''));
-  if(adminPanel){adminPanel.appendChild(b);return}
+  const b=document.createElement('button');b.id='bmGhostEntry';b.type='button';b.textContent='👻 ورود روح ناظر';b.onclick=open;
+  b.style.cssText='display:block!important;visibility:visible!important;opacity:1!important;position:relative;z-index:20;width:100%;max-width:100%;margin:10px 0;padding:12px;border-radius:12px;border:1px solid #7cecff;background:linear-gradient(135deg,#101d35,#263d5d);color:#dffcff;font-weight:800;cursor:pointer;box-sizing:border-box';
+  // Insert beside the visible management button so the entry is visible on the same screen.
   (admin.parentElement||admin).insertAdjacentElement('afterend',b);
  }
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',addEntry,{once:true});else addEntry();
