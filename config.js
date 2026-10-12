@@ -185,3 +185,87 @@ window.MAFIA_ONE_ROOM_ALL=true;     // true: هر سه لابی یک اتاق‌
 
 
 })();
+
+
+/* BLACK MAFIA: observer ghost panel + live running-lobby list (UI integration) */
+(()=> {
+ if(window.__bmObserverGhostV1)return; window.__bmObserverGhostV1=true;
+ const db=()=>String(window.MAFIA_DB_URL||'').replace(/\/$/,'');
+ const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+ const ghostSvg='data:image/svg+xml;charset=UTF-8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 260"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#efffff"/><stop offset="1" stop-color="#8be9ff"/></linearGradient><filter id="b"><feGaussianBlur stdDeviation="5"/></filter></defs><ellipse cx="110" cy="230" rx="70" ry="12" fill="#5be7ff" opacity=".28" filter="url(#b)"/><path d="M38 220V105C38 48 70 18 110 18s72 30 72 87v115l-23-17-20 18-29-18-28 18-22-18z" fill="url(#g)" stroke="#d9ffff" stroke-width="4"/><path d="M63 104q-3-59 47-64 50 5 47 64" fill="none" stroke="#fff" stroke-width="8" opacity=".6"/><ellipse cx="84" cy="112" rx="10" ry="15" fill="#16384f"/><ellipse cx="136" cy="112" rx="10" ry="15" fill="#16384f"/><path d="M91 145q19 17 38 0" fill="none" stroke="#16384f" stroke-width="5" stroke-linecap="round"/><path d="M45 190q-18 13-15 34m145-34q18 13 15 34" fill="none" stroke="#9cf5ff" stroke-width="7" stroke-linecap="round"/></svg>');
+ const style=document.createElement('style');style.textContent=`
+ #bmGhostEntry{border:1px solid #7cecff;background:linear-gradient(135deg,#101d35,#263d5d);color:#dffcff;border-radius:12px;padding:9px 12px;font-weight:800;cursor:pointer;box-shadow:0 0 16px #5be7ff40}
+ #bmGhostModal{position:fixed;inset:0;z-index:2147483000;background:#050b16ed;color:#e8fbff;display:none;overflow:auto;font-family:system-ui,sans-serif;padding:16px;box-sizing:border-box}
+ #bmGhostModal .bm-g-card{max-width:620px;margin:5vh auto;background:linear-gradient(145deg,#101a2d,#172b42);border:1px solid #67dff5;border-radius:20px;padding:18px;box-shadow:0 0 35px #4be4ff30}
+ #bmGhostModal input,#bmGhostModal textarea,#bmGhostModal select{width:100%;box-sizing:border-box;margin:6px 0;padding:11px;border-radius:9px;border:1px solid #44657b;background:#081320;color:white}
+ #bmGhostModal button{border:1px solid #5ccfe7;border-radius:9px;background:#173b50;color:#efffff;padding:10px 12px;margin:4px;cursor:pointer}
+ #bmGhostModal .bm-g-danger{background:#632b38;border-color:#ff8398}
+ #bmGhostModal .bm-g-room{padding:10px;border:1px solid #37566a;border-radius:10px;margin:7px 0;display:flex;align-items:center;gap:8px;justify-content:space-between}
+ body.bm-ghost-mode{background:#07111e!important}
+ body.bm-ghost-mode:before{content:"";position:fixed;inset:0;z-index:9990;pointer-events:none;background:radial-gradient(ellipse at center,#8deaff20,transparent 60%),linear-gradient(130deg,#80e8ff08,#07111e66);backdrop-filter:saturate(.55)}
+ #bmGhostBadge{position:fixed;right:10px;top:10px;z-index:9991;display:none;align-items:center;gap:8px;padding:6px 12px;border-radius:30px;background:#071725dd;border:1px solid #89f2ff;color:#dcfcff;box-shadow:0 0 20px #4deaff40}
+ #bmGhostBadge img{width:34px;height:40px;object-fit:contain}
+ `;document.head.appendChild(style);
+ const modal=document.createElement('div');modal.id='bmGhostModal';modal.innerHTML=`<div class="bm-g-card">
+ <div style="display:flex;align-items:center;gap:12px"><img src="${ghostSvg}" alt="روح ناظر" style="width:76px;height:90px;object-fit:contain"><div style="flex:1"><h2 style="margin:0">👻 پنل روح ناظر</h2><small style="color:#9defff">ورود ناظر به بازی‌های فعال</small></div><button id="bmGhostClose">بستن</button></div>
+ <div id="bmGhostLogin"><p>کد ورود روح ناظر را وارد کن.</p><input id="bmGhostCode" inputmode="numeric" autocomplete="off" placeholder="کد ورود"><button id="bmGhostLoginBtn">ورود</button><div id="bmGhostError" style="color:#ff9da9"></div></div>
+ <div id="bmGhostTools" style="display:none"><div style="display:flex;gap:8px;align-items:center;justify-content:space-between"><h3>بازی‌های در حال اجرا</h3><button id="bmGhostRefresh">به‌روزرسانی</button></div><div id="bmGhostRooms">در حال بارگذاری…</div>
+ <div id="bmGhostActions" style="display:none;border-top:1px solid #38566b;margin-top:14px;padding-top:12px"><h3 id="bmGhostRoomTitle">اتاق انتخاب‌شده</h3><p style="color:#b9dce9;font-size:13px">حالت روح فقط نمای ناظر را فعال می‌کند؛ اجرای دستورات مدیریتی در همهٔ گوشی‌ها نیازمند پشتیبانی سرور و کلاینت بازی است.</p>
+ <input id="bmGhostTarget" placeholder="شناسه یا نام بازیکن برای اخطار/اخراج"><textarea id="bmGhostMessage" rows="2" placeholder="پیام ناظر به اتاق"></textarea>
+ <button id="bmGhostSay">ارسال پیام ناظر</button><button id="bmGhostWarn">ثبت اخطار</button><button id="bmGhostKick" class="bm-g-danger">درخواست اخراج</button><button id="bmGhostEnd" class="bm-g-danger">پایان بازی</button><button id="bmGhostLeave">خروج از حالت روح</button><div id="bmGhostStatus" style="color:#9defff;margin-top:8px"></div></div></div>
+ </div>`;
+ document.body.appendChild(modal);
+ const badge=document.createElement('div');badge.id='bmGhostBadge';badge.innerHTML='<img alt="روح ناظر" src="'+ghostSvg+'"><b>روح ناظر</b>';document.body.appendChild(badge);
+ let selectedRoom='',refreshTimer=null;
+ function open(){modal.style.display='block'}
+ function close(){modal.style.display='none'}
+ function setStatus(s){const n=document.getElementById('bmGhostStatus');if(n)n.textContent=s}
+ function enterGhost(){document.body.classList.add('bm-ghost-mode');badge.style.display='flex';modal.style.display='none';}
+ function leaveGhost(){document.body.classList.remove('bm-ghost-mode');badge.style.display='none';}
+ async function loadRooms(){
+  const host=document.getElementById('bmGhostRooms');host.innerHTML='در حال دریافت فهرست…';
+  if(!db()){host.textContent='آدرس دیتابیس تنظیم نشده است.';return}
+  try{
+   const r=await fetch(db()+'/roomsV23.json',{cache:'no-store'});if(!r.ok)throw Error('HTTP '+r.status);
+   const data=await r.json();const rooms=Object.entries(data||{}).filter(([k,v])=>v&&typeof v==='object'&&String(v.status||'').toLowerCase()==='started');
+   if(!rooms.length){host.textContent='در حال حاضر لابی شروع‌شده‌ای پیدا نشد.';return}
+   host.innerHTML=rooms.map(([k,v])=>'<div class="bm-g-room"><div><b>'+esc(v.name||v.roomName||('لابی '+k))+'</b><div style="font-size:12px;color:#a7cedd">کد: '+esc(k)+' · در حال اجرا</div></div><button data-bm-room="'+esc(k)+'">ورود روح</button></div>').join('');
+   host.querySelectorAll('[data-bm-room]').forEach(b=>b.addEventListener('click',()=>selectRoom(b.getAttribute('data-bm-room'),data[b.getAttribute('data-bm-room')])));
+  }catch(e){host.textContent='دریافت لابی‌ها ناموفق بود؛ اتصال دیتابیس و قوانین آن را بررسی کن.'}
+ }
+ function selectRoom(code,room){
+  selectedRoom=code;document.getElementById('bmGhostActions').style.display='block';document.getElementById('bmGhostRoomTitle').textContent='👻 لابی '+(room.name||room.roomName||code);enterGhost();setStatus('حالت روح فعال شد. کد لابی: '+code);
+ }
+ async function action(kind,payload){
+  if(!selectedRoom){setStatus('اول یک لابی را انتخاب کن.');return}
+  try{
+   const path=db()+'/roomsV23/'+encodeURIComponent(selectedRoom)+'/moderatorActions.json';
+   const r=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:kind,...payload,by:'observer-ghost',at:Date.now()})});
+   if(!r.ok)throw Error('HTTP '+r.status);
+   setStatus('درخواست '+kind+' در سرور ثبت شد. برای اثرگذاری روی بازیکنان، کلاینت بازی باید این فرمان را پشتیبانی کند.');
+  }catch(e){setStatus('ثبت فرمان ناموفق بود؛ قوانین دیتابیس را بررسی کن.')}
+ }
+ document.getElementById('bmGhostClose').onclick=close;
+ document.getElementById('bmGhostLoginBtn').onclick=()=>{
+  if(document.getElementById('bmGhostCode').value.trim()!=='00100900'){document.getElementById('bmGhostError').textContent='کد ورود نادرست است.';return}
+  document.getElementById('bmGhostError').textContent='';document.getElementById('bmGhostLogin').style.display='none';document.getElementById('bmGhostTools').style.display='block';loadRooms();
+  if(refreshTimer)clearInterval(refreshTimer);refreshTimer=setInterval(loadRooms,10000);
+ };
+ document.getElementById('bmGhostRefresh').onclick=loadRooms;
+ document.getElementById('bmGhostSay').onclick=()=>{const message=document.getElementById('bmGhostMessage').value.trim();if(message)action('message',{message})};
+ document.getElementById('bmGhostWarn').onclick=()=>action('warn',{target:document.getElementById('bmGhostTarget').value.trim()});
+ document.getElementById('bmGhostKick').onclick=()=>{if(confirm('درخواست اخراج این بازیکن ثبت شود؟'))action('kick',{target:document.getElementById('bmGhostTarget').value.trim()})};
+ document.getElementById('bmGhostEnd').onclick=()=>{if(confirm('بازی تمام شود؟'))action('end_game',{status:'ended'})};
+ document.getElementById('bmGhostLeave').onclick=()=>{leaveGhost();document.getElementById('bmGhostActions').style.display='none';selectedRoom='';setStatus('از حالت روح خارج شدی.')};
+ badge.onclick=open;
+ function addEntry(){
+  if(document.getElementById('bmGhostEntry'))return;
+  const nodes=[...document.querySelectorAll('button,a,[role="button"]')];
+  const admin=nodes.find(n=>/مدیریت|تنظیمات مدیریت|پنل مدیریت/.test((n.innerText||n.textContent||'').trim()));
+  if(!admin)return;
+  const b=document.createElement('button');b.id='bmGhostEntry';b.textContent='👻 ورود روح ناظر';b.onclick=open;
+  (admin.parentElement||admin).insertAdjacentElement('afterend',b);
+ }
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',addEntry,{once:true});else addEntry();
+ new MutationObserver(addEntry).observe(document.documentElement,{childList:true,subtree:true});
+})();
