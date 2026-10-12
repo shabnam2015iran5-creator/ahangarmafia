@@ -66,24 +66,40 @@
   }catch(e){count.textContent='!';status.textContent='خطا در دریافت بازی‌ها';host.innerHTML='<div class="bm-rg-empty">اتصال به فهرست بازی‌ها برقرار نشد. چند لحظه بعد دوباره امتحان کن.</div>'}
  }
  // Remember a started match during transient disconnects.
- let lastRejoin=0;
+ let lastRejoin=0,activeStartedRoom='';
  async function reconnectCheck(){
   try{
    const code=String(window.MAFIA_ROOM_CODE||'');
    if(code&&window.lobbyMode==='player'){
     const r=await fetch(db()+'/roomsV23/'+encodeURIComponent(code)+'/status.json',{cache:'no-store'});
-    if(r.ok&&String(await r.json()).toLowerCase()==='started'){
-     try{localStorage.setItem('bm_locked_room',code);localStorage.setItem('bm_locked_room_at',String(Date.now()))}catch(e){}
-     const room=$('lobbyRoom');
-     if(room&&room.classList.contains('on')&&Date.now()-lastRejoin>3500){
-      lastRejoin=Date.now();
-      if(window.Net&&typeof window.Net.enter==='function')window.Net.enter();
-      else if(typeof window.roomStartGame==='function')window.roomStartGame();
+    if(r.ok){
+     const currentStatus=String(await r.json()).toLowerCase();
+     if(currentStatus==='started'){
+      activeStartedRoom=code;
+      try{localStorage.setItem('bm_locked_room',code);localStorage.setItem('bm_locked_room_at',String(Date.now()))}catch(e){}
+      const room=$('lobbyRoom');
+      if(room&&room.classList.contains('on')&&Date.now()-lastRejoin>3500){
+       lastRejoin=Date.now();
+       if(window.Net&&typeof window.Net.enter==='function')window.Net.enter();
+       else if(typeof window.roomStartGame==='function')window.roomStartGame();
+      }
+     }else if(activeStartedRoom===code){
+      activeStartedRoom='';
+      try{localStorage.removeItem('bm_locked_room');localStorage.removeItem('bm_locked_room_at')}catch(e){}
      }
     }
    }
   }catch(e){}
  }
+ // Keep normal in-game exit controls from taking a player back to the lobby mid-match.
+ document.addEventListener('click',e=>{
+  const el=e.target&&e.target.closest?e.target.closest('button,a,[role="button"]'):null;
+  if(!el||!activeStartedRoom||String(window.MAFIA_ROOM_CODE||'')!==activeStartedRoom||window.lobbyMode!=='player')return;
+  const label=String(el.innerText||el.textContent||'').replace(/\s+/g,' ').trim();
+  if(!/^(خروج|ترک بازی|خروج از بازی|خروج از اتاق|بازگشت به خانه|رفتن به خانه|خانه)$/.test(label))return;
+  e.preventDefault();e.stopPropagation();if(e.stopImmediatePropagation)e.stopImmediatePropagation();
+  try{window.toast&&window.toast('بازی شروع شده است؛ تا پایان بازی نمی‌توان به لابی برگشت.')}catch(_){}
+ },true);
  window.addEventListener('online',()=>setTimeout(reconnectCheck,800));
  window.addEventListener('focus',()=>setTimeout(reconnectCheck,500));
  document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(reconnectCheck,500)});
