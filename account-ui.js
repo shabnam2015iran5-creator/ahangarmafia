@@ -12,7 +12,30 @@ const overlay=document.createElement('div');overlay.id='bmRegOverlay';overlay.in
 function show(){if(!overlay.isConnected)document.body.appendChild(overlay);overlay.style.display='flex';const uid=getUid();$('bmRegAccount').value=accountFor(uid);try{const p=JSON.parse(localStorage.getItem('mafia_profile')||'{}');$('bmRegFull').value=p.fullName||'';$('bmRegNick').value=p.nick||'';$('bmRegAge').value=p.age||''}catch(e){}}
 async function submit(e){e.preventDefault();const b=$('bmRegSubmit'),error=$('bmRegError'),uid=getUid(),fullName=$('bmRegFull').value.trim(),nick=$('bmRegNick').value.trim().normalize('NFKC'),age=Number($('bmRegAge').value),account=accountFor(uid);error.textContent='';if(fullName.length<2||nick.length<2||nick.length>18||!Number.isInteger(age)||age<1||age>99){error.textContent='همهٔ مشخصات را درست وارد کن.';return}b.disabled=true;b.textContent='در حال ذخیرهٔ امن مشخصات…';try{const r=await api('/api/register',{method:'POST',body:JSON.stringify({uid,fullName,nick,account,age,profileComplete:true,avatarSeed:1})});const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||'ثبت‌نام انجام نشد.');const profile={uid,fullName,nick,account,age,serial:d.user&&d.user.serial,registered:true};try{localStorage.setItem('mafia_profile',JSON.stringify(profile));localStorage.setItem('mafia_uid',uid);localStorage.setItem('mafia_account',account);localStorage.setItem('mafia_nick',nick)}catch(e){}try{if(window.S){window.S.nick=nick;window.S.age=age;window.S.account=account;window.S.fullName=fullName;window.S.profileComplete=true}try{eval("if(typeof S!=='undefined'){S.nick="+JSON.stringify(nick)+";S.age="+Number(age)+";S.account="+JSON.stringify(account)+";S.fullName="+JSON.stringify(fullName)+";S.profileComplete=true;save()}")}catch(_){}const n=$('playerNick');if(n)n.value=nick;const ageInput=$('playerAge');if(ageInput)ageInput.value=String(age);window.dispatchEvent(new CustomEvent('bm:profile-ready',{detail:profile}))}catch(e){}overlay.remove();}catch(err){error.textContent=err.message||'ارتباط با سرور برقرار نشد؛ دوباره تلاش کن.'}finally{b.disabled=false;b.textContent='ثبت مشخصات و ورود'}}
 overlay.querySelector('#bmRegForm').addEventListener('submit',submit);
-function init(){const uid=getUid();try{const p=JSON.parse(localStorage.getItem('mafia_profile')||'null');if(p&&p.registered&&p.uid===uid&&p.fullName&&p.nick&&p.account&&p.age){try{if(window.S){window.S.nick=p.nick;window.S.age=Number(p.age);window.S.account=p.account;window.S.fullName=p.fullName;window.S.profileComplete=true}try{eval("if(typeof S!=='undefined'){S.nick="+JSON.stringify(p.nick)+";S.age="+Number(p.age)+";S.account="+JSON.stringify(p.account)+";S.fullName="+JSON.stringify(p.fullName)+";S.profileComplete=true;save()}")}catch(_){}const n=$('playerNick');if(n)n.value=p.nick;const ageInput=$('playerAge');if(ageInput)ageInput.value=String(p.age);window.dispatchEvent(new CustomEvent('bm:profile-ready',{detail:p}))}catch(e){}api('/api/register',{method:'POST',body:JSON.stringify({...p,uid,profileComplete:true,avatarSeed:1})}).then(async r=>{if(!r.ok){const d=await r.json().catch(()=>({}));if(r.status===403||r.status===409)show()}}).catch(()=>{});return}}catch(e){}show()}
+function applyProfile(p){
+  if(!p||!p.registered||!p.uid||!p.fullName||!p.nick||!p.account||!p.age)return false;
+  const profile={uid:p.uid,fullName:p.fullName,nick:p.nick,account:p.account,age:Number(p.age),serial:p.serial,registered:true};
+  try{localStorage.setItem('mafia_profile',JSON.stringify(profile));localStorage.setItem('mafia_uid',profile.uid);localStorage.setItem('mafia_account',profile.account);localStorage.setItem('mafia_nick',profile.nick)}catch(e){}
+  try{eval("if(typeof S!=='undefined'){S.nick="+JSON.stringify(profile.nick)+";S.age="+Number(profile.age)+";S.account="+JSON.stringify(profile.account)+";S.fullName="+JSON.stringify(profile.fullName)+";S.profileComplete=true;save()}")}catch(_){}
+  const n=$('playerNick');if(n)n.value=profile.nick;
+  const ageInput=$('playerAge');if(ageInput)ageInput.value=String(profile.age);
+  window.dispatchEvent(new CustomEvent('bm:profile-ready',{detail:profile}));
+  return true;
+}
+async function init(){
+  const uid=getUid(),account=accountFor(uid);
+  try{
+    const r=await api('/api/profile?account='+encodeURIComponent(account)+'&uid='+encodeURIComponent(uid),{method:'GET'});
+    const d=await r.json().catch(()=>({}));
+    if(r.ok&&d.user&&applyProfile(d.user))return;
+    if(r.status===403){show();$('bmRegError').textContent=d.error||'این حساب امکان ورود ندارد.';return}
+  }catch(e){}
+  try{
+    const p=JSON.parse(localStorage.getItem('mafia_profile')||'null');
+    if(p&&p.registered&&p.uid===getUid()&&p.fullName&&p.nick&&p.account&&p.age){applyProfile(p);return}
+  }catch(e){}
+  show();
+}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 window.BMAccount={getProfile(){try{return JSON.parse(localStorage.getItem('mafia_profile')||'null')}catch(e){return null}},getUid};
 })();
