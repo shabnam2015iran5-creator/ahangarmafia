@@ -183,11 +183,12 @@ export default {
       if (request.method === "GET" && (url.pathname === "/" || url.pathname.endsWith("/index.html")) && asset.ok) {
         const html = await asset.text();
         let injected = html;
-        if (!injected.includes("/account-ui.js")) injected = injected.replace(/<\/body\s*>/i, '<script src="/account-ui.js?v=29" defer></script></body>');
+        if (!injected.includes("/account-ui.js")) injected = injected.replace(/<\/body\s*>/i, '<script src="/account-ui.js?v=30" defer></script></body>');
         if (!injected.includes("/admin-ui.js")) injected = injected.replace(/<\/body\s*>/i, '<script src="/admin-ui.js" defer></script></body>');
         if (!injected.includes("/room-ui.js")) injected = injected.replace(/<\/body\s*>/i, '<script src="/room-ui.js" defer></script></body>');
         if (!injected.includes("/alliance-ui.js")) injected = injected.replace(/<\/body\s*>/i, '<script src="/alliance-ui.js" defer></script></body>');
         if (!injected.includes("/startup-fix.js")) injected = injected.replace(/<\/body\s*>/i, '<script src="/startup-fix.js" defer></script></body>');
+        if (!injected.includes("/guest-ui.js")) injected = injected.replace(/<\/body\s*>/i, '<script src="/guest-ui.js?v=1" defer></script></body>');
         const headers = new Headers(asset.headers); headers.delete("Content-Length"); headers.set("Cache-Control", "no-store");
         return new Response(injected, { status: asset.status, statusText: asset.statusText, headers });
       }
