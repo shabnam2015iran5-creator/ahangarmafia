@@ -45,8 +45,20 @@ window.MAFIA_ONE_ROOM_ALL=true;     // true: هر سه لابی یک اتاق‌
   layout();
   if(typeof window.roomStartGame==='function'&&!window.__bmGodOnlyStartInstalled){
    const old=window.roomStartGame;window.__bmGodOnlyStartInstalled=true;
-   window.roomStartGame=function(){
+   window.roomStartGame=async function(){
     if(window.lobbyMode!=='god'){try{window.toast&&toast('فقط گاد می‌تواند بازی را شروع کند.')}catch(e){}return false}
+    // Persist the start signal using Firebase REST PUT on individual fields.
+    // This is a fallback if the proxy does not support PATCH on the whole room.
+    const code=String(window.MAFIA_ROOM_CODE||'');
+    if(code&&db()){
+     try{
+      const root=db()+'/roomsV23/'+encodeURIComponent(code);
+      const a=await fetch(root+'/status.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify('started')});
+      if(!a.ok)throw Error('status '+a.status);
+      const b=await fetch(root+'/startedAt.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(Date.now())});
+      if(!b.ok)throw Error('startedAt '+b.status);
+     }catch(e){try{window.toast&&toast('ثبت شروع در سرور ناموفق بود؛ اتصال دیتابیس را بررسی کنید.')}catch(_){}}
+    }
     return old.apply(this,arguments)
    };
   }
