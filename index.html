@@ -3035,6 +3035,55 @@ try{Voice.onMsg('kick',()=>{localStorage.removeItem(key);toast('گاد شما ر
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{restoreProfile();showLaw()},{once:true});else{restoreProfile();showLaw()}
 })();
 </script>
+
+<script id="bm-single-settings-admin-panel">
+(()=> {
+ 'use strict';
+ if(window.__bmSingleSettingsAdmin)return;window.__bmSingleSettingsAdmin=true;
+ const $=id=>document.getElementById(id);
+ function init(){
+  const hub=$('bpHub'),settingsWrap=$('bpSettings'),adminWrap=$('bpAdmin');
+  if(!hub||!settingsWrap||!adminWrap)return;
+  const settingsCard=settingsWrap.querySelector('.bpModal'),adminCard=adminWrap.querySelector('.bpModal');
+  if(!settingsCard||!adminCard)return;
+  const buttons=[...hub.querySelectorAll('.bpHubBtn')];
+  const settingsBtn=buttons.find(b=>(b.getAttribute('onclick')||'').includes("BP.open('settings')"));
+  const adminBtn=buttons.find(b=>(b.getAttribute('onclick')||'').includes("BP.open('admin')"));
+  if(settingsBtn){settingsBtn.textContent='⚙️ تنظیمات و مدیریت';settingsBtn.setAttribute('onclick',"BMOpenCombined('settings')");settingsBtn.setAttribute('aria-label','تنظیمات و مدیریت')}
+  if(adminBtn)adminBtn.remove();
+  const root=document.createElement('div');root.id='bmCombinedControl';root.dir='rtl';
+  root.style.cssText='position:fixed;inset:0;z-index:2147483200;display:none;align-items:center;justify-content:center;padding:12px;background:#000d;backdrop-filter:blur(10px);box-sizing:border-box;font-family:Tahoma,Arial,sans-serif';
+  root.innerHTML='<section style="width:min(96vw,650px);max-height:92dvh;overflow:auto;background:linear-gradient(180deg,#171719,#050506);border:1px solid #a77a30;border-radius:16px;padding:12px;box-shadow:0 14px 44px #000d;box-sizing:border-box"><header style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><b style="flex:1;color:#f3d98c;font-size:17px">⚙️ تنظیمات و مدیریت</b><button id="bmCombinedClose" type="button" style="border:1px solid #8e6a31;border-radius:8px;padding:7px 12px;background:#23170b;color:#fff0bd;font-size:18px">×</button></header><nav id="bmCombinedTabs" style="display:flex;gap:8px;margin:0 0 12px"><button type="button" data-pane="settings" style="flex:1;min-height:44px;border:1px solid #e0b255;border-radius:9px;background:linear-gradient(#e7bd5b,#9d6d1d);color:#1b1005;font-weight:800;font-family:inherit">⚙️ تنظیمات</button><button type="button" data-pane="admin" style="flex:1;min-height:44px;border:1px solid #8e6a31;border-radius:9px;background:#17120c;color:#f6e6bd;font-weight:800;font-family:inherit">🛡 مدیریت</button></nav><div id="bmCombinedSettings"></div><div id="bmCombinedAdmin" style="display:none"></div></section>';
+  document.body.appendChild(root);
+  const settingsPane=$('bmCombinedSettings'),adminPane=$('bmCombinedAdmin');
+  for(const card of [settingsCard,adminCard]){
+   card.style.setProperty('width','100%','important');card.style.setProperty('max-width','none','important');card.style.setProperty('max-height','none','important');card.style.setProperty('overflow','visible','important');card.style.setProperty('margin','0','important');card.style.setProperty('padding','0','important');card.style.setProperty('border','0','important');card.style.setProperty('box-shadow','none','important');card.style.setProperty('background','transparent','important');
+  }
+  settingsPane.appendChild(settingsCard);adminPane.appendChild(adminCard);
+  settingsWrap.style.display='none';adminWrap.style.display='none';
+  settingsCard.querySelectorAll('.bpX').forEach(b=>b.setAttribute('onclick','BMCloseCombined()'));
+  adminCard.querySelectorAll('.bpX').forEach(b=>b.setAttribute('onclick','BMCloseCombined()'));
+  const actions=settingsCard.querySelector('.bpActions');
+  if(actions){
+   actions.style.cssText+=';position:sticky;bottom:0;z-index:20;padding:10px 0 4px;margin-top:12px;border-top:1px solid #6f5228;background:linear-gradient(180deg,#111114f5,#050506);';
+   const save=actions.querySelector('.bpPrimary');if(save){save.textContent='💾 ذخیره تنظیمات';save.style.cssText+=';display:block!important;visibility:visible!important;opacity:1!important;min-height:48px;flex:1 1 170px;font-size:15px;font-weight:900'}
+  }
+  window.BMOpenCombined=function(which){
+   root.style.display='flex';const pane=which==='admin'?'admin':'settings';
+   settingsPane.style.display=pane==='settings'?'block':'none';adminPane.style.display=pane==='admin'?'block':'none';
+   $('bmCombinedTabs').querySelectorAll('[data-pane]').forEach(b=>{const on=b.dataset.pane===pane;b.style.background=on?'linear-gradient(#e7bd5b,#9d6d1d)':'#17120c';b.style.color=on?'#1b1005':'#f6e6bd';b.style.borderColor=on?'#e0b255':'#8e6a31'});
+   if(pane==='settings'&&window.BP)BP.loadSettings?.();
+   if(pane==='admin'){const logged=sessionStorage.getItem('bp_admin')==='1';if($('bpAdminLogin'))$('bpAdminLogin').style.display=logged?'none':'block';if($('bpAdminPanel'))$('bpAdminPanel').style.display=logged?'block':'none'}
+  };
+  window.BMCloseCombined=()=>{root.style.display='none'};
+  $('bmCombinedClose').addEventListener('click',window.BMCloseCombined);
+  root.addEventListener('click',e=>{if(e.target===root)window.BMCloseCombined()});
+  $('bmCombinedTabs').querySelectorAll('[data-pane]').forEach(b=>b.addEventListener('click',()=>window.BMOpenCombined(b.dataset.pane)));
+  document.querySelectorAll('[onclick]').forEach(el=>{const a=el.getAttribute('onclick')||'';if(a.includes("BP.open('settings')"))el.setAttribute('onclick',"BMOpenCombined('settings')");else if(a.includes("BP.open('admin')"))el.setAttribute('onclick',"BMOpenCombined('admin')")});
+ }
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
+})();
+</script>
 </body></html>
 
 <!-- BLACK MAFIA v31: clean controls, open moderator entry, clearer friendly-lobby choices -->
