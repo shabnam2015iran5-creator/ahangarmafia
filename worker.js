@@ -210,7 +210,7 @@ export default {
       const asset = await env.ASSETS.fetch(request);
       if (request.method === "GET" && (url.pathname === "/" || url.pathname.endsWith("/index.html")) && asset.ok) {
         const html = await asset.text();
-        let injected = html;
+        let injected = html.replace(/<script\b[^>]*src=["'][^"']*alliance-ui\.js[^"']*["'][^>]*>\s*<\/script>/gi, '');
         if (!injected.includes("/account-ui.js")) injected = injected.replace(/<\/body\s*>/i, '<script src="/account-ui.js?v=30" defer></script></body>');
         if (!injected.includes("/admin-ui.js")) injected = injected.replace(/<\/body\s*>/i, '<script src="/admin-ui.js" defer></script></body>');
         if (!injected.includes("/room-ui.js")) injected = injected.replace(/<\/body\s*>/i, '<script src="/room-ui.js" defer></script></body>');
