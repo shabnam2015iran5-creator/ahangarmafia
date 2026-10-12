@@ -698,7 +698,7 @@ async function syncRegisteredProfile(){
  }catch(e){console.warn('syncRegisteredProfile',e);toast(e.message||'ذخیره آنلاین انجام نشد');return false}
 }
 async function ensureRegisteredOnline(){if(!S.profileComplete||!String(S.nick||'').trim()||!String(S.account||'').trim()||!Number(S.age))return false;const ok=await syncRegisteredProfile();if(!ok){toast('تا وقتی مشخصات با موفقیت در سرور ذخیره نشود، ورود به بازی مجاز نیست');return false}return true}
-function saveProfile(){const n=$('playerNick').value.trim();const fullName=($('playerFullName')?.value||S.fullName||'').trim();const a=+$('playerAge').value||0;const account=$('playerAccount').value.trim();if(n.length<2){toast('نام کاربری بازی را وارد کنید');return false}if(lobbyMode==='player'){if(fullName.length<2||fullName.length>60){toast('نام و نام خانوادگی را کامل وارد کنید');return false}if(a<1||a>99){toast('سن را درست وارد کنید');return false}if(account.length<3){toast('کد اکانت معتبر نیست؛ صفحه را دوباره باز کن');return false}S.fullName=fullName;S.age=a;S.account=account.slice(0,24);S.profileComplete=true}else{S.account=S.account||makeAccountId()}S.nick=n;S.avatarSeed=selectedAvSeed;save();return true}
+function saveProfile(){const n=$('playerNick').value.trim();const fullName=($('playerFullName')?.value||S.fullName||'').trim();const a=+$('playerAge').value||0;const account=$('playerAccount').value.trim();if(n.length<2){toast('نام کاربری بازی را وارد کنید');return false}if(lobbyMode==='player'){if(fullName.length<2||fullName.length>60){toast('نام و نام خانوادگی را کامل وارد کنید');return false}if(a<1||a>99){toast('سن را درست وارد کنید');return false}if(account.length<3){toast('کد اکانت معتبر نیست؛ صفحه را دوباره باز کن');return false}S.fullName=fullName;S.age=a;S.account=account.slice(0,24);S.profileComplete=false}else{S.account=S.account||makeAccountId()}S.nick=n;S.avatarSeed=selectedAvSeed;save();return true}
 $('playerAge')?.addEventListener('input',updateAgeStatus);
 $('playerNick')?.addEventListener('input',()=>{S.nick=$('playerNick').value.trim()||'رضا'});
 async function enterLobby(kind){if(lobbyMode==='player'){if(!await savePlayerRegistration())return}else if(!saveProfile())return;const age=+S.age||0;if(kind!=='edu' && age<16 && !S.released){toast('این لابی فقط برای بالای ۱۵ سال است؛ فعلاً لابی آموزشی برای شما فعال است');return}lobbyKind=kind;buildLobbyRoom();$('lobbyGate').classList.remove('on');$('lobbyRoom').classList.add('on');}
@@ -3014,7 +3014,7 @@ try{Voice.onMsg('kick',()=>{localStorage.removeItem(key);toast('گاد شما ر
    if(!account||account.length<3)return;
    const r=await fetch('/api/profile?account='+encodeURIComponent(account)+'&uid='+encodeURIComponent(uid),{cache:'no-store'});
    const d=await r.json().catch(()=>({}));
-   if(!r.ok||!d.user||!d.user.registered)return;
+   if(!r.ok||!d.user||!d.user.registered){S.profileComplete=false;save();status('برای ثبت اولیه، مشخصات را وارد کن و دکمهٔ ثبت را بزن.');return}
    const u=d.user;
    S.fullName=u.fullName||'';S.nick=u.nick||S.nick;S.account=u.account||account;S.age=Number(u.age||S.age||0);S.avatarSeed=Number(u.avatarSeed||S.avatarSeed||1);S.profileComplete=true;S.serial=Number(u.serial||0);if(u.photo)S.photo=u.photo;save();
    try{localStorage.setItem('mafia_account',S.account);localStorage.setItem('mafia_profile',JSON.stringify(u))}catch(e){}
@@ -3072,7 +3072,7 @@ try{Voice.onMsg('kick',()=>{localStorage.removeItem(key);toast('گاد شما ر
    root.style.display='flex';const pane=which==='admin'?'admin':'settings';
    settingsPane.style.display=pane==='settings'?'block':'none';adminPane.style.display=pane==='admin'?'block':'none';
    $('bmCombinedTabs').querySelectorAll('[data-pane]').forEach(b=>{const on=b.dataset.pane===pane;b.style.background=on?'linear-gradient(#e7bd5b,#9d6d1d)':'#17120c';b.style.color=on?'#1b1005':'#f6e6bd';b.style.borderColor=on?'#e0b255':'#8e6a31'});
-   if(pane==='settings'&&window.BP)BP.loadSettings?.();
+   if(pane==='settings'){const key='mafia_bp_settings_v1';const q=localStorage.getItem(key+'q')||'high';document.querySelectorAll('#bpQuality button').forEach(b=>b.classList.toggle('on',b.dataset.q===q));const vol=$('bpVol');if(vol)vol.value=Math.round(Number(localStorage.getItem(key+'vol')||0.8)*100);const voice=$('bpVoiceVol');if(voice)voice.value=Math.round(Number(localStorage.getItem(key+'voice')||1)*100);const music=$('bpMusic');if(music)music.value=localStorage.getItem(key+'music')||'on'}
    if(pane==='admin'){const logged=sessionStorage.getItem('bp_admin')==='1';if($('bpAdminLogin'))$('bpAdminLogin').style.display=logged?'none':'block';if($('bpAdminPanel'))$('bpAdminPanel').style.display=logged?'block':'none'}
   };
   window.BMCloseCombined=()=>{root.style.display='none'};
