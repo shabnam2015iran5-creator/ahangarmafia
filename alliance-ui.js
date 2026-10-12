@@ -15,6 +15,9 @@
  '#bmAllianceModal .bm-al-muted{color:#d0c2e9;font-size:12px;line-height:1.9;overflow-wrap:anywhere}'+
  '#bmAllianceModal .bm-al-box{border:1px solid #514066;border-radius:12px;padding:11px;margin:10px 0;background:#171021}'+
  '#bmAllianceModal .bm-al-member{padding:7px 0;border-bottom:1px solid #3d2e50;font-size:13px}'+
+ '#bmAllianceModal textarea{box-sizing:border-box;width:100%;min-height:68px;margin:6px 0;padding:10px;border:1px solid #5e4a7e;border-radius:9px;background:#100b19;color:#fff;font:inherit;resize:vertical}'+
+ '#bmAllianceChatHistory{max-height:220px;overflow:auto;border:1px solid #3d2e50;border-radius:9px;padding:8px;margin:7px 0;background:#0c0912}'+
+ '#bmAllianceChatHistory .bm-al-msg{padding:7px 0;border-bottom:1px solid #30253e;font-size:12px;line-height:1.8;overflow-wrap:anywhere}'+
  '#bmAllianceModal .bm-al-danger{border-color:#f08d9c;background:#542332}'+
  '@media(max-width:520px){#bmAllianceModal .bm-al-card{margin:1vh auto;padding:12px}#bmAllianceButton{width:100%}}';
  document.head.appendChild(css);
@@ -34,13 +37,31 @@
   if(!r.ok)throw Error(d.error||'درخواست اتحاد انجام نشد ('+r.status+')');
   return d;
  }
+ function renderMessages(a){
+  const host=$('bmAllianceChatHistory');if(!host)return;
+  const messages=Object.entries(a&&a.messages||{}).map(([id,m])=>({id,...m})).filter(m=>m&&m.text).sort((a,b)=>Number(a.at||0)-Number(b.at||0)).slice(-40);
+  host.innerHTML=messages.map(m=>'<div class="bm-al-msg"><b>'+esc(m.nick||'بازیکن')+'</b><span class="bm-al-muted"> · '+esc(m.at?new Date(Number(m.at)).toLocaleTimeString('fa-IR',{hour:'2-digit',minute:'2-digit'}):'')+'</span><div>'+esc(m.text)+'</div></div>').join('')||'<div class="bm-al-muted">هنوز پیامی نیست. اولین پیام را بفرست.</div>';
+  host.scrollTop=host.scrollHeight;
+ }
+ async function loadChat(){
+  if(modal.style.display!=='block'||!$('bmAllianceChatHistory'))return;
+  try{const d=await api('GET',{});if(d.alliance)renderMessages(d.alliance)}catch(e){}
+ }
  async function refresh(){
   try{
    const d=await api('GET',{}),a=d.alliance;
    if(!a){$('bmAllianceCurrent').style.display='none';$('bmAllianceCurrent').innerHTML='';$('bmAllianceActions').style.display='block';status('هنوز عضو هیچ اتحادی نیستی.');return}
    const members=Object.values(a.members||{}).filter(Boolean);
    $('bmAllianceActions').style.display='none';$('bmAllianceCurrent').style.display='block';
-   $('bmAllianceCurrent').innerHTML='<h3 style="margin:0 0 6px">اتحاد شما: '+esc(a.name)+'</h3><div class="bm-al-muted">کد دعوت: <b style="font-size:18px;letter-spacing:2px;color:#e5d6ff">'+esc(a.code)+'</b></div><button id="bmAllianceCopy">کپی کد دعوت</button><button id="bmAllianceLeave" class="bm-al-danger">خروج از اتحاد</button><div class="bm-al-muted">سازنده: '+esc(a.ownerName||'—')+' · تعداد اعضا: '+members.length+'</div><div style="margin-top:8px"><b>اعضای اتحاد</b>'+members.map(m=>'<div class="bm-al-member">'+esc(m.nick||'بازیکن')+(m.uid===a.ownerUid?' — سازنده':'')+'</div>').join('')+'</div>';
+   $('bmAllianceCurrent').innerHTML='<h3 style="margin:0 0 6px">اتحاد شما: '+esc(a.name)+'</h3><div class="bm-al-muted">کد دعوت: <b style="font-size:18px;letter-spacing:2px;color:#e5d6ff">'+esc(a.code)+'</b></div><button id="bmAllianceCopy">کپی کد دعوت</button><button id="bmAllianceLeave" class="bm-al-danger">خروج از اتحاد</button><div class="bm-al-muted">سازنده: '+esc(a.ownerName||'—')+' · تعداد اعضا: '+members.length+'</div><div style="margin-top:8px"><b>اعضای اتحاد</b>'+members.map(m=>'<div class="bm-al-member">'+esc(m.nick||'بازیکن')+(m.uid===a.ownerUid?' — سازنده':'')+'</div>').join('')+'</div><div class="bm-al-box"><h3 style="margin:0 0 5px">گفت‌وگوی اتحاد</h3><div id="bmAllianceChatHistory" aria-live="polite"></div><textarea id="bmAllianceMessage" maxlength="500" rows="2" placeholder="پیام به اعضای اتحاد…"></textarea><button id="bmAllianceSend">ارسال پیام</button></div>';
+   renderMessages(a);
+   $('bmAllianceSend').addEventListener('click',async()=>{
+    const input=$('bmAllianceMessage'),message=String(input.value||'').trim();if(!message){status('اول پیام را بنویس.');return}
+    $('bmAllianceSend').disabled=true;
+    try{await api('POST',{action:'message',message});input.value='';await loadChat();status('پیام ارسال شد.')}
+    catch(e){status(e.message,true)}
+    finally{$('bmAllianceSend').disabled=false}
+   });
    $('bmAllianceCopy').addEventListener('click',async()=>{
     try{await navigator.clipboard.writeText(String(a.code||''));status('کد اتحاد کپی شد.')}
     catch(e){const input=document.createElement('input');input.value=String(a.code||'');document.body.appendChild(input);input.select();try{document.execCommand('copy');status('کد اتحاد کپی شد.')}catch(_){status('کد اتحاد: '+a.code)}input.remove()}
@@ -74,4 +95,5 @@
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',placeButton,{once:true});else placeButton();
  new MutationObserver(placeButton).observe(document.documentElement,{childList:true,subtree:true});
  setInterval(placeButton,1500);
+ setInterval(loadChat,5000);
 })();
