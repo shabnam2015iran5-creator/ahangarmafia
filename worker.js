@@ -40,7 +40,7 @@ async function handleAlliance(req,url){
     for(let i=0;i<12&&exists;i++){code=newAllianceCode();exists=!!(await dbRead("alliancesV1/"+code)).data}
     if(exists)return json({error:"ساخت کد اتحاد ناموفق بود؛ دوباره تلاش کن"},503);
     const now=Date.now(),member={uid,nick:String(user.nick||"بازیکن").slice(0,18),joinedAt:now};
-    const alliance={code,name,ownerUid:uid,ownerName:member.nick,createdAt:now,open:true,members:{[uid]:member}};
+    const alliance={code,name,ownerUid:uid,ownerName:member.nick,createdAt:now,open:true,members:{[uid]:member},messages:{}};
     const save=await dbWrite("alliancesV1/"+code,"PUT",alliance);
     if(!save.ok)return json({error:"ذخیرهٔ اتحاد انجام نشد"},502);
     if(!await reserveIndex(indexPath,code)){await dbWrite("alliancesV1/"+code,"DELETE");return json({error:"عضویت کاربر همزمان در اتحاد دیگری ثبت شده است"},409)}
@@ -63,6 +63,24 @@ async function handleAlliance(req,url){
     const save=await dbWrite("alliancesV1/"+code,"PUT",updated);
     if(!save.ok)return json({error:"عضویت ثبت شد اما به‌روزرسانی فهرست اتحاد کامل نشد؛ دوباره پنل را باز کن."},502);
     return json({ok:true,alliance:updated});
+  }
+  if(action==="message"){
+    const idx=(await dbRead(indexPath)).data;
+    const code=String(idx&&idx.uid||"");
+    if(!code)return json({error:"ابتدا عضو یک اتحاد شو"},403);
+    const alliance=(await dbRead("alliancesV1/"+code)).data;
+    if(!alliance||!alliance.members||!alliance.members[uid])return json({error:"عضویت اتحاد تأیید نشد"},403);
+    const messageText=String(x.message||"").trim();
+    if(!messageText||messageText.length>500)return json({error:"پیام باید بین ۱ تا ۵۰۰ نویسه باشد"},400);
+    const now=Date.now(),random=Array.from(crypto.getRandomValues(new Uint8Array(4)),b=>b.toString(16).padStart(2,"0")).join("");
+    const message={uid,nick:String(user.nick||"بازیکن").slice(0,18),text:messageText,at:now};
+    const messageId=now.toString(36)+"_"+random;
+    const save=await dbWrite("alliancesV1/"+code+"/messages/"+messageId,"PUT",message);
+    if(!save.ok)return json({error:"ارسال پیام اتحاد ناموفق بود"},502);
+    const messages=(await dbRead("alliancesV1/"+code+"/messages")).data||{};
+    const ordered=Object.entries(messages).filter(([,m])=>m&&typeof m==="object").sort((a,b)=>Number(a[1].at||0)-Number(b[1].at||0));
+    for(const [oldId] of ordered.slice(0,Math.max(0,ordered.length-40)))await dbWrite("alliancesV1/"+code+"/messages/"+oldId,"DELETE");
+    return json({ok:true,message});
   }
   if(action==="leave"){
     const idx=(await dbRead(indexPath)).data;
