@@ -852,9 +852,16 @@ const Voice=(()=>{
   else if(typeof H[d.t]==='function'&&(d.t==='act'||r.role==='god')){H[d.t](s,d)}});
  }
  function playRemote(r,st){
-  const a=document.createElement('audio');a.autoplay=true;a.playsInline=true;a.srcObject=st;a.style.display='none';document.body.appendChild(a);
-  const p=a.play&&a.play();if(p&&p.catch)p.catch(()=>{});r.audio=a;
-  try{const n=ctx.createAnalyser();n.fftSize=256;const src=ctx.createMediaStreamSource(st),keep=ctx.createGain();keep.gain.value=0;src.connect(n);n.connect(keep);keep.connect(ctx.destination);r.an=n;r.anKeep=keep;r.buf=new Uint8Array(n.frequencyBinCount)}catch(e){}
+  try{if(r.audio){r.audio.pause();r.audio.srcObject=null;r.audio.remove()}}catch(e){}
+  const a=document.createElement('audio');
+  a.autoplay=true;a.playsInline=true;a.setAttribute('playsinline','');a.muted=false;a.volume=1;
+  a.srcObject=st;
+  // بعض مرورگرهای موبایل خروجی audio با display:none را مسدود می‌کنند.
+  a.style.cssText='position:fixed;width:1px;height:1px;opacity:.01;left:0;bottom:0;pointer-events:none;z-index:-1';
+  document.body.appendChild(a);r.audio=a;
+  const play=()=>{try{a.muted=false;a.volume=1;const p=a.play();if(p&&p.catch)p.catch(()=>{})}catch(e){}};
+  a.onloadedmetadata=play;a.oncanplay=play;play();
+  try{const n=ctx.createAnalyser();n.fftSize=512;const src=ctx.createMediaStreamSource(st);src.connect(n);r.an=n;r.buf=new Uint8Array(n.fftSize)}catch(e){}
  }
  function drop(s,quiet){
   const r=R[s];if(!r)return;delete R[s];
@@ -862,7 +869,7 @@ const Voice=(()=>{
   if(r.audio){r.audio.srcObject=null;r.audio.remove()}
   if(!quiet)refresh();
  }
- const lvl=(n,b)=>{n.getByteFrequencyData(b);let t=0;for(let i=0;i<b.length;i++)t+=b[i];return t/b.length};
+ const lvl=(n,b)=>{try{n.getByteTimeDomainData(b);let t=0;for(let i=0;i<b.length;i++){const v=(b[i]-128)/128;t+=v*v}return Math.sqrt(t/b.length)*100}catch(e){return 0}};
  function enforce(){
   const mu0=!!(muted||!micOk||!allowed());if(mu0!==lastMu){lastMu=mu0;try{broadcast({t:'mu',v:mu0?1:0})}catch(e){}}
   if(!rawTrack)return;
@@ -872,8 +879,8 @@ const Voice=(()=>{
  }
  function tick(){
   let ch=false;
-  const ms=!!(micOk&&rawTrack&&rawTrack.enabled&&an&&lvl(an,anBuf)>12);if(ms!==meSp){meSp=ms;ch=true}
-  Object.values(R).forEach(r=>{const sp=!!(r.live&&r.an&&lvl(r.an,r.buf)>10);if(sp!==r.sp){r.sp=sp;ch=true}});
+  const ms=!!(micOk&&rawTrack&&rawTrack.enabled&&an&&lvl(an,anBuf)>4);if(ms!==meSp){meSp=ms;ch=true}
+  Object.values(R).forEach(r=>{const sp=!!(r.live&&r.an&&lvl(r.an,r.buf)>3.5);if(sp!==r.sp){r.sp=sp;ch=true}});
   enforce();if(ch)refresh();
  }
  function humans(){return Object.values(R).filter(r=>r.live).sort((a,b)=>a.slot-b.slot)}
