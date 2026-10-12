@@ -221,6 +221,14 @@ nav{background:#0009;border:1px solid var(--g2);border-radius:12px;padding:3px}n
 </style>
 <script src="config.js"></script>
 <link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#000000"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><link rel="apple-touch-icon" href="icon-192.png">
+<style id="bm-emergency-loading-fix">
+/* Emergency recovery: never let the decorative boot splash block the game. */
+#bpSplash{display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important}
+#app{visibility:visible!important;opacity:1!important}
+</style>
+<script id="bm-emergency-loading-script">
+(()=>{const release=()=>{const s=document.getElementById('bpSplash');if(s){s.classList.add('hide');s.style.setProperty('display','none','important');s.style.setProperty('visibility','hidden','important');s.style.setProperty('opacity','0','important');s.setAttribute('aria-hidden','true')}const p=document.getElementById('bpPercent');if(p)p.textContent='100%';const a=document.getElementById('app');if(a){a.style.setProperty('visibility','visible','important');a.style.setProperty('opacity','1','important')}};release();document.addEventListener('DOMContentLoaded',release);window.addEventListener('pageshow',release);setInterval(release,500)})();
+</script>
 </head><body>
 <div id="fx"></div><div id="toast"></div>
 <div id="app">
