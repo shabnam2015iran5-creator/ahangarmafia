@@ -64,6 +64,7 @@ export default {
         let injected = html;
         if (!injected.includes("/account-ui.js")) injected = injected.replace(/<\/body\s*>/i, '<script src="/account-ui.js" defer></script></body>');
         if (!injected.includes("/admin-ui.js")) injected = injected.replace(/<\/body\s*>/i, '<script src="/admin-ui.js" defer></script></body>');
+        if (!injected.includes("/room-ui.js")) injected = injected.replace(/<\/body\s*>/i, '<script src="/room-ui.js" defer></script></body>');
         const headers = new Headers(asset.headers); headers.delete("Content-Length"); headers.set("Cache-Control", "no-store");
         return new Response(injected, { status: asset.status, statusText: asset.statusText, headers });
       }
@@ -104,6 +105,61 @@ export default {
       if (body.length > 65536) return json({ error: "Payload too large" }, 413);
       if (body) {
         try { JSON.parse(body); } catch { return json({ error: "Invalid JSON" }, 400); }
+      }
+    }
+
+    // Keep players in a started match even when a browser disconnects or tries to leave.
+    const roomMutation = rawPath.match(/^roomsV23\/(\d{5})(?:\/(.+))?\.json$/);
+    if (roomMutation && ["PUT", "PATCH", "DELETE"].includes(method)) {
+      const roomCode = roomMutation[1];
+      const subPath = String(roomMutation[2] || "").replace(/\.json$/, "");
+      const shouldCheck = method === "DELETE" || subPath === "" || subPath === "players" || subPath === "status";
+      if (shouldCheck) {
+        let roomData;
+        try { roomData = (await dbRead("roomsV23/" + roomCode)).data || {}; }
+        catch { return json({error:"برای حفظ وضعیت بازی، بررسی اتاق ناموفق بود؛ دوباره تلاش کن."},502); }
+        if (String(roomData.status || "").toLowerCase() === "started") {
+          if (method === "DELETE" && (!subPath || subPath === "players" || subPath.startsWith("players/"))) {
+            return json({error:"این بازی شروع شده؛ خروج یا حذف بازیکن تا پایان بازی مجاز نیست."},409);
+          }
+          if (subPath === "status" && ["PUT","PATCH"].includes(method)) {
+            let nextStatus;
+            try { nextStatus = JSON.parse(body || "null"); } catch { return json({error:"وضعیت بازی نامعتبر است."},400); }
+            if (!["started","ended","finished","completed"].includes(String(nextStatus || "").toLowerCase())) {
+              return json({error:"بازی شروع شده و نمی‌توان آن را به لابی بازگرداند."},409);
+            }
+          }
+          const mergePlayers = (oldPlayers, incomingPlayers, partial) => {
+            const merged = {...(oldPlayers && typeof oldPlayers === "object" ? oldPlayers : {})};
+            if (!incomingPlayers || typeof incomingPlayers !== "object" || Array.isArray(incomingPlayers)) return merged;
+            for (const [id, value] of Object.entries(incomingPlayers)) {
+              if (value === null) continue;
+              if (partial && value && typeof value === "object" && !Array.isArray(value) && merged[id] && typeof merged[id] === "object") {
+                merged[id] = {...merged[id], ...value};
+              } else merged[id] = value;
+            }
+            return merged;
+          };
+          if (subPath === "" && ["PUT","PATCH"].includes(method)) {
+            let incoming;
+            try { incoming = JSON.parse(body || "null"); } catch { return json({error:"اطلاعات اتاق نامعتبر است."},400); }
+            if (!incoming || typeof incoming !== "object" || Array.isArray(incoming)) {
+              return json({error:"حذف کامل اتاق در زمان اجرای بازی مجاز نیست."},409);
+            }
+            if (method === "PUT") incoming.players = mergePlayers(roomData.players, incoming.players, false);
+            else if (incoming.players !== undefined) incoming.players = mergePlayers(roomData.players, incoming.players, true);
+            const requestedStatus = String(incoming.status || "").toLowerCase();
+            incoming.status = ["ended","finished","completed"].includes(requestedStatus) ? requestedStatus : "started";
+            body = JSON.stringify(incoming);
+          } else if (subPath === "players" && ["PUT","PATCH"].includes(method)) {
+            let incoming;
+            try { incoming = JSON.parse(body || "null"); } catch { return json({error:"فهرست بازیکنان نامعتبر است."},400); }
+            if (method === "PUT" && (!incoming || typeof incoming !== "object" || Array.isArray(incoming))) {
+              return json({error:"حذف فهرست بازیکنان در زمان بازی مجاز نیست."},409);
+            }
+            body = JSON.stringify(mergePlayers(roomData.players, incoming, method === "PATCH"));
+          }
+        }
       }
     }
 
