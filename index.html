@@ -3012,3 +3012,17 @@ button[title], [role="button"][title]{cursor:pointer}button:focus-visible{outlin
  setInterval(()=>{if(room?.classList.contains('on'))syncRole()},700);
 })();
 </script>
+
+<!-- BLACK MAFIA: silence background score in waiting lobby; keep player voices enabled -->
+<script id="bm-lobby-audio-fix">
+(()=>{
+ if(window.__bmLobbyAudioFix)return;window.__bmLobbyAudioFix=true;
+ const $=id=>document.getElementById(id);let lobbyMuted=false;
+ function lobbyVisible(){const e=$('lobbyRoom');return !!(e&&e.classList.contains('on'))}
+ function syncMusic(){try{if(typeof MU==='undefined'||!MU.mg)return;const inside=lobbyVisible(),now=MU.mg.context.currentTime;if(inside){lobbyMuted=true;MU.mg.gain.setTargetAtTime(0,now,.025)}else if(lobbyMuted){lobbyMuted=false;MU.mg.gain.setTargetAtTime(MU.on?1.5:0,now,.08)}}catch(e){}}
+ function resumeRemoteAudio(){document.querySelectorAll('audio').forEach(a=>{if(!a.srcObject)return;a.muted=false;a.volume=1;a.playsInline=true;if(a.paused){const p=a.play();if(p&&p.catch)p.catch(()=>{})}});try{if(typeof ctx!=='undefined'&&ctx&&ctx.state==='suspended')ctx.resume()}catch(e){}}
+ document.addEventListener('pointerdown',resumeRemoteAudio,{passive:true});document.addEventListener('touchend',resumeRemoteAudio,{passive:true});
+ const room=$('lobbyRoom');if(room)new MutationObserver(()=>{syncMusic();if(lobbyVisible())resumeRemoteAudio()}).observe(room,{attributes:true,attributeFilter:['class']});
+ setInterval(()=>{syncMusic();if(lobbyVisible())resumeRemoteAudio()},900);
+})();
+</script>
