@@ -97,4 +97,30 @@ window.MAFIA_ONE_ROOM_ALL=true;     // true: هر سه لابی یک اتاق‌
   }catch(e){}
   return nativeFetch(resource,options);
  };
+ // Voice lobby recovery: retain TURN relays and retry PeerJS connection while a player is waiting.
+ let voiceConfigApplied=false,voiceLastJoinKey='';
+ setInterval(()=>{
+  try{
+   if(typeof VOICE_CFG!=='undefined'){
+    VOICE_CFG.peer={host:'0.peerjs.com',port:443,path:'/',secure:true};
+    const stun=[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'}];
+    VOICE_CFG.ice=stun.concat(Array.isArray(window.MAFIA_TURN)?window.MAFIA_TURN:[]);
+    voiceConfigApplied=true;
+   }
+   const room=$('lobbyRoom');
+   if(!room||!room.classList.contains('on')||typeof Voice==='undefined')return;
+   const code=String(window.MAFIA_ROOM_CODE||window.MAFIA_ROOM_NAME||'main');
+   if(!Voice.active()){
+    const key=code+'|'+String(window.lobbyMode||'player');
+    if(voiceLastJoinKey!==key)voiceLastJoinKey=key;
+    // Voice.join internally uses MAFIA_ROOM_CODE when available, keeping both phones in the same voice room.
+    Voice.join(code);
+   }
+  }catch(e){}
+ },3500);
+ // If the first autoplay attempt was blocked, retry remote audio after the next user interaction.
+ document.addEventListener('pointerdown',()=>{
+  try{document.querySelectorAll('audio').forEach(a=>{if(a.srcObject&&a.paused)a.play().catch(()=>{})})}catch(e){}
+ },true);
+
 })();
