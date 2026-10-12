@@ -117,10 +117,19 @@ window.MAFIA_ONE_ROOM_ALL=true;     // true: هر سه لابی یک اتاق‌
     Voice.join(code);
    }
   }catch(e){}
- },3500);
+ },12000);
  // If the first autoplay attempt was blocked, retry remote audio after the next user interaction.
- document.addEventListener('pointerdown',()=>{
-  try{document.querySelectorAll('audio').forEach(a=>{if(a.srcObject&&a.paused)a.play().catch(()=>{})})}catch(e){}
- },true);
+ const resumeRemoteAudio=()=>{
+  try{
+   if(typeof ctx!=='undefined'&&ctx&&ctx.state==='suspended')ctx.resume().catch(()=>{});
+   document.querySelectorAll('audio').forEach(a=>{if(a.srcObject&&a.paused)a.play().catch(()=>{})});
+  }catch(e){}
+ };
+ document.addEventListener('pointerdown',resumeRemoteAudio,true);
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(resumeRemoteAudio,300)});
+ window.addEventListener('online',()=>{setTimeout(()=>{
+  try{if($('lobbyRoom')?.classList.contains('on')&&typeof Voice!=='undefined'&&!Voice.active())Voice.join(window.__voiceKey||window.MAFIA_ROOM_CODE||'main')}catch(e){}
+ },1500)});
+
 
 })();
