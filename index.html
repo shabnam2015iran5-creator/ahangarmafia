@@ -2654,7 +2654,7 @@ window.APP_VERSION='27.0';
  const previous=window.roomStartGame;
  // This final guard uses the actual lexical game mode; older patches checked window.lobbyMode,
  // which is not the same variable and could block the host or expose the button to players.
- window.roomStartGame=function(){
+ window.roomStartGame=async function(){
    if(!isGod()){try{toast('فقط گاد اتاق می‌تواند بازی را شروع کند.')}catch(e){}syncStartButton();return false}
    if(window.__bmStartLocked||((typeof started!=='undefined')&&started)||((typeof G!=='undefined')&&G.loading))return false;
    window.__bmStartLocked=true;
@@ -2665,10 +2665,25 @@ window.APP_VERSION='27.0';
      }
    },12000);
    const b=$('roomStartBtn');if(b){b.disabled=true;b.style.pointerEvents='none';b.textContent='⏳ در حال اتصال بازیکنان…'}
-   // Give the shared PeerJS data channels time to settle; broadcasts now include open data
-   // channels even when an audio stream has not become live yet.
+   // Publish shared room state here because this final guard bypasses the earlier start wrapper.
+   const roomCode=String(window.MAFIA_ROOM_CODE||'').replace(/\D/g,'').slice(0,5);
+   const base=String(window.MAFIA_DB_URL||'').replace(/\/$/,'');
+   const startToken=Date.now();
+   if(roomCode&&base){
+     try{
+       const response=await fetch(base+'/roomsV23/'+encodeURIComponent(roomCode)+'.json',{
+         method:'PATCH',headers:{'Content-Type':'application/json'},
+         body:JSON.stringify({status:'started',startedAt:startToken,updatedAt:startToken})
+       });
+       if(!response.ok)throw Error('Firebase start status '+response.status);
+     }catch(e){
+       console.error('Shared room start failed',e);window.__bmStartLocked=false;
+       if(b){b.disabled=false;b.style.pointerEvents='';b.textContent='🎭 شروع بازی'}
+       try{toast('شروع بازی در سرور مشترک ثبت نشد؛ اتصال اتاق را بررسی کن.')}catch(_){}
+       return false;
+     }
+   }
    try{if(window.Voice&&Voice.active())Voice.broadcast({t:'go'})}catch(e){}
-   // Call the game-start implementation captured before the stale UI guards.
    let result;
    try{
      if(typeof __bmOriginalStartGame==='function')result=__bmOriginalStartGame();
@@ -2680,6 +2695,17 @@ window.APP_VERSION='27.0';
        if(window.Net&&typeof Net.hostStart==='function')Net.hostStart();
      }catch(e){console.error(e)}
    },700);
+   if(roomCode&&base)setTimeout(async()=>{
+     try{
+       if((typeof started!=='undefined'&&started)||(typeof G!=='undefined'&&G.loading))return;
+       const url=base+'/roomsV23/'+encodeURIComponent(roomCode)+'.json';
+       const check=await fetch(url,{cache:'no-store'});if(!check.ok)return;
+       const room=await check.json();
+       if(room&&room.status==='started'&&Number(room.startedAt)===startToken){
+         await fetch(url,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:'waiting',updatedAt:Date.now()})});
+       }
+     }catch(e){}
+   },18000);
    return result;
  };
  // Capture a direct reference to the pre-guard room start implementation.
