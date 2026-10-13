@@ -1030,7 +1030,11 @@ const Net=(()=>{
   renderNet(d);
   const m=d.seats[d.my];
   if(d.st&&!lastSt){S.games++;save()}
-  if(d.st&&m&&m.ro&&!revealed){/* نقش فقط پس از لمس آواتار خود باز می‌شود */}
+  if(d.st&&m&&m.ro&&!revealed){
+   // نقش از snapshot اختصاصی همین بازیکن می‌آید؛ کارت فقط یک بار و پس از دریافت نقش باز شود.
+   revealed=true;
+   revealCard(m.ro);
+  }
   if(!d.st){revealed=false}
   if(d.st&&!m&&hadSeat)toast('شما از بازی خارج شدید');
   hadSeat=!!m;
