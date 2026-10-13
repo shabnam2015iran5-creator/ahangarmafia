@@ -1032,7 +1032,8 @@ const Net=(()=>{
  /* ====== بازیکن (کلاینت) ====== */
  function enter(){
   client=true;revealed=false;gtLast='';snap=null;rxT=Date.now();warned=false;lastCur=-9;lastPh=null;lastSt=false;wonShown=false;lastVb='';hadSeat=false;
-  g('lobbyRoom').classList.remove('on');
+  // Keep the shared waiting room visible until a real started-game snapshot arrives.
+  if(!window.MAFIA_ROOM_CODE)g('lobbyRoom').classList.remove('on');
   role='player';started=false;clearInterval(ti);clTok++;
   seats=Array(N).fill(null);G={ph:null,t:0,n:{},v:{},rv:{}};
   document.body.classList.add('ingame');buildDock();nav('game');$('vb').innerHTML='';
@@ -1059,6 +1060,7 @@ const Net=(()=>{
  }
  function apply(d){
   if(!client||!d||!Array.isArray(d.seats)||d.seats.length>N)return;
+  if(d.st&&window.MAFIA_ROOM_CODE){const lr=g('lobbyRoom');if(lr)lr.classList.remove('on','bm-start-wait');}
   snap=d;rxT=Date.now();warned=false;G.ph=d.ph;started=!!d.st;
   g('phase').textContent=d.st?String(d.phase||'').slice(0,80):'منتظر شروع بازی توسط گرداننده...';g('timer').textContent=String(d.tm||'').slice(0,8);
   g('pbar').style.width=Math.max(0,Math.min(100,parseFloat(d.pb)||0))+'%';
@@ -3166,7 +3168,7 @@ body.ingame #bmSharedRoomBadge{display:block}
  if(window.Net&&typeof Net.enter==='function'&&!window.__bmNetEnterWrapped){
    window.__bmNetEnterWrapped=true;
    const enter=Net.enter;
-   Net.enter=function(){const r=enter.apply(this,arguments);if(code())leaveWaitingRoom();return r};
+   Net.enter=function(){const r=enter.apply(this,arguments);if(code())keepWaitingRoom();return r};
  }
  const priorStart=window.roomStartGame;
  if(typeof priorStart==='function'&&!window.__bmOneLobbyStartWrapped){
@@ -3193,7 +3195,7 @@ body.ingame #bmSharedRoomBadge{display:block}
      else if(window.Net&&typeof Net.snapshot==='function'){const snap=Net.snapshot();live=!!(snap&&snap.st)}
    }catch(e){}
    if(live)leaveWaitingRoom();
-   else if((typeof lobbyMode!=='undefined'?lobbyMode:window.lobbyMode)==='player'&&window.Net&&Net.isClient())leaveWaitingRoom();
+   else if((typeof lobbyMode!=='undefined'?lobbyMode:window.lobbyMode)==='player'&&window.Net&&Net.isClient()){const lr=$('lobbyRoom');if(lr&&!lr.classList.contains('on'))keepWaitingRoom();}
    paintBadge();
  },250);
  document.addEventListener('visibilitychange',()=>{if(!document.hidden)paintBadge()});
