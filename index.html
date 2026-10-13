@@ -2924,8 +2924,10 @@ button[title], [role="button"][title]{cursor:pointer}button:focus-visible{outlin
     const code=String(window.MAFIA_ROOM_CODE||'');
     const mode=(typeof lobbyMode!=='undefined'?lobbyMode:window.lobbyMode);
     if(!code||mode!=='player'||entering)return;
+    // Continue recovery even after another handler has hidden the waiting lobby.
+    // Otherwise a missed PeerJS 'go' signal leaves the player on a blank game screen.
     const lobby=document.getElementById('lobbyRoom');
-    if(!lobby||!lobby.classList.contains('on'))return;
+    if(!lobby)return;
     const d=db();if(!d)return;
     try{
       const r=await fetch(d+'/roomsV23/'+encodeURIComponent(code)+'.json',{cache:'no-store'});
