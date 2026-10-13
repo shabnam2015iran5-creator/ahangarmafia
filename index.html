@@ -752,9 +752,9 @@ const Voice=(()=>{
   r.call=call;r.callT0=Date.now();
   // Expose the actual WebRTC ICE state in the voice status so a silent call can
   // be distinguished from a browser autoplay block.
-  try{
-   const pc=call.peerConnection;
-   if(pc){
+  const watchIce=()=>{
+   try{
+    const pc=call.peerConnection;if(!pc||pc.__mfDiagBound)return;pc.__mfDiagBound=true;
     const report=()=>{
      const st=pc.iceConnectionState||pc.connectionState||'';
      if(st==='failed'){voiceDiag=' · اتصال صوتی ناموفق؛ شبکه یا TURN';refresh()}
@@ -764,9 +764,11 @@ const Voice=(()=>{
     pc.addEventListener('iceconnectionstatechange',report);
     pc.addEventListener('connectionstatechange',report);
     report();
-   }
-  }catch(e){}
+   }catch(e){}
+  };
+  watchIce();
   call.on('stream',st=>{
+   watchIce();
    if(R[s]!==r||r.call!==call||r.stream===st)return;
    r.stream=st;playRemote(r,st);r.live=true;refresh();
   });
