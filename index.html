@@ -1103,7 +1103,7 @@ const Net=(()=>{
   g('vpn').innerHTML='<b>🗳 جدول آرا</b>'+d.l.slice(0,N).map(x=>`<div>${esc(x[0])} ➜ <b>${esc(x[1])}</b></div>`).join('')+((d.ab&&d.ab.length)?'<div style="opacity:.7">ممتنع: '+d.ab.slice(0,N).map(esc).join('، ')+'</div>':'');
   g('vpn').style.display='block';clearTimeout(vpT);vpT=setTimeout(()=>g('vpn').style.display='none',5500)});
  Voice.onMsg('act',onAct);
- return{enter,hostStart,reset,bcast,canSpeak,snapshot:()=>snap,isClient:()=>client,mySeat:()=>snap?snap.my:-1,
+ return{enter,hostStart,reset,bcast,canSpeak,snapshot:()=>snap,lastSyncAt:()=>rxT,isClient:()=>client,mySeat:()=>snap?snap.my:-1,
   tap(i){if(client&&snap&&snap.st)toHost({t:'act',a:'pick',i})},
   mode(m){toHost({t:'act',a:'mode',m})},rv(y){toHost({t:'act',a:'rv',y:y?1:0});g('vb').innerHTML='';lastVb=''},
   challenge(){if(!snap||!snap.st){toast('چالش فقط در بحث روز بازی ممکن است');return}toHost({t:'act',a:'ch'})},
@@ -2019,8 +2019,7 @@ nav .navStart{flex:1.6;font-size:21px!important;font-weight:900;border:2.5px sol
   /* ---- لابی: دکمهٔ خروج و «مشاهده دک» ---- */
   const $=id=>document.getElementById(id);
   const ex=document.querySelector('.lobbyTop .roomIcon');if(ex)ex.textContent='🚪';
-  const acts=document.querySelector('.roomActions'),st=$('roomStartBtn');
-  if(acts){const b=document.createElement('button');b.className='btn';b.id='deckBtn';b.textContent='🃏 مشاهده دک';b.onclick=()=>{try{op('ovDeck')}catch(e){$('ovDeck').classList.add('on')}};acts.insertBefore(b,st||null)}
+  /* Duplicate deck-view button creation removed; keep the existing deck screen assets. */
   const D=[['🎩','گادفادر','رئیس تیم مافیا','m'],['🤝','مذاکره‌کننده','می‌تواند یک بازیکن را به مافیا بکشاند','m'],['🔫','مافیای ساده','عضو تیم مافیا','m'],['👤','شهروند ساده','عضو تیم شهر','c'],['💉','دکتر','نقش ویژهٔ تیم شهر','c'],['🕵️','کاراگاه','نقش ویژهٔ تیم شهر','c'],['🛡','زره‌پوش','یک‌بار از رأی خروج جان سالم به در می‌برد','c'],['🎯','تک‌تیرانداز','نقش ویژهٔ تیم شهر','c'],['📰','خبرنگار','نقش ویژهٔ تیم شهر','c']];
   const dl=$('deckList');if(dl)dl.innerHTML='<small style="color:#bfa97d;display:block;margin-bottom:8px">سناریوی مذاکره · ۱۰ بازیکن</small>'+D.map(r=>'<div class="deckRow '+r[3]+'"><b>'+r[0]+'</b><span>'+r[1]+'<small>'+r[2]+'</small></span></div>').join('');
 })();
@@ -2159,7 +2158,7 @@ function winRows(w){
 </style>
 <script>
 (function(){
-  window.APP_VERSION='27.0';
+  
   const $=id=>document.getElementById(id);
   const permitted=()=>{try{return isAdmin||localStorage.getItem('mafia_god_ok')==='1'}catch(e){return false}};
   const SCN=[['مذاکره',1],['تکاور',0],['جوکر',0]];
@@ -2229,7 +2228,7 @@ function winRows(w){
 </style>
 <script>
 (function(){
-  window.APP_VERSION='27.0';
+  
   const FACADE="<svg id=\"sceneArt\" viewBox=\"0 0 360 620\" preserveAspectRatio=\"none\" aria-hidden=\"true\"><defs><linearGradient id=\"wl\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#4a5565\"/><stop offset=\".5\" stop-color=\"#262d39\"/><stop offset=\"1\" stop-color=\"#10141b\"/></linearGradient><linearGradient id=\"sh\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#26334d\"/><stop offset=\"1\" stop-color=\"#0a0f18\"/></linearGradient><linearGradient id=\"wn\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#ffe08a\"/><stop offset=\"1\" stop-color=\"#b8731c\"/></linearGradient><linearGradient id=\"wd\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\"><stop offset=\"0\" stop-color=\"#34496b\"/><stop offset=\"1\" stop-color=\"#080c14\"/></linearGradient><linearGradient id=\"pv\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#9a9fa8\"/><stop offset=\"1\" stop-color=\"#2b2f37\"/></linearGradient><radialGradient id=\"gl\"><stop offset=\"0\" stop-color=\"#fff3b0\" stop-opacity=\".95\"/><stop offset=\".4\" stop-color=\"#ffcf4d\" stop-opacity=\".4\"/><stop offset=\"1\" stop-color=\"#ffcf4d\" stop-opacity=\"0\"/></radialGradient><radialGradient id=\"vg\" cx=\".5\" cy=\".5\" r=\".75\"><stop offset=\".6\" stop-color=\"#000\" stop-opacity=\"0\"/><stop offset=\"1\" stop-color=\"#000\" stop-opacity=\".75\"/></radialGradient><linearGradient id=\"fg\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#b8c2d0\" stop-opacity=\"0\"/><stop offset=\"1\" stop-color=\"#b8c2d0\" stop-opacity=\".22\"/></linearGradient><pattern id=\"brk\" width=\"24\" height=\"20\" patternUnits=\"userSpaceOnUse\"><path d=\"M0 .5H24M0 10.5H24M12 .5V10.5M0 10.5V20M24 10.5V20\" stroke=\"#000\" stroke-opacity=\".28\" stroke-width=\".8\" fill=\"none\"/></pattern><pattern id=\"stp\" width=\"28\" height=\"10\" patternUnits=\"userSpaceOnUse\"><rect width=\"14\" height=\"10\" fill=\"#e6d8b0\"/><rect x=\"14\" width=\"14\" height=\"10\" fill=\"#7d1f2a\"/></pattern><pattern id=\"dnt\" width=\"9\" height=\"6\" patternUnits=\"userSpaceOnUse\"><rect width=\"5\" height=\"6\" fill=\"#7d8695\"/></pattern><filter id=\"nz\"><feTurbulence type=\"fractalNoise\" baseFrequency=\".85\" numOctaves=\"2\" seed=\"4\"/><feColorMatrix values=\"0 0 0 0 .6 0 0 0 0 .6 0 0 0 0 .6 0 0 0 .55 0\"/></filter></defs><rect width=\"360\" height=\"620\" fill=\"url(#wl)\"/><rect width=\"360\" height=\"268\" fill=\"url(#brk)\"/><rect width=\"360\" height=\"620\" filter=\"url(#nz)\" opacity=\".16\"/><path d=\"M20 118 V62 A24 24 0 0 1 68 62 V118 Z\" fill=\"url(#wn)\" stroke=\"#7a8392\" stroke-width=\"5\"/><path d=\"M20 84 H68 M44 48 V118\" stroke=\"#0008\" stroke-width=\"2\"/><rect x=\"15\" y=\"118\" width=\"58\" height=\"7\" fill=\"#6c7482\"/><ellipse cx=\"44\" cy=\"82\" rx=\"52\" ry=\"62\" fill=\"url(#gl)\" opacity=\".55\"/><path d=\"M98 118 V62 A24 24 0 0 1 146 62 V118 Z\" fill=\"url(#wd)\" stroke=\"#7a8392\" stroke-width=\"5\"/><path d=\"M98 84 H146 M122 48 V118\" stroke=\"#0008\" stroke-width=\"2\"/><rect x=\"93\" y=\"118\" width=\"58\" height=\"7\" fill=\"#6c7482\"/><path d=\"M214 118 V62 A24 24 0 0 1 262 62 V118 Z\" fill=\"url(#wd)\" stroke=\"#7a8392\" stroke-width=\"5\"/><path d=\"M214 84 H262 M238 48 V118\" stroke=\"#0008\" stroke-width=\"2\"/><rect x=\"209\" y=\"118\" width=\"58\" height=\"7\" fill=\"#6c7482\"/><path d=\"M292 118 V62 A24 24 0 0 1 340 62 V118 Z\" fill=\"url(#wn)\" stroke=\"#7a8392\" stroke-width=\"5\"/><path d=\"M292 84 H340 M316 48 V118\" stroke=\"#0008\" stroke-width=\"2\"/><rect x=\"287\" y=\"118\" width=\"58\" height=\"7\" fill=\"#6c7482\"/><ellipse cx=\"316\" cy=\"82\" rx=\"52\" ry=\"62\" fill=\"url(#gl)\" opacity=\".55\"/><path d=\"M20 222 V166 A24 24 0 0 1 68 166 V222 Z\" fill=\"url(#wd)\" stroke=\"#7a8392\" stroke-width=\"5\"/><path d=\"M20 188 H68 M44 152 V222\" stroke=\"#0008\" stroke-width=\"2\"/><rect x=\"15\" y=\"222\" width=\"58\" height=\"7\" fill=\"#6c7482\"/><path d=\"M98 222 V166 A24 24 0 0 1 146 166 V222 Z\" fill=\"url(#wn)\" stroke=\"#7a8392\" stroke-width=\"5\"/><path d=\"M98 188 H146 M122 152 V222\" stroke=\"#0008\" stroke-width=\"2\"/><rect x=\"93\" y=\"222\" width=\"58\" height=\"7\" fill=\"#6c7482\"/><ellipse cx=\"122\" cy=\"186\" rx=\"52\" ry=\"62\" fill=\"url(#gl)\" opacity=\".55\"/><path d=\"M214 222 V166 A24 24 0 0 1 262 166 V222 Z\" fill=\"url(#wn)\" stroke=\"#7a8392\" stroke-width=\"5\"/><path d=\"M214 188 H262 M238 152 V222\" stroke=\"#0008\" stroke-width=\"2\"/><rect x=\"209\" y=\"222\" width=\"58\" height=\"7\" fill=\"#6c7482\"/><ellipse cx=\"238\" cy=\"186\" rx=\"52\" ry=\"62\" fill=\"url(#gl)\" opacity=\".55\"/><path d=\"M292 222 V166 A24 24 0 0 1 340 166 V222 Z\" fill=\"url(#wd)\" stroke=\"#7a8392\" stroke-width=\"5\"/><path d=\"M292 188 H340 M316 152 V222\" stroke=\"#0008\" stroke-width=\"2\"/><rect x=\"287\" y=\"222\" width=\"58\" height=\"7\" fill=\"#6c7482\"/><rect y=\"250\" width=\"360\" height=\"20\" fill=\"#5d6675\"/><rect y=\"262\" width=\"360\" height=\"8\" fill=\"url(#dnt)\"/><rect y=\"270\" width=\"360\" height=\"5\" fill=\"#0009\"/><rect y=\"275\" width=\"360\" height=\"297\" fill=\"url(#sh)\"/><rect x=\"0\" y=\"275\" width=\"26\" height=\"297\" fill=\"#3a4352\"/><rect x=\"0\" y=\"275\" width=\"3\" height=\"297\" fill=\"#6c7482\" opacity=\".6\"/><rect x=\"334\" y=\"275\" width=\"26\" height=\"297\" fill=\"#3a4352\"/><rect x=\"334\" y=\"275\" width=\"3\" height=\"297\" fill=\"#6c7482\" opacity=\".6\"/><rect x=\"108\" y=\"275\" width=\"12\" height=\"297\" fill=\"#3a4352\"/><rect x=\"108\" y=\"275\" width=\"3\" height=\"297\" fill=\"#6c7482\" opacity=\".6\"/><rect x=\"242\" y=\"275\" width=\"12\" height=\"297\" fill=\"#3a4352\"/><rect x=\"242\" y=\"275\" width=\"3\" height=\"297\" fill=\"#6c7482\" opacity=\".6\"/><rect x=\"36\" y=\"330\" width=\"72\" height=\"190\" fill=\"url(#wd)\" stroke=\"#c9972f\" stroke-width=\"3\"/><path d=\"M36 330 l50 190 M46 330 l24 190\" stroke=\"#fff\" stroke-opacity=\".08\" stroke-width=\"10\"/><rect x=\"252\" y=\"330\" width=\"72\" height=\"190\" fill=\"url(#wd)\" stroke=\"#c9972f\" stroke-width=\"3\"/><path d=\"M252 330 l50 190 M262 330 l24 190\" stroke=\"#fff\" stroke-opacity=\".08\" stroke-width=\"10\"/><rect x=\"124\" y=\"368\" width=\"112\" height=\"196\" fill=\"#05080d\" stroke=\"#5d6675\" stroke-width=\"6\"/><rect x=\"112\" y=\"560\" width=\"136\" height=\"12\" fill=\"#7d8695\"/><rect x=\"118\" y=\"572\" width=\"124\" height=\"10\" fill=\"#4d5461\"/><path d=\"M92 326 H268 L282 372 H78 Z\" fill=\"url(#stp)\"/><path d=\"M78 372 H282\" stroke=\"#000\" stroke-opacity=\".5\" stroke-width=\"3\"/><circle cx=\"85\" cy=\"374\" r=\"7\" fill=\"#e6d8b0\"/><circle cx=\"99\" cy=\"374\" r=\"7\" fill=\"#7d1f2a\"/><circle cx=\"113\" cy=\"374\" r=\"7\" fill=\"#e6d8b0\"/><circle cx=\"127\" cy=\"374\" r=\"7\" fill=\"#7d1f2a\"/><circle cx=\"141\" cy=\"374\" r=\"7\" fill=\"#e6d8b0\"/><circle cx=\"155\" cy=\"374\" r=\"7\" fill=\"#7d1f2a\"/><circle cx=\"169\" cy=\"374\" r=\"7\" fill=\"#e6d8b0\"/><circle cx=\"183\" cy=\"374\" r=\"7\" fill=\"#7d1f2a\"/><circle cx=\"197\" cy=\"374\" r=\"7\" fill=\"#e6d8b0\"/><circle cx=\"211\" cy=\"374\" r=\"7\" fill=\"#7d1f2a\"/><circle cx=\"225\" cy=\"374\" r=\"7\" fill=\"#e6d8b0\"/><circle cx=\"239\" cy=\"374\" r=\"7\" fill=\"#7d1f2a\"/><circle cx=\"253\" cy=\"374\" r=\"7\" fill=\"#e6d8b0\"/><circle cx=\"267\" cy=\"374\" r=\"7\" fill=\"#7d1f2a\"/><circle cx=\"281\" cy=\"374\" r=\"7\" fill=\"#e6d8b0\"/><rect y=\"582\" width=\"360\" height=\"38\" fill=\"url(#pv)\"/><path d=\"M0 582 L-108 620\" stroke=\"#000\" stroke-opacity=\".25\"/><path d=\"M45 582 L-36 620\" stroke=\"#000\" stroke-opacity=\".25\"/><path d=\"M90 582 L36 620\" stroke=\"#000\" stroke-opacity=\".25\"/><path d=\"M135 582 L108 620\" stroke=\"#000\" stroke-opacity=\".25\"/><path d=\"M180 582 L180 620\" stroke=\"#000\" stroke-opacity=\".25\"/><path d=\"M225 582 L252 620\" stroke=\"#000\" stroke-opacity=\".25\"/><path d=\"M270 582 L324 620\" stroke=\"#000\" stroke-opacity=\".25\"/><path d=\"M315 582 L396 620\" stroke=\"#000\" stroke-opacity=\".25\"/><path d=\"M360 582 L468 620\" stroke=\"#000\" stroke-opacity=\".25\"/><rect x=\"34\" y=\"388\" width=\"9\" height=\"192\" rx=\"4\" fill=\"#1e4030\"/><rect x=\"26\" y=\"574\" width=\"25\" height=\"9\" fill=\"#14281e\"/><path d=\"M26 392 L31 366 H46 L51 392 Z\" fill=\"url(#wn)\" stroke=\"#1e4030\" stroke-width=\"3\"/><circle cx=\"38\" cy=\"372\" r=\"74\" fill=\"url(#gl)\"/><ellipse cx=\"38\" cy=\"598\" rx=\"56\" ry=\"10\" fill=\"#ffd34f\" opacity=\".28\"/><ellipse cx=\"180\" cy=\"602\" rx=\"96\" ry=\"8\" fill=\"#ffdc8c\" opacity=\".22\"/><rect y=\"470\" width=\"360\" height=\"150\" fill=\"url(#fg)\"/><rect width=\"360\" height=\"620\" fill=\"url(#vg)\"/></svg>",POSTER="<svg id=\"bpPoster\" viewBox=\"0 0 360 640\" preserveAspectRatio=\"xMidYMid slice\" aria-hidden=\"true\"><defs><radialGradient id=\"pb\" cx=\".5\" cy=\".3\" r=\".8\"><stop offset=\"0\" stop-color=\"#2e1c0c\"/><stop offset=\".7\" stop-color=\"#070608\"/></radialGradient><linearGradient id=\"pc\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#f3d98c\" stop-opacity=\".55\"/><stop offset=\"1\" stop-color=\"#f3d98c\" stop-opacity=\"0\"/></linearGradient><radialGradient id=\"pt\"><stop offset=\"0\" stop-color=\"#3b2a12\"/><stop offset=\"1\" stop-color=\"#0c0804\"/></radialGradient></defs><rect width=\"360\" height=\"640\" fill=\"url(#pb)\"/><path d=\"M150 0H210L330 470H30Z\" fill=\"url(#pc)\"/><path d=\"M22 492 Q22 412 60 406 Q98 412 98 492 Z\" fill=\"#101016\" stroke=\"#2c2c36\" stroke-width=\"2\"/><circle cx=\"60\" cy=\"372\" r=\"21\" fill=\"#7a5a44\"/><path d=\"M38 362 H82 L76 342 H44 Z\" fill=\"#14100c\" stroke=\"#3a2a14\" stroke-width=\"2\"/><rect x=\"28\" y=\"360\" width=\"64\" height=\"5\" rx=\"2\" fill=\"#14100c\"/><path d=\"M262 492 Q262 412 300 406 Q338 412 338 492 Z\" fill=\"#101016\" stroke=\"#2c2c36\" stroke-width=\"2\"/><circle cx=\"300\" cy=\"372\" r=\"21\" fill=\"#7a5a44\"/><ellipse cx=\"300\" cy=\"374\" rx=\"16\" ry=\"20\" fill=\"#ece7dc\" stroke=\"#c9972f\" stroke-width=\"2\"/><ellipse cx=\"294\" cy=\"370\" rx=\"3\" ry=\"4\" fill=\"#111\"/><ellipse cx=\"306\" cy=\"370\" rx=\"3\" ry=\"4\" fill=\"#111\"/><path d=\"M82 450 Q82 370 120 364 Q158 370 158 450 Z\" fill=\"#101016\" stroke=\"#2c2c36\" stroke-width=\"2\"/><circle cx=\"120\" cy=\"330\" r=\"21\" fill=\"#7a5a44\"/><ellipse cx=\"120\" cy=\"332\" rx=\"16\" ry=\"20\" fill=\"#ece7dc\" stroke=\"#c9972f\" stroke-width=\"2\"/><ellipse cx=\"114\" cy=\"328\" rx=\"3\" ry=\"4\" fill=\"#111\"/><ellipse cx=\"126\" cy=\"328\" rx=\"3\" ry=\"4\" fill=\"#111\"/><path d=\"M202 450 Q202 370 240 364 Q278 370 278 450 Z\" fill=\"#101016\" stroke=\"#2c2c36\" stroke-width=\"2\"/><circle cx=\"240\" cy=\"330\" r=\"21\" fill=\"#7a5a44\"/><path d=\"M218 320 H262 L256 300 H224 Z\" fill=\"#14100c\" stroke=\"#3a2a14\" stroke-width=\"2\"/><rect x=\"208\" y=\"318\" width=\"64\" height=\"5\" rx=\"2\" fill=\"#14100c\"/><path d=\"M142 420 Q142 340 180 334 Q218 340 218 420 Z\" fill=\"#101016\" stroke=\"#2c2c36\" stroke-width=\"2\"/><circle cx=\"180\" cy=\"300\" r=\"21\" fill=\"#7a5a44\"/><ellipse cx=\"180\" cy=\"302\" rx=\"16\" ry=\"20\" fill=\"#ece7dc\" stroke=\"#c9972f\" stroke-width=\"2\"/><ellipse cx=\"174\" cy=\"298\" rx=\"3\" ry=\"4\" fill=\"#111\"/><ellipse cx=\"186\" cy=\"298\" rx=\"3\" ry=\"4\" fill=\"#111\"/><ellipse cx=\"180\" cy=\"452\" rx=\"160\" ry=\"46\" fill=\"url(#pt)\" stroke=\"#8f6a2f\" stroke-width=\"3\"/><ellipse cx=\"180\" cy=\"452\" rx=\"130\" ry=\"34\" fill=\"none\" stroke=\"#c9972f\" stroke-opacity=\".35\"/></svg>",ORN="<svg id=\"pfOrn\" viewBox=\"0 0 100 100\" preserveAspectRatio=\"none\" aria-hidden=\"true\"><g fill=\"none\" stroke=\"#fff0a8\" stroke-width=\"2.4\"><path d=\"M4 22V4H22M78 4H96V22M96 78V96H78M22 96H4V78\"/></g><g fill=\"#c0242f\" stroke=\"#fff0a8\" stroke-width=\"1.2\"><path d=\"M50 -2l5 5-5 5-5-5zM50 92l5 5-5 5-5-5zM-2 50l5-5 5 5-5 5zM92 50l5-5 5 5-5 5z\"/></g></svg>";
   const sc=document.getElementById('scene');if(sc&&!document.getElementById('sceneArt'))sc.insertAdjacentHTML('afterbegin',FACADE);
   const sp=document.getElementById('bpSplash');if(sp&&!document.getElementById('bpPoster'))sp.insertAdjacentHTML('afterbegin',POSTER);
@@ -2248,7 +2247,7 @@ function winRows(w){
 </style>
 <div class="ov" id="ovMis"><div class="box"><h3>📅 مأموریت‌های امروز</h3><div id="misList" style="display:flex;flex-direction:column;gap:7px"></div><button class="btn" onclick="cl('ovMis')">بستن</button></div></div>
 <script>
-window.APP_VERSION='27.0';
+
 (function(){
   const $=id=>document.getElementById(id),msg=t=>{try{toast(t)}catch(e){}};
   const lg=k=>{try{return localStorage.getItem(k)}catch(e){return null}},ls=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
@@ -2329,7 +2328,7 @@ window.APP_VERSION='27.0';
 </style>
 <script>
 (function(){
-  window.APP_VERSION='27.0';
+  
   const d=document.getElementById('sDoor');if(!d||d.querySelector('svg'))return;
   d.insertAdjacentHTML('afterbegin',"<svg viewBox=\"0 0 100 190\" preserveAspectRatio=\"none\" aria-hidden=\"true\"><defs><linearGradient id=\"dr-l\" x1=\"0\" x2=\"1\"><stop offset=\"0\" stop-color=\"#2b150d\"/><stop offset=\".35\" stop-color=\"#5b2f1c\"/><stop offset=\".7\" stop-color=\"#47231a\"/><stop offset=\"1\" stop-color=\"#22110b\"/></linearGradient><filter id=\"dr-g\" x=\"0\" y=\"0\" width=\"100%\" height=\"100%\"><feTurbulence type=\"fractalNoise\" baseFrequency=\".015 .55\" numOctaves=\"3\" seed=\"7\"/><feColorMatrix values=\"0 0 0 0 .12 0 0 0 0 .05 0 0 0 0 .02 0 0 0 1.1 -.35\"/></filter><radialGradient id=\"dr-b\" cx=\".35\" cy=\".3\" r=\".8\"><stop offset=\"0\" stop-color=\"#fff2b8\"/><stop offset=\".35\" stop-color=\"#e0b04a\"/><stop offset=\"1\" stop-color=\"#6b4710\"/></radialGradient><linearGradient id=\"dr-bl\" x1=\"0\" x2=\"1\"><stop offset=\"0\" stop-color=\"#6b4710\"/><stop offset=\".3\" stop-color=\"#f6dd8a\"/><stop offset=\".6\" stop-color=\"#c9972f\"/><stop offset=\"1\" stop-color=\"#5a3c10\"/></linearGradient><linearGradient id=\"dr-gl\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#ffd27a\"/><stop offset=\".6\" stop-color=\"#b8631c\"/><stop offset=\"1\" stop-color=\"#3a1608\"/></linearGradient><linearGradient id=\"dr-ao\" x1=\"0\" x2=\"1\"><stop offset=\"0\" stop-color=\"#000\" stop-opacity=\".6\"/><stop offset=\".14\" stop-color=\"#000\" stop-opacity=\"0\"/><stop offset=\".86\" stop-color=\"#000\" stop-opacity=\"0\"/><stop offset=\"1\" stop-color=\"#000\" stop-opacity=\".5\"/></linearGradient><linearGradient id=\"dr-gs\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\"><stop offset=\".3\" stop-color=\"#fff\" stop-opacity=\"0\"/><stop offset=\".45\" stop-color=\"#fff\" stop-opacity=\".13\"/><stop offset=\".6\" stop-color=\"#fff\" stop-opacity=\"0\"/></linearGradient></defs><rect width=\"100\" height=\"190\" fill=\"url(#dr-l)\"/><rect width=\"100\" height=\"190\" filter=\"url(#dr-g)\" opacity=\".6\"/><rect x=\"11\" y=\"11\" width=\"78\" height=\"54\" rx=\"2\" fill=\"#1b0d08\" stroke=\"#0a0503\" stroke-width=\"2\"/><rect x=\"16\" y=\"16\" width=\"68\" height=\"44\" fill=\"url(#dr-gl)\"/><path d=\"M50 16V60M16 38H84\" stroke=\"#150a06\" stroke-width=\"3\"/><path d=\"M20 20L34 20L22 34Z\" fill=\"#fff\" opacity=\".18\"/><rect x=\"12\" y=\"74\" width=\"34\" height=\"46\" fill=\"#4e2718\" stroke=\"#1a0c07\" stroke-width=\"2\"/><path d=\"M14 118 V76 H44\" fill=\"none\" stroke=\"#a0623f\" stroke-width=\"1.4\" opacity=\".7\"/><path d=\"M44 76 V118 H14\" fill=\"none\" stroke=\"#12060a\" stroke-width=\"1.4\" opacity=\".8\"/><rect x=\"17\" y=\"79\" width=\"24\" height=\"36\" fill=\"#43200f\" stroke=\"#1a0c07\" stroke-width=\"1\"/><rect x=\"54\" y=\"74\" width=\"34\" height=\"46\" fill=\"#4e2718\" stroke=\"#1a0c07\" stroke-width=\"2\"/><path d=\"M56 118 V76 H86\" fill=\"none\" stroke=\"#a0623f\" stroke-width=\"1.4\" opacity=\".7\"/><path d=\"M86 76 V118 H56\" fill=\"none\" stroke=\"#12060a\" stroke-width=\"1.4\" opacity=\".8\"/><rect x=\"59\" y=\"79\" width=\"24\" height=\"36\" fill=\"#43200f\" stroke=\"#1a0c07\" stroke-width=\"1\"/><rect x=\"12\" y=\"128\" width=\"34\" height=\"46\" fill=\"#4e2718\" stroke=\"#1a0c07\" stroke-width=\"2\"/><path d=\"M14 172 V130 H44\" fill=\"none\" stroke=\"#a0623f\" stroke-width=\"1.4\" opacity=\".7\"/><path d=\"M44 130 V172 H14\" fill=\"none\" stroke=\"#12060a\" stroke-width=\"1.4\" opacity=\".8\"/><rect x=\"17\" y=\"133\" width=\"24\" height=\"36\" fill=\"#43200f\" stroke=\"#1a0c07\" stroke-width=\"1\"/><rect x=\"54\" y=\"128\" width=\"34\" height=\"46\" fill=\"#4e2718\" stroke=\"#1a0c07\" stroke-width=\"2\"/><path d=\"M56 172 V130 H86\" fill=\"none\" stroke=\"#a0623f\" stroke-width=\"1.4\" opacity=\".7\"/><path d=\"M86 130 V172 H56\" fill=\"none\" stroke=\"#12060a\" stroke-width=\"1.4\" opacity=\".8\"/><rect x=\"59\" y=\"133\" width=\"24\" height=\"36\" fill=\"#43200f\" stroke=\"#1a0c07\" stroke-width=\"1\"/><rect x=\"9\" y=\"176\" width=\"82\" height=\"11\" fill=\"url(#dr-bl)\" stroke=\"#3a2608\" stroke-width=\".8\"/><rect x=\"-1\" y=\"26\" width=\"7\" height=\"16\" rx=\"2\" fill=\"url(#dr-bl)\" stroke=\"#3a2608\" stroke-width=\".8\"/><rect x=\"-1\" y=\"90\" width=\"7\" height=\"16\" rx=\"2\" fill=\"url(#dr-bl)\" stroke=\"#3a2608\" stroke-width=\".8\"/><rect x=\"-1\" y=\"150\" width=\"7\" height=\"16\" rx=\"2\" fill=\"url(#dr-bl)\" stroke=\"#3a2608\" stroke-width=\".8\"/><rect x=\"81\" y=\"86\" width=\"11\" height=\"30\" rx=\"3\" fill=\"url(#dr-bl)\" stroke=\"#3a2608\" stroke-width=\".8\"/><circle cx=\"86.5\" cy=\"95\" r=\"5.2\" fill=\"url(#dr-b)\" stroke=\"#4a3008\" stroke-width=\".8\"/><circle cx=\"86.5\" cy=\"108\" r=\"1.7\" fill=\"#1a1004\"/><path d=\"M86.5 108v4\" stroke=\"#1a1004\" stroke-width=\"1.2\"/><rect x=\"46\" y=\"64\" width=\"8\" height=\"5\" fill=\"url(#dr-bl)\"/><circle cx=\"50\" cy=\"73\" r=\"5.4\" fill=\"none\" stroke=\"url(#dr-b)\" stroke-width=\"2.6\"/><rect width=\"100\" height=\"190\" fill=\"url(#dr-ao)\"/><rect width=\"100\" height=\"190\" fill=\"url(#dr-gs)\"/><rect x=\".5\" y=\".5\" width=\"99\" height=\"189\" fill=\"none\" stroke=\"#0a0503\" stroke-width=\"2\"/></svg>");
   d.insertAdjacentHTML('beforebegin','<div class="sDoorWay"></div>');
@@ -2347,7 +2346,7 @@ window.APP_VERSION='27.0';
 .scene .sDoor::before{content:""!important;position:absolute;inset:0;box-shadow:inset 0 0 14px #000a;pointer-events:none;z-index:1}
 </style>
 <script>
-window.APP_VERSION='27.0';
+
 (function(){
   const d=document.getElementById('sDoor');
   if(d){const s=d.querySelector('svg');if(s)s.remove();d.insertAdjacentHTML('afterbegin',"<svg viewBox=\"0 0 100 190\" preserveAspectRatio=\"none\" aria-hidden=\"true\"><defs><linearGradient id=\"d2-l\" x1=\"0\" x2=\"1\"><stop offset=\"0\" stop-color=\"#2e170c\"/><stop offset=\".4\" stop-color=\"#5e301a\"/><stop offset=\".75\" stop-color=\"#46231a\"/><stop offset=\"1\" stop-color=\"#241109\"/></linearGradient><filter id=\"d2-g\" x=\"0\" y=\"0\" width=\"100%\" height=\"100%\"><feTurbulence type=\"fractalNoise\" baseFrequency=\".012 .5\" numOctaves=\"3\" seed=\"11\"/><feColorMatrix values=\"0 0 0 0 .1 0 0 0 0 .04 0 0 0 0 .02 0 0 0 1.1 -.35\"/></filter><radialGradient id=\"d2-b\" cx=\".35\" cy=\".3\" r=\".8\"><stop offset=\"0\" stop-color=\"#fff2b8\"/><stop offset=\".35\" stop-color=\"#e0b04a\"/><stop offset=\"1\" stop-color=\"#6b4710\"/></radialGradient><linearGradient id=\"d2-bl\" x1=\"0\" x2=\"1\"><stop offset=\"0\" stop-color=\"#6b4710\"/><stop offset=\".3\" stop-color=\"#f6dd8a\"/><stop offset=\".6\" stop-color=\"#c9972f\"/><stop offset=\"1\" stop-color=\"#5a3c10\"/></linearGradient><pattern id=\"d2-c\" width=\"12\" height=\"12\" patternUnits=\"userSpaceOnUse\"><path d=\"M2 10C2 3 10 3 10 8C10 11 5 11 5 8\" fill=\"none\" stroke=\"#120804\" stroke-width=\"1.3\"/><path d=\"M2.7 10.7C2.7 3.7 10.7 3.7 10.7 8.7\" fill=\"none\" stroke=\"#9a5d38\" stroke-width=\".6\" opacity=\".55\"/></pattern><linearGradient id=\"d2-ao\" x1=\"0\" x2=\"1\"><stop offset=\"0\" stop-color=\"#000\" stop-opacity=\".55\"/><stop offset=\".14\" stop-color=\"#000\" stop-opacity=\"0\"/><stop offset=\".86\" stop-color=\"#000\" stop-opacity=\"0\"/><stop offset=\"1\" stop-color=\"#000\" stop-opacity=\".5\"/></linearGradient><linearGradient id=\"d2-gs\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\"><stop offset=\".3\" stop-color=\"#fff\" stop-opacity=\"0\"/><stop offset=\".45\" stop-color=\"#fff\" stop-opacity=\".12\"/><stop offset=\".6\" stop-color=\"#fff\" stop-opacity=\"0\"/></linearGradient><clipPath id=\"d2-arch\"><path d=\"M31 152V64Q31 40 51 40Q71 40 71 64V152Z\"/></clipPath></defs><rect width=\"100\" height=\"190\" fill=\"url(#d2-l)\"/><rect width=\"100\" height=\"190\" filter=\"url(#d2-g)\" opacity=\".6\"/><rect x=\"24\" y=\"4\" width=\"52\" height=\"22\" fill=\"#4a2515\" stroke=\"#160a05\" stroke-width=\"2\"/><path d=\"M26 24V6H74\" fill=\"none\" stroke=\"#a0623f\" stroke-width=\"1.2\" opacity=\".6\"/><rect x=\"22\" y=\"30\" width=\"56\" height=\"128\" fill=\"#4c2716\" stroke=\"#160a05\" stroke-width=\"2.2\"/><path d=\"M24 156V32H76\" fill=\"none\" stroke=\"#a8683f\" stroke-width=\"1.4\" opacity=\".7\"/><path d=\"M76 32V156H24\" fill=\"none\" stroke=\"#10060a\" stroke-width=\"1.6\" opacity=\".85\"/><g clip-path=\"url(#d2-arch)\"><rect x=\"31\" y=\"40\" width=\"40\" height=\"112\" fill=\"#2a1409\"/><rect x=\"31\" y=\"40\" width=\"40\" height=\"112\" fill=\"url(#d2-c)\"/></g><path d=\"M31 152V64Q31 40 51 40Q71 40 71 64V152Z\" fill=\"none\" stroke=\"#0e0603\" stroke-width=\"2\"/><path d=\"M33 150V64Q33 43 51 43\" fill=\"none\" stroke=\"#8a5636\" stroke-width=\".8\" opacity=\".6\"/><rect x=\"24\" y=\"166\" width=\"52\" height=\"19\" fill=\"#4a2515\" stroke=\"#160a05\" stroke-width=\"2\"/><circle cx=\"14\" cy=\"40\" r=\"3.3\" fill=\"url(#d2-b)\" stroke=\"#2e1d06\" stroke-width=\".7\"/><circle cx=\"14\" cy=\"62\" r=\"3.3\" fill=\"url(#d2-b)\" stroke=\"#2e1d06\" stroke-width=\".7\"/><circle cx=\"14\" cy=\"84\" r=\"3.3\" fill=\"url(#d2-b)\" stroke=\"#2e1d06\" stroke-width=\".7\"/><circle cx=\"14\" cy=\"106\" r=\"3.3\" fill=\"url(#d2-b)\" stroke=\"#2e1d06\" stroke-width=\".7\"/><circle cx=\"14\" cy=\"128\" r=\"3.3\" fill=\"url(#d2-b)\" stroke=\"#2e1d06\" stroke-width=\".7\"/><circle cx=\"14\" cy=\"150\" r=\"3.3\" fill=\"url(#d2-b)\" stroke=\"#2e1d06\" stroke-width=\".7\"/><rect x=\"4.2\" y=\"34\" width=\"4.6\" height=\"128\" rx=\"2\" fill=\"url(#d2-bl)\" stroke=\"#3a2608\" stroke-width=\".7\"/><ellipse cx=\"6.5\" cy=\"36\" rx=\"3.2\" ry=\"4.2\" fill=\"url(#d2-b)\" stroke=\"#3a2608\" stroke-width=\".6\"/><ellipse cx=\"6.5\" cy=\"98\" rx=\"3.2\" ry=\"4.2\" fill=\"url(#d2-b)\" stroke=\"#3a2608\" stroke-width=\".6\"/><ellipse cx=\"6.5\" cy=\"160\" rx=\"3.2\" ry=\"4.2\" fill=\"url(#d2-b)\" stroke=\"#3a2608\" stroke-width=\".6\"/><rect x=\"2\" y=\"50\" width=\"10\" height=\"5\" rx=\"1.5\" fill=\"url(#d2-bl)\" stroke=\"#3a2608\" stroke-width=\".6\"/><rect x=\"2\" y=\"142\" width=\"10\" height=\"5\" rx=\"1.5\" fill=\"url(#d2-bl)\" stroke=\"#3a2608\" stroke-width=\".6\"/><rect x=\"95\" y=\"26\" width=\"7\" height=\"16\" rx=\"2\" fill=\"url(#d2-bl)\" stroke=\"#3a2608\" stroke-width=\".8\"/><rect x=\"95\" y=\"90\" width=\"7\" height=\"16\" rx=\"2\" fill=\"url(#d2-bl)\" stroke=\"#3a2608\" stroke-width=\".8\"/><rect x=\"95\" y=\"150\" width=\"7\" height=\"16\" rx=\"2\" fill=\"url(#d2-bl)\" stroke=\"#3a2608\" stroke-width=\".8\"/><rect width=\"100\" height=\"190\" fill=\"url(#d2-ao)\"/><rect width=\"100\" height=\"190\" fill=\"url(#d2-gs)\"/><rect x=\".5\" y=\".5\" width=\"99\" height=\"189\" fill=\"none\" stroke=\"#0a0503\" stroke-width=\"2\"/></svg>")}
@@ -2401,7 +2400,7 @@ nav .navStart{display:none!important}
 </style>
 <div class="ov" id="ovRole"><div class="box" style="text-align:center"><div class="rbig" id="rlE"></div><h3 id="rlN"></h3><span class="tm" id="rlT"></span><ul id="rlL"></ul><div class="win" id="rlW"></div><button class="btn" onclick="cl('ovRole')">بستن</button></div></div>
 <script>
-window.APP_VERSION='27.0';
+
 (function(){
   const $=id=>document.getElementById(id),msg=t=>{try{toast(t)}catch(e){}};
   const lg=k=>{try{return localStorage.getItem(k)}catch(e){return null}},ls=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
@@ -2918,64 +2917,47 @@ button[title], [role="button"][title]{cursor:pointer}button:focus-visible{outlin
 
 <!-- BLACK MAFIA: reliable game-start signal across phones -->
 <script id="bm-shared-game-start">
-(()=>{
-  if(window.__bmSharedGameStartInstalled)return;
-  window.__bmSharedGameStartInstalled=true;
-  const db=()=>String(window.MAFIA_DB_URL||'').replace(/\/$/,'');
-  const originalStart=window.roomStartGame;
-  let entering=false,lastStartedRoom='',startSeenAt=0,lastReconnectAt=0;
-  // Save the start state to the shared room before sending the live voice signal.
-  if(typeof originalStart==='function'){
-    window.roomStartGame=async function(){
-      const isGod=(typeof lobbyMode!=='undefined'&&lobbyMode==='god');
-      const code=String(window.MAFIA_ROOM_CODE||'');
-      if(isGod&&code&&db()){
-        try{
-          const r=await fetch(db()+'/roomsV23/'+encodeURIComponent(code)+'.json',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:'started',startedAt:Date.now()})});
-          if(!r.ok)throw Error('room start '+r.status);
-        }catch(e){try{toast('شروع بازی در سرور ثبت نشد؛ اتصال اینترنت را بررسی کنید.')}catch(_){}}
-      }
-      return originalStart.apply(this,arguments);
-    };
-  }
-  // If the live "go" voice message was missed while PeerJS was connecting,
-  // the player phone enters as soon as it sees the persistent server state.
-  setInterval(async()=>{
-    const code=String(window.MAFIA_ROOM_CODE||'');
-    const mode=(typeof lobbyMode!=='undefined'?lobbyMode:window.lobbyMode);
-    if(!code||mode!=='player'||entering)return;
-    // Continue recovery even after another handler has hidden the waiting lobby.
-    // Otherwise a missed PeerJS 'go' signal leaves the player on a blank game screen.
-    const lobby=document.getElementById('lobbyRoom');
-    if(!lobby)return;
-    const d=db();if(!d)return;
-    try{
-      const r=await fetch(d+'/roomsV23/'+encodeURIComponent(code)+'.json',{cache:'no-store'});
-      if(!r.ok)return;
-      const room=await r.json();
-      if(!room||room.status!=='started'){startSeenAt=0;lastReconnectAt=0;lastStartedRoom='';return}
-      if(lastStartedRoom===code)return;
-      if(!startSeenAt)startSeenAt=Date.now();
-      if(window.Net&&typeof Net.isClient==='function'&&Net.isClient()){
-        const snap=typeof Net.snapshot==='function'?Net.snapshot():null;
-        if(snap&&snap.st){lastStartedRoom=code;return}
-        // If the start signal arrived but no real game snapshot follows, repair the
-        // PeerJS connection; do not mark the room handled until the game is synchronized.
-        if(Date.now()-startSeenAt>9000&&Date.now()-lastReconnectAt>10000&&window.Voice&&typeof Voice.join==='function'){
-          lastReconnectAt=Date.now();
-          try{
-            Voice.leave();
-            await new Promise(resolve=>setTimeout(resolve,350));
-            await Voice.join((window.MAFIA_ROOM_META&&window.MAFIA_ROOM_META.kind)||(typeof lobbyKind!=='undefined'?lobbyKind:'friendly'));
-          }catch(re){}
-        }
-        return;
-      }
-      entering=true;
-      try{window.lobbyReady=true;if(window.Net&&typeof Net.enter==='function')Net.enter()}
-      finally{entering=false}
-    }catch(e){}
-  },1200);
+(()=> {
+ if(window.__bmSharedGameStartInstalled)return;
+ window.__bmSharedGameStartInstalled=true;
+ const db=()=>String(window.MAFIA_DB_URL||'').replace(/\/$/,'');
+ const code=()=>String(window.MAFIA_ROOM_CODE||'').replace(/[^0-9]/g,'').slice(0,5);
+ let entering=false,checking=false,lastStartedRoom='',startSeenAt=0,lastReconnectAt=0;
+ // Firebase is the durable start signal; PeerJS carries the live game snapshot.
+ setInterval(async()=>{
+  const c=code(),mode=typeof lobbyMode!=='undefined'?lobbyMode:window.lobbyMode;
+  if(!c||mode!=='player'||entering||checking)return;
+  const endpoint=db();if(!endpoint)return;
+  checking=true;
+  try{
+   const response=await fetch(endpoint+'/roomsV23/'+encodeURIComponent(c)+'.json',{cache:'no-store'});
+   if(!response.ok)return;
+   const room=await response.json();
+   if(!room||room.status!=='started'){startSeenAt=0;lastReconnectAt=0;lastStartedRoom='';return}
+   if(!startSeenAt)startSeenAt=Date.now();
+   const client=!!(window.Net&&typeof Net.isClient==='function'&&Net.isClient());
+   if(client){
+    const snap=typeof Net.snapshot==='function'?Net.snapshot():null;
+    const syncedAt=typeof Net.lastSyncAt==='function'?Net.lastSyncAt():0;
+    if(snap&&snap.st&&syncedAt&&Date.now()-syncedAt<6500){lastStartedRoom=c;return}
+    if(Date.now()-startSeenAt>8000&&Date.now()-lastReconnectAt>10000&&window.Voice&&typeof Voice.join==='function'){
+     lastReconnectAt=Date.now();
+     try{
+      Voice.leave();
+      await new Promise(resolve=>setTimeout(resolve,350));
+      await Voice.join((window.MAFIA_ROOM_META&&window.MAFIA_ROOM_META.kind)||(typeof lobbyKind!=='undefined'?lobbyKind:'friendly'));
+      // Reset stale local state so the host's regular snapshots can synchronize it.
+      if(window.Net&&typeof Net.enter==='function')Net.enter();
+     }catch(reconnectError){console.warn('[Black Mafia] Shared game reconnect failed',reconnectError)}
+    }
+    return;
+   }
+   entering=true;
+   try{window.lobbyReady=true;if(window.Net&&typeof Net.enter==='function')Net.enter()}
+   finally{entering=false}
+  }catch(error){console.warn('[Black Mafia] Shared room status check failed',error)}
+  finally{checking=false}
+ },1200);
 })();
 </script>
 
@@ -3033,93 +3015,58 @@ button[title], [role="button"][title]{cursor:pointer}button:focus-visible{outlin
 <script id="bm-lobby-controls-restore-js">
 (()=> {
  const $=id=>document.getElementById(id);
- const acts=document.querySelector('#lobbyRoom .roomActions');
- const deck=$('deckBtn'),chat=$('bmChatToggle'),timer=$('roomTimer'),mic=$('roomMic'),start=$('roomStartBtn'),ready=$('readyBtn');
+ const actions=document.querySelector('#lobbyRoom .roomActions');
+ const chat=$('bmChatToggle'),timer=$('roomTimer'),mic=$('roomMic'),start=$('roomStartBtn'),ready=$('readyBtn');
  if(ready)ready.style.display='none';
- if(acts&&timer&&timer.parentElement!==acts)acts.insertBefore(timer,deck?deck.nextSibling:mic?.nextSibling||null);
- if(acts&&chat&&chat.parentElement!==acts)acts.insertBefore(chat,timer?timer.nextSibling:deck?.nextSibling||null);
+ if(actions&&timer&&timer.parentElement!==actions)actions.insertBefore(timer,mic?mic.nextSibling:null);
+ if(actions&&chat&&chat.parentElement!==actions)actions.insertBefore(chat,timer?timer.nextSibling:(mic?mic.nextSibling:null));
  function syncRole(){
-   const god=(typeof lobbyMode!=='undefined'&&lobbyMode==='god');
-   if(start){start.style.display=god?'inline-flex':'none';start.textContent='🎭 شروع بازی';start.disabled=false}
-   if(ready)ready.style.display='none';
-   if(typeof lobbyReady!=='undefined'&&!god)lobbyReady=true;
- }
- const oldEnter=window.enterLobby;
- if(typeof oldEnter==='function'&&!window.__bmEnterRoleGuard){window.__bmEnterRoleGuard=true;window.enterLobby=function(kind){return oldEnter.apply(this,arguments)}}
- const oldStart=window.roomStartGame;
- if(typeof oldStart==='function'&&!window.__bmGodOnlyStart){
-   window.__bmGodOnlyStart=true;
-   window.roomStartGame=function(){if(!(typeof lobbyMode!=='undefined'&&lobbyMode==='god')){try{toast('فقط گردانندهٔ اتاق می‌تواند بازی را شروع کند.')}catch(e){}return false}return oldStart.apply(this,arguments)}
+  const god=typeof lobbyMode!=='undefined'&&lobbyMode==='god';
+  const live=typeof started!=='undefined'&&!!started,busy=!!window.__bmStartBusy||live;
+  if(start){
+   start.style.display=god?'inline-flex':'none';
+   start.classList.toggle('bm-player-hidden',!god);
+   if(god){start.removeAttribute('aria-hidden');start.disabled=busy;start.textContent=live?'✅ بازی شروع شد':(busy?'⏳ در حال اتصال بازیکنان…':'🎭 شروع بازی')}
+   else{start.disabled=true;start.setAttribute('aria-hidden','true')}
+  }
+  if(ready)ready.style.display='none';
+  if(typeof lobbyReady!=='undefined'&&!god)lobbyReady=true;
  }
  syncRole();
- const watch=new MutationObserver(syncRole);
- const room=$('lobbyRoom');if(room)watch.observe(room,{attributes:true,attributeFilter:['class']});
- setInterval(()=>{if(room?.classList.contains('on'))syncRole()},700);
+ const room=$('lobbyRoom');
+ if(room)new MutationObserver(syncRole).observe(room,{attributes:true,attributeFilter:['class']});
+ setInterval(()=>{if(room&&room.classList.contains('on'))syncRole()},700);
 })();
 </script>
 
 
 <!-- BLACK MAFIA CLEANUP: remove duplicate/test controls; direct God start -->
-<style id="bm-clean-controls">
-#deckBtn,#readyBtn{display:none!important}
-#lobbyRoom .roomActions #roomStartBtn{display:inline-flex!important}
-</style>
 <script id="bm-clean-controls-js">
-(()=>{
+(()=> {
  if(window.__bmCleanControlsApplied)return;
  window.__bmCleanControlsApplied=true;
  const $=id=>document.getElementById(id);
- // Remove the test-only human injection and duplicated phase-start control.
+ // Remove obsolete test-only actions and duplicate phase-start shortcuts.
  const oldMenu=window.openMenu;
- if(typeof oldMenu==='function'){
-   window.openMenu=function(){
-     oldMenu.apply(this,arguments);
-     const menu=$('mnu');
-     if(menu){
-       [...menu.querySelectorAll('button')].forEach(b=>{
-         const t=(b.textContent||'').trim();
-         if(t.includes('ورود بازیکن انسانی')||t.includes('شروع بازی /')||t.includes('رد کردن فاز'))b.remove();
-       });
-     }
-   };
- }
- const oldDock=window.buildDock;
- if(typeof oldDock==='function'){
-   window.buildDock=function(){
-     oldDock.apply(this,arguments);
-     const dock=$('dock');
-     if(dock){
-       [...dock.querySelectorAll('button')].forEach(b=>{
-         const t=(b.textContent||'').trim();
-         if(t.includes('شروع / فاز'))b.remove();
-       });
-     }
-   };
- }
- // The God button launches the default scenario immediately, without a second start/phase screen.
- const oldRoomStart=window.roomStartGame;
- if(typeof oldRoomStart==='function'){
-   window.roomStartGame=function(){
-     if(!(typeof lobbyMode!=='undefined'&&lobbyMode==='god')){
-       try{toast('فقط گردانندهٔ اتاق می‌تواند بازی را شروع کند.')}catch(e){}
-       return false;
-     }
-     const result=oldRoomStart.apply(this,arguments);
-     // Wait until the async shared-room/host setup has completed before launching.
-     Promise.resolve(result).then(()=>setTimeout(()=>{
-       if(typeof window.launch==='function'&&typeof started!=='undefined'&&!started&&typeof G!=='undefined'&&!G.loading)window.launch(0);
-     },80)).catch(()=>{});
-     return result;
-   };
- }
- // Remove deck-view button from the room, keep voice and shared-room chat controls.
- const cleanup=()=>{
-   const d=$('deckBtn');if(d)d.remove();
-   const ready=$('readyBtn');if(ready)ready.style.display='none';
+ if(typeof oldMenu==='function')window.openMenu=function(){
+  const result=oldMenu.apply(this,arguments),menu=$('mnu');
+  if(menu)[...menu.querySelectorAll('button')].forEach(button=>{
+   const label=(button.textContent||'').trim();
+   if(label.includes('ورود بازیکن انسانی')||label.includes('شروع بازی /')||label.includes('رد کردن فاز'))button.remove();
+  });
+  return result;
  };
- cleanup();
- const room=$('lobbyRoom');
- if(room)new MutationObserver(cleanup).observe(room,{childList:true,subtree:true});
+ const oldDock=window.buildDock;
+ if(typeof oldDock==='function')window.buildDock=function(){
+  const result=oldDock.apply(this,arguments),dock=$('dock');
+  if(dock)[...dock.querySelectorAll('button')].forEach(button=>{
+   if((button.textContent||'').trim().includes('شروع / فاز'))button.remove();
+  });
+  return result;
+ };
+ // Do not inject a deck button only to remove it in a later cleanup.
+ const deck=$('deckBtn');if(deck)deck.remove();
+ const ready=$('readyBtn');if(ready)ready.style.display='none';
 })();
 </script>
 
@@ -3170,19 +3117,6 @@ body.ingame #bmSharedRoomBadge{display:block}
    const enter=Net.enter;
    Net.enter=function(){const r=enter.apply(this,arguments);if(code())keepWaitingRoom();return r};
  }
- const priorStart=window.roomStartGame;
- if(typeof priorStart==='function'&&!window.__bmOneLobbyStartWrapped){
-   window.__bmOneLobbyStartWrapped=true;
-   window.roomStartGame=function(){
-     const isGod=(typeof lobbyMode!=='undefined'&&lobbyMode==='god'),c=code();
-     if(!isGod||!c)return priorStart.apply(this,arguments);
-     const start=$('roomStartBtn');
-     if(start){start.disabled=true;start.textContent='⏳ در حال راه‌اندازی بازی…'}
-     const result=priorStart.apply(this,arguments);
-     Promise.resolve(result).then(()=>keepWaitingRoom()).catch(()=>keepWaitingRoom());
-     return result;
-   };
- }
  // Host and players leave the waiting lobby on the same shared start state.
  setInterval(()=>{
    const c=code();
@@ -3205,62 +3139,96 @@ body.ingame #bmSharedRoomBadge{display:block}
 
 
 <!-- BLACK MAFIA FINAL FIX: host-only start and include data-connected players -->
-<style id="bm-start-sync-fix-css">
-#lobbyRoom .roomActions #roomStartBtn.bm-player-hidden{display:none!important}
-#lobbyRoom .roomActions #readyBtn{display:none!important}
+
+
+
+<!-- One authoritative handler for starting a shared room. -->
+<style id="bm-unified-start-controls">
+ #lobbyRoom .roomActions #roomStartBtn.bm-player-hidden{display:none!important}
+ #lobbyRoom .roomActions #readyBtn{display:none!important}
 </style>
-<script id="bm-start-sync-fix-js">
-(()=>{
- const $=id=>document.getElementById(id);
+<script id="bm-unified-start-js">
+(()=> {
+ if(window.__bmUnifiedStartInstalled)return;
+ window.__bmUnifiedStartInstalled=true;
+ const $=id=>document.getElementById(id),originalStart=window.roomStartGame;
+ const db=()=>String(window.MAFIA_DB_URL||'').replace(/\/$/,'');
+ const roomCode=()=>String(window.MAFIA_ROOM_CODE||'').replace(/[^0-9]/g,'').slice(0,5);
+ let busy=false,startedAt=0,watchdog=null;
+ if(typeof originalStart!=='function'){console.error('[Black Mafia] Core roomStartGame function is missing.');return}
  const isGod=()=>typeof lobbyMode!=='undefined'&&lobbyMode==='god';
- function syncStartButton(){
-   const b=$('roomStartBtn');if(!b)return;
-   b.classList.toggle('bm-player-hidden',!isGod());
-   b.style.display=isGod()?'inline-flex':'none';
-   if(!isGod()){b.disabled=true;b.setAttribute('aria-hidden','true')}
-   else{
-     b.removeAttribute('aria-hidden');
-     const busy=b.textContent.includes('در حال')||b.textContent.includes('در انتظار')||
-       (typeof started!=='undefined'&&!!started)||(typeof G!=='undefined'&&!!G.loading);
-     b.disabled=!!busy;
-     if(!busy)b.textContent='🎭 شروع بازی';
+ async function setRoomStatus(code,status){
+  const endpoint=db();if(!endpoint||!code)throw new Error('اتصال دیتابیس آنلاین فعال نیست.');
+  const url=endpoint+'/roomsV23/'+encodeURIComponent(code)+'.json';
+  const response=await fetch(url,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({status,updatedAt:Date.now()}),cache:'no-store'});
+  if(!response.ok)throw new Error('ثبت وضعیت اتاق ناموفق بود (HTTP '+response.status+').');
+  if(status==='started'){
+   const check=await fetch(url,{cache:'no-store'});
+   if(!check.ok)throw new Error('بررسی وضعیت اتاق ناموفق بود.');
+   const saved=await check.json();
+   if(!saved||saved.status!=='started')throw new Error('شروع بازی در دیتابیس تأیید نشد.');
+  }
+ }
+ function showWaitingRoom(code){
+  const room=$('lobbyRoom');if(!room||!code)return;
+  room.classList.add('on','bm-start-wait');
+  const title=$('roomTitle'),banner=$('roomBanner'),button=$('roomStartBtn'),ready=$('readyBtn');
+  if(title)title.innerHTML='اتاق مشترک <span class="roomCodeBadge">#'+code+'</span>';
+  if(banner)banner.innerHTML='<span class="roomCodeBadge">شناسه اتاق #'+code+'</span> لابی انتظار مشترک'+
+   '<small>همه در همین اتاق می‌مانند؛ با شروع گاد، همگی وارد همان بازی می‌شوید.</small>';
+  if(button){button.disabled=true;button.textContent='⏳ در حال اتصال بازیکنان…'}
+  if(ready)ready.style.display='none';
+ }
+ function syncButton(){
+  const button=$('roomStartBtn');if(!button)return;
+  const god=isGod(),live=typeof started!=='undefined'&&!!started;
+  button.style.display=god?'inline-flex':'none';button.classList.toggle('bm-player-hidden',!god);
+  if(!god){button.disabled=true;button.setAttribute('aria-hidden','true');return}
+  button.removeAttribute('aria-hidden');button.disabled=busy||live;
+  button.textContent=live?'✅ بازی شروع شد':(busy?'⏳ در حال اتصال بازیکنان…':'🎭 شروع بازی');
+ }
+ function armWatchdog(code){
+  if(watchdog)clearInterval(watchdog);startedAt=Date.now();
+  watchdog=setInterval(async()=>{
+   if(typeof started!=='undefined'&&started){
+    clearInterval(watchdog);watchdog=null;busy=false;window.__bmStartBusy=false;syncButton();return;
    }
-   const r=$('readyBtn');if(r)r.style.display='none';
+   if(Date.now()-startedAt<15000)return;
+   clearInterval(watchdog);watchdog=null;busy=false;window.__bmStartBusy=false;
+   try{if(code&&db())await setRoomStatus(code,'waiting')}catch(error){console.warn('[Black Mafia] Could not reset failed start status',error)}
+   syncButton();
+   try{toast('شروع بازی کامل نشد؛ اتصال را بررسی کن و دوباره تلاش کن.')}catch(error){}
+  },300);
  }
- const previous=window.roomStartGame;
- // This final guard uses the actual lexical game mode; older patches checked window.lobbyMode,
- // which is not the same variable and could block the host or expose the button to players.
- window.roomStartGame=function(){
-   if(!isGod()){try{toast('فقط گاد اتاق می‌تواند بازی را شروع کند.')}catch(e){}syncStartButton();return false}
-   const b=$('roomStartBtn');if(b){b.disabled=true;b.textContent='⏳ در حال اتصال بازیکنان…'}
-   // Give the shared PeerJS data channels time to settle; broadcasts now include open data
-   // channels even when an audio stream has not become live yet.
-   try{if(window.Voice&&Voice.active())Voice.broadcast({t:'go'})}catch(e){}
-   // Call the game-start implementation captured before the stale UI guards.
-   let result;
-   try{
-     if(typeof __bmOriginalStartGame==='function')result=__bmOriginalStartGame();
-     else if(typeof previous==='function')result=previous.apply(this,arguments);
-   }catch(e){console.error(e);if(b){b.disabled=false;b.textContent='🎭 شروع بازی'}return false}
+ window.roomStartGame=async function(){
+  if(!isGod()){try{toast('فقط گاد اتاق می‌تواند بازی را شروع کند.')}catch(error){}syncButton();return false}
+  if(busy||(typeof started!=='undefined'&&started))return false;
+  busy=true;window.__bmStartBusy=true;syncButton();
+  const code=roomCode();let statusWritten=false;
+  try{
+   if(!code)throw new Error('کد اتاق پیدا نشد؛ دوباره وارد اتاق انتظار شو.');
+   await setRoomStatus(code,'started');statusWritten=true;
+   const result=originalStart.apply(this,arguments);
+   await Promise.resolve(result);
+   showWaitingRoom(code);
+   // The core handler broadcasts to peers; this fallback launches the default scenario once.
    setTimeout(()=>{
-     try{
-       if(typeof started!=='undefined'&&!started&&typeof G!=='undefined'&&!G.loading&&typeof window.launch==='function')window.launch(0);
-       if(window.Net&&typeof Net.hostStart==='function')Net.hostStart();
-     }catch(e){console.error(e)}
-   },700);
+    try{if(typeof started!=='undefined'&&!started&&typeof G!=='undefined'&&!G.loading&&typeof window.launch==='function')window.launch(0)}
+    catch(error){console.error('[Black Mafia] Game launch failed',error)}
+   },80);
+   armWatchdog(code);
    return result;
+  }catch(error){
+   console.error('[Black Mafia] Start failed',error);
+   if(statusWritten){try{await setRoomStatus(code,'waiting')}catch(resetError){}}
+   busy=false;window.__bmStartBusy=false;syncButton();
+   try{toast(error&&error.message?error.message:'شروع بازی ناموفق بود؛ اتصال را بررسی کن.')}catch(toastError){}
+   return false;
+  }
  };
- // Capture a direct reference to the pre-guard room start implementation.
- // It performs the host transition without going through the broken window.lobbyMode check.
- if(!window.__bmOriginalStartGame){
-   try{
-     const candidates=[previous];
-     window.__bmOriginalStartGame=candidates.find(f=>typeof f==='function'&&String(f).includes('Voice.broadcast'))||null;
-   }catch(e){window.__bmOriginalStartGame=null}
- }
- syncStartButton();
+ syncButton();
  const room=$('lobbyRoom');
- if(room)new MutationObserver(syncStartButton).observe(room,{attributes:true,attributeFilter:['class']});
- setInterval(syncStartButton,500);
+ if(room)new MutationObserver(syncButton).observe(room,{attributes:true,attributeFilter:['class']});
+ setInterval(syncButton,700);
 })();
 </script>
