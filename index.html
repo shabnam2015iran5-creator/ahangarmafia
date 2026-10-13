@@ -394,7 +394,23 @@ const INTRO=['سلام به همه، من {n} هستم؛ قول می‌دم را
 const CHQ=['{t}، چرا اینقدر مطمئنی؟','{t}، حرفت با اون چیزی که قبلاً گفتی نمی‌خونه!','{t}، منو قانع کن که شهروندی 🤨','{t}، دقیقاً منظورت چی بود؟'];
 const CHA=['سؤالت منطقیه؛ من فقط حقیقت رو گفتم','من چیزی برای پنهان کردن ندارم','دارید منو به حاشیه می‌برید','قسم می‌خورم شهروندم'];
 const dfn=()=>rs(seats[G.acc]&&seats[G.acc].r=='m'?DEFM:DEFC);
-function pickT(v){const s=seats[v],c=alive().filter(x=>x!=v&&!(s.r=='m'&&seats[x].r=='m'));if(s.sus!=null&&c.includes(s.sus)&&Math.random()<.6)return s.sus;return c.length?rs(c):null}
+function pickT(v){const s=seats[v],c=alive().filter(x=>x!=v&&!(s.r=='m'&&seats[x].r=='m'));if(s.sus!=null&&c.includes(s.sus)&&Math.random()<.72)return s.sus;return c.length?rs(c):null}
+function botVoteTarget(v,options){
+ const s=seats[v],o=options.filter(x=>x!==v&&seats[x]&&!seats[x].d&&!(s.r==='m'&&seats[x].r==='m'));
+ if(!o.length)return null;
+ if(s.sus!=null&&o.includes(s.sus)&&Math.random()<.82)return s.sus;
+ const scored=o.map(x=>{
+  let score=1;
+  score+=seats.filter((q,j)=>q&&!q.d&&j!==x&&q.sus===x).length*1.7;
+  if(G.rep&&G.rep.to===x)score+=1.2;
+  if(seats[x].sus===v)score+=.35;
+  if(s.r==='m'&&seats[x].r!=='m')score+=.25;
+  return {x,score};
+ });
+ const total=scored.reduce((n,q)=>n+q.score,0);let roll=Math.random()*total;
+ for(const q of scored){roll-=q.score;if(roll<=0)return q.x}
+ return scored[scored.length-1].x;
+}
 function dlg(v){
  const s=seats[v];if(!started)return rs(LOB);
  const T=pickT(v),L=(G.last!=null&&G.last!=v&&seats[G.last]&&!seats[G.last].d)?G.last:null;
@@ -530,7 +546,7 @@ function begin(ph){G.ph=ph;G.k=Math.random();G.t=G.T=DUR[ph];G.sc={};G.sd={};sea
  if(ph=='day'){G.dayNo=(G.dayNo||0)+1;G.dn=0;G.tl=al.slice();G.ti=0;banner(G.dayNo==1?'☀️ روز معارفه':'☀️ روز '+G.dayNo);sfx(2);
   say(G.dayNo==1?'روز معارفه آغاز شد. از شماره یک، هر کس سی ثانیه صحبت می‌کند. امروز رأی‌گیری نداریم.':'بحث روز '+G.dayNo+' آغاز شد. از شماره یک، هر کس سی ثانیه.');startTurn();return}
  if(ph=='vote'){G.v={};G.cand=al.slice();G.vi=0;G.tg={};banner('🗳 رأی‌گیری');sfx(3);
-  al.forEach(v=>{if(isH(v))return;const o=al.filter(x=>x!=v&&!(seats[v].r=='m'&&seats[x].r=='m'));if(o.length){const sv=seats[v].sus;G.tg[v]=(sv!=null&&o.includes(sv)&&Math.random()<.7)?sv:rs(o)}});
+  al.forEach(v=>{if(isH(v))return;const o=al.filter(x=>x!=v&&!(seats[v].r=='m'&&seats[x].r=='m'));if(o.length){G.tg[v]=botVoteTarget(v,o)}});
   say('رأی‌گیری آغاز شد. از شماره یک شروع می‌کنیم و برای هر نفر ده ثانیه فرصت رأی داریم.');startWin();return}
  if(ph=='defense'){banner('⚖️ دفاعیه');later(()=>{if(!isH(G.acc))sayAs(G.acc,dfn())},1200);later(()=>{if(!isH(G.acc))sayAs(G.acc,dfn())},13000)}
  if(ph=='revote'){banner('🗳 رأی خروج');G.rv={};const a=seats[G.acc];say(a.n+' دفاعش را کرد. حالا رأی خروج: لایک برای خروج، دیسلایک برای ماندن.');
