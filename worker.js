@@ -21,6 +21,10 @@ function allowedPath(path) {
     if (p[2] === "chat") {
       return p.length === 3 || (p.length === 4 && /^[A-Za-z0-9_-]{1,80}$/.test(p[3]));
     }
+    // Per-player snapshots and action queue used when WebRTC/PeerJS is unavailable.
+    if (p[2] === "gameSnapshots" || p[2] === "gameActions") {
+      return p.length === 3 || (p.length === 4 && /^[A-Za-z0-9_-]{1,100}$/.test(p[3]));
+    }
     return false;
   }
 
