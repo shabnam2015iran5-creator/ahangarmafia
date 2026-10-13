@@ -1090,6 +1090,12 @@ const Net=(()=>{
   chat(v){toHost({t:'act',a:'chat',v:String(v).slice(0,120)})},react(e){toHost({t:'act',a:'rx',e})}};
 })();
 
+/* --- Publish shared game modules for the online-room recovery paths --- */
+/* These modules were declared with const, so they are not window properties by default.
+   Later room-start and Firebase recovery code intentionally checks window.Net/window.Voice. */
+window.Voice = Voice;
+window.Net = Net;
+
 /* --- اتصال به بقیه‌ی برنامه --- */
 (()=>{
  const _fl=fl,_bn=banner,_sv=showVotes,_hc=humanChallenge,_sT=sendT,_again=again,_rx=rx,_tr=toggleLobbyReady,_rsg=roomStartGame,_enter=enterLobby,_build=buildLobbyRoom,_close=closeRoom,_leave=leave,_render=render,_say=sayAs,_mic=toggleMic,_chairs=renderLobbyChairs;
