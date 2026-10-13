@@ -3204,10 +3204,10 @@ body.ingame #bmSharedRoomBadge{display:block}
   if(!isGod()){try{toast('فقط گاد اتاق می‌تواند بازی را شروع کند.')}catch(error){}syncButton();return false}
   if(busy||(typeof started!=='undefined'&&started))return false;
   busy=true;window.__bmStartBusy=true;syncButton();
-  const code=roomCode();let statusWritten=false;
+  const code=roomCode();let statusAttempted=false;
   try{
    if(!code)throw new Error('کد اتاق پیدا نشد؛ دوباره وارد اتاق انتظار شو.');
-   await setRoomStatus(code,'started');statusWritten=true;
+   statusAttempted=true;await setRoomStatus(code,'started');
    const result=originalStart.apply(this,arguments);
    await Promise.resolve(result);
    showWaitingRoom(code);
@@ -3220,7 +3220,7 @@ body.ingame #bmSharedRoomBadge{display:block}
    return result;
   }catch(error){
    console.error('[Black Mafia] Start failed',error);
-   if(statusWritten){try{await setRoomStatus(code,'waiting')}catch(resetError){}}
+   if(statusAttempted){try{await setRoomStatus(code,'waiting')}catch(resetError){}}
    busy=false;window.__bmStartBusy=false;syncButton();
    try{toast(error&&error.message?error.message:'شروع بازی ناموفق بود؛ اتصال را بررسی کن.')}catch(toastError){}
    return false;
