@@ -891,14 +891,32 @@ const Voice=(()=>{
  function patchSeats(){
   if(!on||!inGame()||!Array.isArray(seats)||(window.Net&&Net.isClient()))return;
   const off=(typeof role!=='undefined'&&role==='player')?1:0;
-  if(typeof started!=='undefined'&&started){ // بعد از شروع بازی، جایگاه‌ها ثابت می‌مانند
-   seats.forEach(s=>{if(s&&s.hv){s.sp=!!(R[s.hv]&&R[s.hv].live&&R[s.hv].sp)}});
+  const hs=humans().filter(r=>r.role!=='god').slice(0,N-off);
+  if(typeof started!=='undefined'&&started){
+   // Keep existing seats fixed, but never leave a newly connected player without a seat.
+   const mapped=new Set();
+   seats.forEach(s=>{if(s&&s.hv){mapped.add(s.hv);s.sp=!!(R[s.hv]&&R[s.hv].live&&R[s.hv].sp)}});
+   hs.forEach(r=>{
+    if(mapped.has(r.slot))return;
+    // A reconnecting player should reclaim their old seat by stable account UID.
+    let i=r.uid?seats.findIndex(s=>s&&s.uid===r.uid):-1;
+    if(i>=0){
+     const s=seats[i];s.hv=r.slot;s.uid=r.uid||'';s.sp=!!r.sp;mapped.add(r.slot);return;
+    }
+    // A player whose connection finished after start takes an unoccupied bot seat;
+    // preserve that seat's already-assigned role and game state.
+    i=seats.findIndex(s=>s&&s.b&&!s.hv&&!s.d);
+    if(i<0)i=seats.findIndex(s=>s&&s.b&&!s.hv);
+    if(i<0)return;
+    const s=seats[i];s.hv=r.slot;s.uid=r.uid||'';s.n=r.n||('بازیکن '+r.slot);
+    s.id=r.seed||1;s.f=!!r.f;s.b=false;s.sp=!!r.sp;mapped.add(r.slot);
+   });
   }else{
-   const hs=humans().slice(0,N-off),used={};
+   const used={};
    hs.forEach((r,j)=>{const i=j+off;let s=seats[i];if(!s){s=seats[i]=nbot()}used[i]=1;
-    if(s.hv!==r.slot){if(!s.hv){s.n0=s.n;s.id0=s.id;s.f0=s.f}s.hv=r.slot}
-    s.n=r.n||('بازیکن '+r.slot);s.id=r.seed||1;s.f=!!r.f;s.sp=r.sp});
-   seats.forEach((s,i)=>{if(s&&s.hv&&!used[i]){s.hv=0;s.n=s.n0;s.id=s.id0;s.f=s.f0;s.sp=false}});
+    if(s.hv!==r.slot){if(!s.hv){s.n0=s.n;s.id0=s.id;s.f0=s.f;s.b0=s.b}s.hv=r.slot}
+    s.uid=r.uid||'';s.n=r.n||('بازیکن '+r.slot);s.id=r.seed||1;s.f=!!r.f;s.sp=r.sp});
+   seats.forEach((s,i)=>{if(s&&s.hv&&!used[i]){s.hv=0;s.uid='';s.n=s.n0;s.id=s.id0;s.f=s.f0;s.b=s.b0;s.sp=false}});
   }
   seats.forEach(s=>{if(s&&s.hv){const r=R[s.hv];s.mu=!!(r&&r.mu)}});
   if(typeof role!=='undefined'&&role==='player'&&seats[0]&&!seats[0].hv)seats[0].sp=meSp;
@@ -1008,7 +1026,7 @@ const Net=(()=>{
      bt:(s.bt&&now<s.bx)?String(s.bt).slice(0,160):null,bm:!!s.bm,ro:vis(s,i)?{r:s.r,gf:!!s.gf,ng:!!s.ng,conv:!!s.conv}:null}:null),
    win:won?{t:g('winT').textContent,r:g('winR').textContent,w:g('winT').textContent.includes('مافیا')?'m':'c',l:seats.map(s=>s&&s.r?[s.d?1:0,s.n,rn(s).e,rn(s).n]:null)}:null};
  }
- function hostTick(){if(role!=='god'||!Voice.active())return;Voice.liveSlots().forEach(sl=>Voice.send(sl,snapFor(sl)))}
+ function hostTick(){if(role!=='god'||!Voice.active())return;Voice.patchSeats();Voice.liveSlots().forEach(sl=>Voice.send(sl,snapFor(sl)))}
  function hostStart(){clearInterval(hostT);hostT=setInterval(hostTick,600);hostTick()}
  function bcast(m){if(role==='god'&&Voice.active())Voice.broadcast(m)}
  /* ====== بازیکن (کلاینت) ====== */
