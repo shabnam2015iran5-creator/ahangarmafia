@@ -2843,6 +2843,11 @@ window.APP_VERSION='27.0';
    }
    if(!['started','finished'].includes(cachedRoomStatus))return;
    if(cachedRoomStatus==='finished'&&clientFinished&&!checkRoom)return;
+   // Enter the game shell as soon as the shared room says started, before reading
+   // the per-player snapshot. A slow/missing snapshot must not strand a phone in lobby.
+   if(cachedRoomStatus==='started'&&waiting&&window.Net&&typeof Net.enter==='function'&&!(Net.isClient&&Net.isClient())){
+    Net.enter();
+   }
 
    const uid=myUid();if(!uid)return;
    const response=await fetch(url('gameSnapshots/'+encodeURIComponent(uid)),{cache:'no-store'});
