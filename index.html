@@ -827,9 +827,9 @@ const Voice=(()=>{
  }
  function connectLoop(){
   if(!peer||peer.destroyed)return;
-  for(let s=slot+1;s<=C.maxSlots;s++){ // فقط شماره‌ی کمتر به بیشتر زنگ می‌زند تا تماس دوتایی نشود
+  for(let s=slot+1;s<=C.maxSlots;s++){ // تا کانال داده و صدای باز هر دو سالم‌اند، اتصال را حفظ کن
    const r=R[s];
-   if(r&&r.live)continue;
+   if(r&&r.live&&r.conn&&r.conn.open)continue;
    if(r&&Date.now()-r.t0<10000)continue;
    if(r)drop(s,true);
    dial(s);
@@ -838,7 +838,13 @@ const Voice=(()=>{
  function bindCall(s,call){
   const r=newR(s);if(r.call&&r.call!==call)try{r.call.close()}catch(e){}r.call=call;
   call.on('stream',st=>{if(R[s]!==r||r.stream===st)return;r.stream=st;playRemote(r,st);r.live=true;refresh()});
-  const gone=()=>{if(R[s]===r&&r.call===call)drop(s)};
+  const gone=()=>{
+   if(R[s]!==r||r.call!==call)return;
+   // افتادن صدای WebRTC نباید کانال دادهٔ بازی را هم ببندد.
+   r.live=false;r.stream=null;r.an=null;r.buf=null;
+   if(r.audio){try{r.audio.pause()}catch(e){}r.audio.srcObject=null;r.audio.remove();r.audio=null}
+   refresh();
+  };
   call.on('close',gone);call.on('error',gone);
  }
  function bindConn(s,conn){
