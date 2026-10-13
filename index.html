@@ -781,10 +781,12 @@ const Voice=(()=>{
    s.src=C.scripts[i++];s.onload=()=>fin(true);s.onerror=()=>fin(false);document.head.appendChild(s)})()});
  }
  function openPeer(id){return new Promise(res=>{
-  let d=false;const p=new Peer(id,{config:{iceServers:C.ice},debug:0,...C.peer});
+  let d=false;const p=new Peer(id,{config:{iceServers:C.ice},debug:1,...C.peer});
   const fin=v=>{if(d)return;d=true;clearTimeout(tm);if(v!==p){try{p.destroy()}catch(e){}}res(v)};
-  const tm=setTimeout(()=>fin(undefined),9000);
+  const tm=setTimeout(()=>fin(undefined),5000);
   p.on('open',()=>fin(p));
+  // An occupied ID is normal while finding a free slot. Other errors may be transient;
+  // the caller retries them rather than abandoning the whole lobby immediately.
   p.on('error',e=>fin(e&&e.type==='unavailable-id'?null:undefined));
  })}
  const MIC={audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}};
@@ -803,7 +805,14 @@ const Voice=(()=>{
   rawTrack=local.getAudioTracks()[0];watchLocal();
   let p=null,fail=false;
   for(let s=1;s<=C.maxSlots&&!p;s++){
-   const r=await openPeer(room+'-'+s);
+   let r;
+   // Retry transient PeerJS signalling failures twice before declaring this phone offline.
+   // A taken slot (null) is not a server failure; continue checking the next slot.
+   for(let attempt=0;attempt<2;attempt++){
+    r=await openPeer(room+'-'+s);
+    if(r!==undefined)break;
+    if(attempt===0)await new Promise(resolve=>setTimeout(resolve,900));
+   }
    if(my!==gen){if(r)try{r.destroy()}catch(e){}if(micOk)local.getTracks().forEach(t=>t.stop());joining=false;return}
    if(r){p=r;slot=s}else if(r===undefined){fail=true;break}
   }
