@@ -24,6 +24,14 @@ function allowedPath(path) {
     return false;
   }
 
+  if (p[0] === "gameSync") {
+    if (p.length === 1) return true;
+    if (!/^\d{5}$/.test(p[1])) return false;
+    if (p.length === 2) return true;
+    if (!["snapshots", "actions"].includes(p[2])) return false;
+    return p.length === 3 || (p.length === 4 && /^[A-Za-z0-9_-]{1,80}$/.test(p[3]));
+  }
+
   if (p[0] === "rooms") {
     if (p.length === 1) return true;
     if (!/^[A-Za-z0-9_-]{1,32}$/.test(p[1])) return false;
