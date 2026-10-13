@@ -122,6 +122,8 @@ nav{background:#0009;border:1px solid var(--g2);border-radius:12px;padding:3px}n
 .cell .nm{position:absolute;bottom:3px;left:50%;transform:translateX(-50%);width:calc(100% - 8px);margin:0;font-size:11px;padding:1px 3px;background:#000b}
 .cell .tg{bottom:auto;top:3px;inset-inline-end:auto;inset-inline-start:3px}
 .cell .rl{top:3px;inset-inline-end:3px}
+.cell.roleVisible .av{bottom:25px}
+.cell.roleVisible .rl{top:auto;bottom:22px;left:50%;right:auto;transform:translateX(-50%);max-width:calc(100% - 6px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}
 .cell .ar{bottom:22px}
 .num{width:24px;height:24px;border-radius:50%;background:linear-gradient(#f8dc82,#a8741f);color:#201008;font-weight:bold;font-size:13px;display:grid;place-items:center;flex:none;border:1px solid #fff8;box-shadow:0 2px 5px #000a}
 .st{display:flex;flex-direction:column;gap:2px;align-items:center;justify-content:center;width:34px;flex:none;font-size:14px;line-height:1.15;text-align:center}
@@ -169,7 +171,7 @@ nav{background:#0009;border:1px solid var(--g2);border-radius:12px;padding:3px}n
 .setupAv{width:88px;height:88px;border-radius:16px;border:3px solid #e0b255;background:#160a05;overflow:hidden;box-shadow:0 0 18px #e0b25533}.setupAv .avi{width:100%;height:100%;background-size:cover;background-position:center}
 .profileSetup input,.ageInput{width:100%;padding:9px;border-radius:9px;border:1px solid #a87528;background:#050202;color:#f6ead0;font-family:inherit}
 .ageLine{display:flex;gap:7px;align-items:center}.ageLine label{font-size:12px;white-space:nowrap}.ageLine input{max-width:100px}
-.avGallery{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-top:7px}.avChoice{border:2px solid #6f4818;border-radius:10px;background:#090403;padding:3px;cursor:pointer;aspect-ratio:1;overflow:hidden}.avChoice.on{border-color:#ffe28a;box-shadow:0 0 14px #e0b25599}.avChoice .avi{width:100%;height:100%;background-size:cover;background-position:center;border-radius:7px}
+.avGallery{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-top:7px}.avChoice{position:relative;border:2px solid #6f4818;border-radius:10px;background:#090403;padding:3px;cursor:pointer;aspect-ratio:1;overflow:hidden}.avChoice.on{border-color:#ffe28a;box-shadow:0 0 14px #e0b25599}.avChoice .avi{width:100%;height:100%;background-size:cover;background-position:center;border-radius:7px}.avChoice small{position:absolute;bottom:4px;left:4px;min-width:18px;padding:1px 3px;border-radius:5px;background:#000c;color:#ffe7a3;font-size:9px}
 .lobbyCards{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}.lobbyCard{position:relative;text-align:right;border:1px solid #7c531b;border-radius:15px;padding:11px;background:linear-gradient(145deg,#2a1208,#0d0503);min-height:142px}.lobbyCard.locked{opacity:.62}.lobbyCard h3{margin:0 0 5px;font-size:14px}.lobbyCard p{margin:0 0 9px;font-size:10.5px;line-height:1.65;color:#cbb58c}.lobbyCard .badge{display:inline-block;border-radius:10px;padding:3px 7px;background:#0008;border:1px solid #79521c;font-size:10px}.lobbyCard .go{position:absolute;bottom:9px;left:9px;right:9px}
 .lobbyRoomWrap{width:min(96vw,520px);height:min(96vh,900px);position:relative;border:3px solid #a87528;border-radius:24px;overflow:hidden;background:radial-gradient(circle at 50% 25%,#71461d 0,#34200d 35%,#160b05 70%,#080403);box-shadow:0 0 45px #000, inset 0 0 30px #000}.lobbyRoomWrap:before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 50% 78%,#d8a83b22,transparent 35%),linear-gradient(#0001,#0007);pointer-events:none}
 .lobbyTop{position:relative;display:flex;align-items:center;gap:7px;padding:10px}.roomTitle{flex:1;text-align:center;font-size:19px;font-weight:900;color:#f6dda1;text-shadow:0 2px 8px #000}.roomIcon{width:43px;height:43px;border:1px solid #a87528;background:#1b0b05;border-radius:12px;color:#f5d88e;font-size:20px}.roomCount{font-size:11px;color:#dbc18d}
@@ -394,16 +396,80 @@ const INTRO=['سلام به همه، من {n} هستم؛ قول می‌دم را
 const CHQ=['{t}، چرا اینقدر مطمئنی؟','{t}، حرفت با اون چیزی که قبلاً گفتی نمی‌خونه!','{t}، منو قانع کن که شهروندی 🤨','{t}، دقیقاً منظورت چی بود؟'];
 const CHA=['سؤالت منطقیه؛ من فقط حقیقت رو گفتم','من چیزی برای پنهان کردن ندارم','دارید منو به حاشیه می‌برید','قسم می‌خورم شهروندم'];
 const dfn=()=>rs(seats[G.acc]&&seats[G.acc].r=='m'?DEFM:DEFC);
-function pickT(v){const s=seats[v],c=alive().filter(x=>x!=v&&!(s.r=='m'&&seats[x].r=='m'));if(s.sus!=null&&c.includes(s.sus)&&Math.random()<.6)return s.sus;return c.length?rs(c):null}
-function dlg(v){const s=seats[v];if(!started)return rs(LOB);const T=pickT(v),o={},L=(G.last!=null&&G.last!=v&&seats[G.last]&&!seats[G.last].d)?G.last:null;
- if(T!=null)o.t=seats[T].n;if(L!=null)o.a=seats[L].n;if(G.kd)o.d=G.kd;let P=[];
- if(G.kd&&(G.dn||0)<3){G.dn=(G.dn||0)+1;P.push(...DEAD)}else if(!G.kd&&G.nn>1&&(G.dn||0)<2){G.dn=(G.dn||0)+1;P.push(...NODEAD)}
- if(T!=null)P.push(...ACC,...ACC);if(L!=null)P.push(...REACT);P.push(...GEN);if(s.per=='aggr')P.push(...AGG);if(s.per=='care')P.push(...CARE);
- if(s.r=='m')P.push(...MAF);if(s.r=='d')P.push(...DOC);if(s.r=='k')P.push(...DET);
- const t=rs(P);if(t.includes('{t}')&&T!=null){s.sus=T;G.rep={to:T,from:v}}return FM(t,o)}
+function pickT(v){const s=seats[v],c=alive().filter(x=>x!=v&&!(s.r=='m'&&seats[x].r=='m'));if(s.sus!=null&&c.includes(s.sus)&&Math.random()<.72)return s.sus;return c.length?rs(c):null}
+function botVoteTarget(v,options){
+ const s=seats[v],o=options.filter(x=>x!==v&&seats[x]&&!seats[x].d&&!(s.r==='m'&&seats[x].r==='m'));
+ if(!o.length)return null;
+ if(s.sus!=null&&o.includes(s.sus)&&Math.random()<.82)return s.sus;
+ const scored=o.map(x=>{
+  let score=1;
+  score+=seats.filter((q,j)=>q&&!q.d&&j!==x&&q.sus===x).length*1.7;
+  if(G.rep&&G.rep.to===x)score+=1.2;
+  if(seats[x].sus===v)score+=.35;
+  if(s.r==='m'&&seats[x].r!=='m')score+=.25;
+  return {x,score};
+ });
+ const total=scored.reduce((n,q)=>n+q.score,0);let roll=Math.random()*total;
+ for(const q of scored){roll-=q.score;if(roll<=0)return q.x}
+ return scored[scored.length-1].x;
+}
+function dlg(v){
+ const s=seats[v];if(!started)return rs(LOB);
+ const T=pickT(v),L=(G.last!=null&&G.last!=v&&seats[G.last]&&!seats[G.last].d)?G.last:null;
+ const o={t:T!=null?seats[T].n:'یکی از بازیکنان',a:L!=null?seats[L].n:'دوستان',d:G.kd||'بازیکن حذف‌شده',n:s.n};
+ const P=[];
+ if(G.kd&&(G.dn||0)<3){G.dn=(G.dn||0)+1;P.push(...DEAD)}
+ else if(!G.kd&&G.nn>1&&(G.dn||0)<2){G.dn=(G.dn||0)+1;P.push(...NODEAD)}
+ const strategic=[
+  'قبل از رأی، هرکس فقط یک دلیل مشخص برای اتهامش بگوید؛ تکرار اتهام مدرک نیست.',
+  'من حرف‌ها را با رأی‌های دور قبل مقایسه می‌کنم؛ تغییر موضع بدون توضیح برایم مهم است.',
+  'به نظرم باید بین «حدس» و «سرنخ» فرق بگذاریم. چه کسی می‌تواند حرفش را با رفتار قبلی ثابت کند؟',
+  'اگر به کسی رأی می‌دهید، توضیح بدهید چرا؛ رأی هماهنگ و بی‌دلیل می‌تواند نشانه‌ی مافیا باشد.',
+  'بیایید تناقض‌ها را بررسی کنیم، نه اینکه فقط به کسی که بلندتر حرف می‌زند اعتماد کنیم.',
+  'من هنوز حکم قطعی نمی‌دهم؛ می‌خواهم ببینم چه کسی از پاسخ مستقیم فرار می‌کند.',
+  'یک سؤال مشخص: اگر امروز اشتباه کنیم، چه کسی از حذف این بازیکن سود می‌برد؟',
+  'به ترتیب صحبت کنیم تا همه فرصت دفاع داشته باشند؛ قطع کردن حرف دیگران چیزی را ثابت نمی‌کند.'
+ ];
+ const town=[
+  'من دنبال تناقض می‌گردم، نه صرفاً رفتار عصبی؛ فشار بازی ممکن است هرکسی را مضطرب کند.',
+  'اگر شهروندیم، باید اطلاعاتمان را کنار هم بگذاریم و عجولانه رأی ندهیم.',
+  'برای اتهامم دلیل دارم، اما آماده‌ام اگر توضیح قانع‌کننده‌ای بشنوم نظرم را عوض کنم.',
+  'کسی که امروز رأی می‌دهد ولی حاضر نیست دلیلش را بگوید باید توضیح بدهد.'
+ ];
+ const mafia=[
+  'اتهام بدون دلیل کمکی نمی‌کند؛ بهتر است از همه یک سؤال یکسان بپرسیم.',
+  'من هم می‌خواهم سرنخ روشن ببینم؛ فعلاً چند نفر دارند با قطعیت بیش از حد حرف می‌زنند.',
+  'بیایید روی حرف‌های متناقض تمرکز کنیم، نه روی شایعه و حدس‌های زنجیره‌ای.'
+ ];
+ const investigator=[
+  'من دارم حرف‌های هر نفر را با رفتار دورهای قبل می‌سنجم؛ یک پاسخ کوتاه کافی نیست.',
+  'اگر کسی ادعای مهمی دارد، باید توضیح بدهد از کجا به آن نتیجه رسیده است.',
+  'سرنخ را با اطمینان اشتباه نگیرید؛ هنوز باید چند احتمال را کنار هم بررسی کنیم.'
+ ];
+ if(T!=null){
+  const target=seats[T];
+  if(target&&target.sus===v)P.push('جالبه که '+target.n+' حالا منو متهم می‌کنه؛ بیایید ببینیم چه کسی اول اتهام را شروع کرد.');
+  P.push(...ACC.filter(x=>!x.includes('دیشب')||G.dayNo>1));
+  if(s.r==='m')P.push('رفتار '+target.n+' را بررسی کنیم؛ اما قبل از نتیجه‌گیری از او سؤال مستقیم بپرسیم.');
+ }
+ if(L!=null)P.push(...REACT);
+ P.push(...strategic,...town);
+ if(s.per==='aggr')P.push(...AGG,'من جواب روشن می‌خواهم؛ '+o.t+' لطفاً مستقیم پاسخ بده.');
+ if(s.per==='care')P.push(...CARE,'قبل از حذف کسی، دفاعش را کامل بشنویم.');
+ if(s.r==='m')P.push(...MAF,...mafia);
+ if(s.r==='d')P.push(...DOC,'من امشب باید انتخابم را بر اساس خطر واقعی انجام بدهم؛ لطفاً نشانه‌ها را دقیق بگویید.');
+ if(s.r==='k')P.push(...DET,...investigator);
+ if(s.r==='j')P.push('من ترجیح می‌دهم ادعاها را با ترتیب اتفاق‌ها بسنجیم؛ زمان‌بندی حرف‌ها مهم است.');
+ if(s.r==='a')P.push('در تصمیم‌گیری عجله نکنید؛ یک رأی اشتباه می‌تواند مسیر بازی را عوض کند.');
+ let t=rs(P);
+ if(s.lastDlg===t){const alt=P.filter(x=>x!==t);if(alt.length)t=rs(alt)}
+ s.lastDlg=t;
+ if(t.includes('{t}')&&T!=null){s.sus=T;G.rep={to:T,from:v}}
+ return FM(t,o);
+}
 
 /* ---------- ui ---------- */
-function showRole(i){const s=seats[i];if(!s||!s.r)return false;return s.rev||isG()||(role=='player'&&(i==0||me().d||(me().r=='m'&&s.r=='m')))}
+function showRole(i){const s=seats[i];if(!s||!s.r)return false;return role==='god'||role==='admin'||s.rev||isG()||(role=='player'&&(i==0||me().d||(me().r=='m'&&s.r=='m')))}
 function bh(s){if(!s.bt||Date.now()>s.bx)return'';const n=s.bn;s.bn=false;return `<div class="bub${s.bm?' mod':''}${n?' new':''}">${s.bt}</div>`}
 function stc(s,i,vp,rp,spk){let h='';if(s.m)h+='<span>🔇</span>';if(s.v)h+='<span>🎤</span>';if(s.w)h+=`<span>⚠️${s.w>1?'×'+s.w:''}</span>`;if(spk==i)h+='<span>🎙</span>';
  if(vp){if(s.hand)h+=`<span>✋</span><b>→${G.v[i]!=null?G.v[i]+1:''}</b>`;else if(!s.d)h+='<span>⏳</span>';if(s.cnt)h+=`<b>🗳${s.cnt}</b>`}
@@ -414,7 +480,7 @@ function baseRender(){try{$('alv').textContent='👥 '+(started?alive().length:s
  $('grid').className='grid'+(G.ph=='night'?' night':'');
  $('grid').innerHTML=seats.map((s,i)=>{if(!s)return `<div class="seat empty"><div class="num">${i+1}</div><div class="cell"><div class="av"><div class="avi" style="display:grid;place-items:center;font-size:34px">🪑</div></div><div class="nm">???</div></div><div class="st"></div></div>`;
   const acc=(dp||rp)&&G.acc==i,dim=(dp||rp)&&!acc&&!s.d,cl2=acc?' def':(spk==i?(G.ch&&dy?' chal':' spot'):''),me0=i==0&&role=='player';
-  return `<div class="seat${cl2}${dim?' dim':''}" id="s${i}" onclick="pick(${i})"><div class="num">${i+1}</div><div class="cell"><span class="tg ${s.b?'':'h'}">${s.b?'ر':'👤'}</span>${showRole(i)?`<span class="rl">${rn(s).e} ${rn(s).n}</span>`:''}${s.fell?'<span class="ar">🛡 زره‌پوش</span>':''}${acc?'<span class="dfl">⚖️ دفاعیه</span>':''}<div class="av ${s.sp?'sp':''} ${s.d?'dead':''}" ${me0&&S.frame?`style="background:${S.frame}"`:''}>${me0&&S.photo?'<div class="avi avme"></div>':avatar(s.id,s.f,s.sp)}</div><div class="nm">${s.d?'✖ ':''}${s.n}</div></div><div class="st">${stc(s,i,vp,rp,dy?spk:null)}</div>${bh(s)}</div>`}).join('');
+  return `<div class="seat${cl2}${dim?' dim':''}" id="s${i}" onclick="pick(${i})"><div class="num">${i+1}</div><div class="cell${showRole(i)?' roleVisible':''}"><span class="tg ${s.b?'':'h'}">${s.b?'ر':'👤'}</span>${s.fell?'<span class="ar">🛡 زره‌پوش</span>':''}${acc?'<span class="dfl">⚖️ دفاعیه</span>':''}<div class="av ${s.sp?'sp':''} ${s.d?'dead':''}" ${me0&&S.frame?`style="background:${S.frame}"`:''}>${me0&&S.photo?'<div class="avi avme"></div>':avatar(s.id,s.f,s.sp)}</div>${showRole(i)?`<span class="rl">${rn(s).e} ${rn(s).n}</span>`:''}<div class="nm">${s.d?'✖ ':''}${s.n}</div></div><div class="st">${stc(s,i,vp,rp,dy?spk:null)}</div>${bh(s)}</div>`}).join('');
  try{const m=$('mic'),c=$('chb');if(m)m.classList.toggle('dis',role=='player'&&started&&!canTalk());if(c&&me()&&role=='player')c.querySelector('small').textContent=me().chd?'چالش (مصرف)':'چالش ×۱'}catch(e){}}
 function bub(i,t,mod){const s=seats[i];if(!s)return;s.bt=t;s.bm=mod;s.bx=Date.now()+4500;s.bn=true;render();setTimeout(()=>{if(seats[i]===s&&Date.now()>=s.bx){s.bt=null;render()}},4600)}
 function fl(i,t){const e=$('s'+i);if(!e)return;const r=e.getBoundingClientRect(),b=document.createElement('div');b.className='fl';b.style.cssText=`position:fixed;left:${r.left+r.width/2-13}px;top:${r.top+r.height*.5}px;bottom:auto`;b.textContent=t;document.body.appendChild(b);setTimeout(()=>b.remove(),1700)}
@@ -454,7 +520,7 @@ function spd(){SPD=SPD==1?2:SPD==2?3:1;toast('سرعت زمان‌ها: ×'+SPD)
 function tick(){
  if(!started){if(G.loading||!role)return;G.lc=(G.lc||0)+1;if(G.lc%8==0&&seats.filter(Boolean).length<8){const fi=seats.findIndex(x=>!x);if(fi>=0){seats[fi]=nbot();render();bub(fi,rs(['سلام!','سلام به همگی 👋','منم اومدم 😄']));tap(2)}}
   if(role=='player'){sec--;$('timer').textContent='00:'+String(Math.max(sec,0)).padStart(2,'0');$('pbar').style.width=(Math.max(sec,0)/60*100)+'%';if(sec<=0)launch(0)}return}
- if(!G.ph)return;if(G.freeze)return;G.t-=SPD;$('timer').textContent='00:'+String(Math.max(Math.ceil(G.t),0)).padStart(2,'0');$('pbar').style.width=(Math.max(G.t,0)/G.T*100)+'%';
+ if(!G.ph)return;if(G.freeze)return;G.t-=(G.ph==='day'?1:SPD);$('timer').textContent='00:'+String(Math.max(Math.ceil(G.t),0)).padStart(2,'0');$('pbar').style.width=(Math.max(G.t,0)/G.T*100)+'%';
  Object.keys(G.sc||{}).forEach(k=>{if(G.t<=+k&&!G.sd[k]){G.sd[k]=1;say(G.sc[k])}});
  if(G.t>0&&G.t<=5&&['vote','revote','defense'].includes(G.ph))tap(1);if(G.t<=0)next()}
 function scenPick(){if(started||G.loading)return;const g=gods.find(x=>x.n=='شما');const al=role=='admin'?[0]:(g&&g.sc&&g.sc.length?g.sc:SC.map((_,i)=>i));
@@ -482,7 +548,7 @@ function begin(ph){G.ph=ph;G.k=Math.random();G.t=G.T=DUR[ph];G.sc={};G.sd={};sea
  if(ph=='day'){G.dayNo=(G.dayNo||0)+1;G.dn=0;G.tl=al.slice();G.ti=0;banner(G.dayNo==1?'☀️ روز معارفه':'☀️ روز '+G.dayNo);sfx(2);
   say(G.dayNo==1?'روز معارفه آغاز شد. از شماره یک، هر کس سی ثانیه صحبت می‌کند. امروز رأی‌گیری نداریم.':'بحث روز '+G.dayNo+' آغاز شد. از شماره یک، هر کس سی ثانیه.');startTurn();return}
  if(ph=='vote'){G.v={};G.cand=al.slice();G.vi=0;G.tg={};banner('🗳 رأی‌گیری');sfx(3);
-  al.forEach(v=>{if(isH(v))return;const o=al.filter(x=>x!=v&&!(seats[v].r=='m'&&seats[x].r=='m'));if(o.length){const sv=seats[v].sus;G.tg[v]=(sv!=null&&o.includes(sv)&&Math.random()<.7)?sv:rs(o)}});
+  al.forEach(v=>{if(isH(v))return;const o=al.filter(x=>x!=v&&!(seats[v].r=='m'&&seats[x].r=='m'));if(o.length){G.tg[v]=botVoteTarget(v,o)}});
   say('رأی‌گیری آغاز شد. از شماره یک شروع می‌کنیم و برای هر نفر ده ثانیه فرصت رأی داریم.');startWin();return}
  if(ph=='defense'){banner('⚖️ دفاعیه');later(()=>{if(!isH(G.acc))sayAs(G.acc,dfn())},1200);later(()=>{if(!isH(G.acc))sayAs(G.acc,dfn())},13000)}
  if(ph=='revote'){banner('🗳 رأی خروج');G.rv={};const a=seats[G.acc];say(a.n+' دفاعش را کرد. حالا رأی خروج: لایک برای خروج، دیسلایک برای ماندن.');
@@ -659,13 +725,24 @@ function proSvg(seed,f){
  const bangs=f?`<path d="M29 40Q29 10 51 14Q74 11 71 40Q62 31 56 27Q47 38 29 40Z" fill="${hair}"/><path d="M34 28Q28 45 31 58Q38 47 40 32Z" fill="${hair}"/>`:`<path d="M29 38Q30 10 51 13Q72 10 71 39Q62 27 53 25Q42 31 29 38Z" fill="${hair}"/>`;
  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><radialGradient id="bg"><stop stop-color="#76501f"/><stop offset="1" stop-color="#120805"/></radialGradient><linearGradient id="skin" x2="0" y2="1"><stop stop-color="#fff" stop-opacity=".22"/><stop offset=".5" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".2"/></linearGradient><linearGradient id="coat" x2="0" y2="1"><stop stop-color="#ffffff" stop-opacity=".12"/><stop offset="1" stop-color="#000" stop-opacity=".35"/></linearGradient></defs><rect width="100" height="100" rx="16" fill="url(#bg)"/><circle cx="50" cy="48" r="39" fill="#000" opacity=".12"/><path d="M15 100Q17 73 35 68L50 78L65 68Q83 73 85 100Z" fill="${coat}" stroke="#d3a74e" stroke-opacity=".35"/><path d="M39 69L50 82L61 69L57 62L43 62Z" fill="${skin}" opacity=".8"/><path d="${female}" fill="${skin}" stroke="#d9aa72" stroke-width=".7"/><ellipse cx="39" cy="45" rx="5" ry="3.2" fill="#fff" opacity=".65"/><ellipse cx="61" cy="45" rx="5" ry="3.2" fill="#fff" opacity=".65"/><circle cx="39" cy="45" r="1.8" fill="${eye}"/><circle cx="61" cy="45" r="1.8" fill="${eye}"/><path d="M34 39Q39 35 44 39M56 39Q61 35 66 39" fill="none" stroke="#24130c" stroke-width="2" stroke-linecap="round"/><path d="M50 46L47 55L51 56" fill="none" stroke="#8f5b3c" stroke-width="1.5"/><path d="M43 61Q50 65 57 61" fill="none" stroke="#6f2830" stroke-width="2" stroke-linecap="round"/>${bangs}<path d="M23 100Q24 78 38 73L50 82L62 73Q76 78 77 100Z" fill="${coat}"/><path d="M44 76L50 88L56 76" fill="none" stroke="#d0a44e" stroke-width="1.3" opacity=".8"/><path d="M18 96Q22 81 35 77M82 96Q78 81 65 77" fill="none" stroke="#e2ba60" stroke-opacity=".35"/><circle cx="50" cy="82" r="2" fill="#e0b255"/><circle cx="50" cy="82" r="5" fill="none" stroke="#e0b255" stroke-opacity=".2"/></svg>`;
 }
-function proAvatar(seed,f){return `<div class="avi" style="background-image:url("data:image/svg+xml;charset=utf-8,${encodeURIComponent(proSvg(seed,!!f))}")"></div>`}
+const PRO_AV_CACHE={};
+function proAvatar(seed,f){
+ const n=Math.max(1,Math.abs(Number(seed)||1)),female=!!f,k='proAv'+n+(female?'f':'m');
+ if(!PRO_AV_CACHE[k]){
+  const svg=proSvg(n,female),css='.'+k+'{background-image:url("data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg)+'")!important;background-size:cover;background-position:center}';
+  let st=document.getElementById('proAvStyles');if(!st){st=document.createElement('style');st.id='proAvStyles';document.head.appendChild(st)}
+  st.appendChild(document.createTextNode(css));PRO_AV_CACHE[k]=true;
+ }
+ return '<div class="avi '+k+'" role="img" aria-label="آواتار حرفه‌ای"></div>';
+}
 function avatar(seed,f,open){return proAvatar(seed,f)}
 function renderAvatarGallery(){
- const g=$('proAvGallery'); if(!g)return; let h=''; for(let i=1;i<=12;i++){const f=i%3===0; h+=`<button class="avChoice ${selectedAvSeed===i?'on':''}" onclick="chooseProAvatar(${i})">${proAvatar(i,f)}</button>`} g.innerHTML=h; updateSetupPreview();
+ const g=$('proAvGallery'); if(!g)return; let h='';
+ for(let i=1;i<=24;i++){const f=(i%4===0||i%7===0);h+=`<button class="avChoice ${selectedAvSeed===i?'on':''}" aria-label="انتخاب آواتار ${i}" onclick="chooseProAvatar(${i})">${proAvatar(i,f)}<small>${String(i).padStart(2,'0')}</small></button>`}
+ g.innerHTML=h; updateSetupPreview();
 }
 function chooseProAvatar(i){selectedAvSeed=i;S.avatarSeed=i;S.photo='';save();injectMe();renderAvatarGallery();toast('آواتار حرفه‌ای انتخاب شد')}
-function updateSetupPreview(){const e=$('setupPreview');if(!e)return;e.innerHTML=S.photo?'<div class="avi avme"></div>':proAvatar(selectedAvSeed,selectedAvSeed%3===0)}
+function updateSetupPreview(){const e=$('setupPreview');if(!e)return;e.innerHTML=S.photo?'<div class="avi avme"></div>':proAvatar(selectedAvSeed,(selectedAvSeed%4===0||selectedAvSeed%7===0))}
 function openDoorFlow(mode){lobbyMode=mode||'player';$('doorScreen').classList.add('on');$('doorFrame').classList.remove('doorOpen');setTimeout(openLobbyDoor,300)}
 function openLobbyDoor(){if(!$('doorScreen').classList.contains('on'))return;doorSfx();$('doorFrame').classList.add('doorOpen');setTimeout(()=>{$('doorScreen').classList.remove('on');openLobbyGate()},900)}
 function doorSfx(){try{const A=new (window.AudioContext||window.webkitAudioContext)(),t=A.currentTime;const o=A.createOscillator(),g=A.createGain();o.type='triangle';o.frequency.setValueAtTime(90,t);o.frequency.exponentialRampToValueAtTime(48,t+.42);g.gain.setValueAtTime(.001,t);g.gain.exponentialRampToValueAtTime(.32,t+.03);g.gain.exponentialRampToValueAtTime(.001,t+.5);o.connect(g);g.connect(A.destination);o.start(t);o.stop(t+.55);const o2=A.createOscillator(),g2=A.createGain();o2.type='sine';o2.frequency.value=420;g2.gain.setValueAtTime(.001,t+.18);g2.gain.exponentialRampToValueAtTime(.08,t+.22);g2.gain.exponentialRampToValueAtTime(.001,t+.5);o2.connect(g2);g2.connect(A.destination);o2.start(t+.18);o2.stop(t+.55);setTimeout(()=>A.close(),800)}catch(e){}}
@@ -682,7 +759,7 @@ function enterLobby(kind){if(!saveProfile())return;const age=+S.age||0;if(kind!=
 function lobbyLabel(k){return k==='edu'?['🎓 لابی آموزشی','آموزش قوانین، نقش‌ها و تمرین قبل از بازی']:k==='friendly'?['🤝 لابی دوستانه','بازی دوستانه با فضای سبک و قوانین کامل']:['🏆 لابی حرفه‌ای','بازی رقابتی با گرداننده و قوانین کامل']}
 function buildLobbyRoom(){const [title,sub]=lobbyLabel(lobbyKind);$('roomTitle').textContent=title;$('roomBanner').innerHTML=title+`<small>${sub}</small>`;const names=lobbyKind==='pro'?['Rafael','ARIANA','MHD-SH','اربابی','Parissa','کیان','مهسا','بهروز','یلدا','آرمان','سارا']:lobbyKind==='friendly'?['دلارام','آرمان','سارا','کیان','مهسا','بهروز','نیلوفر','امیر','ستایش','فرهاد','یلدا']:['آموزش ۱','آموزش ۲','آموزش ۳','آموزش ۴','آموزش ۵','آموزش ۶','آموزش ۷','آموزش ۸','آموزش ۹','آموزش ۱۰','آموزش ۱۱'];
  lobbyRoomSeats=(lobbyMode==='player'?names.slice(0,10):names).map((n,i)=>({n,id:i+1,f:i%3===1,bot:true,seed:(i%12)+1}));
- if(lobbyMode==='player')lobbyRoomSeats[0]={n:S.nick||'رضا',id:7,f:selectedAvSeed%3===0,bot:false,seed:selectedAvSeed};
+ if(lobbyMode==='player')lobbyRoomSeats[0]={n:S.nick||'رضا',id:7,f:(selectedAvSeed%4===0||selectedAvSeed%7===0),bot:false,seed:selectedAvSeed};
  else lobbyRoomSeats[0]={n:'گاد',id:999,f:false,bot:false,seed:8,role:'god'};
  lobbyReady=false;$('readyBtn').style.display=lobbyMode==='player'?'inline-block':'none';$('roomStartBtn').textContent=lobbyMode==='god'?'🎭 شروع لابی':'🎭 شروع بازی';
  $('roomCount').textContent='👥 '+lobbyRoomSeats.filter(s=>s&&s.role!=='god').length+'/10';$('modName').textContent=lobbyMode==='god'?(S.nick||'گاد'):'گاد اصلی';$('modRole').textContent=lobbyMode==='god'?'گاد اصلی':'گرداننده لابی';$('modAvatar').innerHTML=proAvatar(lobbyMode==='god'?selectedAvSeed:8,false);renderLobbyChairs();
@@ -765,11 +842,11 @@ const Voice=(()=>{
  let peer=null,slot=0,room='',local=null,rawTrack=null,micOk=false,ctx=null,an=null,anBuf=null,muted=false,on=false,joining=false,gen=0,tryT=null,loopT=null,meSp=false,base=[],meSeat=null,lastMu=null,myUid=(()=>{try{return localStorage.getItem('mafia_uid')||''}catch(e){return ''}})();
  const R={},H={};
  const myName=()=>String(S.nick||'بازیکن').replace(/[<>&"'`\\]/g,'').slice(0,18)||'بازیکن';
- const mySeed=()=>Math.max(1,Math.min(12,parseInt(selectedAvSeed)||1));
+ const mySeed=()=>Math.max(1,Math.min(24,parseInt(selectedAvSeed)||1));
  const clean=s=>String(s||'').replace(/[<>&"'`\\]/g,'').trim().slice(0,18);
  const slotOf=id=>{const p=room+'-';if(typeof id!=='string'||!id.startsWith(p))return 0;const n=parseInt(id.slice(p.length),10);return n>=1&&n<=C.maxSlots?n:0};
  const inGame=()=>document.body.classList.contains('ingame');
- const allowed=()=>{if(!inGame())return true;if(window.Net&&Net.isClient())return Net.canSpeak();if(typeof role!=='undefined'&&role==='player'&&!C.talkAtNight&&G&&G.ph==='night')return false;return true};
+ const allowed=()=>{if(!inGame())return true;if(window.Net&&Net.isClient())return Net.canSpeak();if(typeof role!=='undefined'&&role==='player'){if(typeof window.canTalk==='function')return !!window.canTalk();if(!C.talkAtNight&&G&&G.ph==='night')return false}return true};
  function setStatus(t){const e=g('voiceStatus');if(e)e.textContent=t}
  function loadPeer(){
   if(window.Peer)return Promise.resolve();let i=0;
@@ -781,10 +858,17 @@ const Voice=(()=>{
    s.src=C.scripts[i++];s.onload=()=>fin(true);s.onerror=()=>fin(false);document.head.appendChild(s)})()});
  }
  function openPeer(id){return new Promise(res=>{
-  let d=false;const p=new Peer(id,{config:{iceServers:C.ice},debug:0,...C.peer});
+  let d=false;const p=new Peer(id,{config:{iceServers:C.ice},debug:1,...C.peer});
+  // Queue incoming calls/data that arrive immediately after PeerServer opens this slot.
+  // Without this buffer, a fast phone could call before join() installs its handlers.
+  p.__mfVoiceReady=false;p.__mfPendingCalls=[];p.__mfPendingConns=[];
+  p.on('call',call=>{if(p.__mfVoiceReady&&p.__mfAcceptCall)p.__mfAcceptCall(call);else p.__mfPendingCalls.push(call)});
+  p.on('connection',conn=>{if(p.__mfVoiceReady&&p.__mfAcceptConn)p.__mfAcceptConn(conn);else p.__mfPendingConns.push(conn)});
   const fin=v=>{if(d)return;d=true;clearTimeout(tm);if(v!==p){try{p.destroy()}catch(e){}}res(v)};
-  const tm=setTimeout(()=>fin(undefined),9000);
+  const tm=setTimeout(()=>fin(undefined),5000);
   p.on('open',()=>fin(p));
+  // An occupied ID is normal while finding a free slot. Other errors may be transient;
+  // the caller retries them rather than abandoning the whole lobby immediately.
   p.on('error',e=>fin(e&&e.type==='unavailable-id'?null:undefined));
  })}
  const MIC={audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}};
@@ -801,25 +885,45 @@ const Voice=(()=>{
    toast(window.isSecureContext?'میکروفن در دسترس نیست؛ فقط می‌شنوید':'برای میکروفن، سایت باید HTTPS باشد')}
   if(my!==gen){if(micOk)local.getTracks().forEach(t=>t.stop());joining=false;return}
   rawTrack=local.getAudioTracks()[0];watchLocal();
-  let p=null,fail=false;
+  let p=null,fail=false,failStreak=0;
   for(let s=1;s<=C.maxSlots&&!p;s++){
-   const r=await openPeer(room+'-'+s);
+   let r;
+   // Retry transient PeerJS signalling failures twice before declaring this phone offline.
+   // A taken slot (null) is not a server failure; continue checking the next slot.
+   for(let attempt=0;attempt<2;attempt++){
+    r=await openPeer(room+'-'+s);
+    if(r!==undefined)break;
+    if(attempt===0)await new Promise(resolve=>setTimeout(resolve,900));
+   }
    if(my!==gen){if(r)try{r.destroy()}catch(e){}if(micOk)local.getTracks().forEach(t=>t.stop());joining=false;return}
-   if(r){p=r;slot=s}else if(r===undefined){fail=true;break}
+   if(r){p=r;slot=s;failStreak=0}else if(r===undefined){fail=true;failStreak++;if(failStreak>=3)break}else{failStreak=0}
   }
   if(!p){joining=false;if(micOk)local.getTracks().forEach(t=>t.stop());local=null;rawTrack=null;
    setStatus(fail?'❌ اتصال به سرور وویس برقرار نشد':'⚠️ ظرفیت وویس این لابی پر است');return}
   peer=p;on=true;joining=false;
-  p.on('call',call=>{const s=slotOf(call.peer);if(!s||s===slot){try{call.close()}catch(e){}return}call.answer(local);bindCall(s,call)});
-  p.on('connection',conn=>{const s=slotOf(conn.peer);if(!s||s===slot){try{conn.close()}catch(e){}return}bindConn(s,conn)});
+  // Install call handlers before answering so the remote "stream" event cannot be missed.
+  p.__mfAcceptCall=call=>{
+   const s=slotOf(call.peer);
+   if(!s||s===slot){try{call.close()}catch(e){}return}
+   bindCall(s,call);
+   try{call.answer(local)}catch(e){try{call.close()}catch(_){}}
+  };
+  p.__mfAcceptConn=conn=>{
+   const s=slotOf(conn.peer);
+   if(!s||s===slot){try{conn.close()}catch(e){}return}
+   bindConn(s,conn);
+  };
+  p.__mfVoiceReady=true;
+  (p.__mfPendingCalls||[]).splice(0).forEach(call=>p.__mfAcceptCall(call));
+  (p.__mfPendingConns||[]).splice(0).forEach(conn=>p.__mfAcceptConn(conn));
   p.on('disconnected',()=>{if(peer===p&&!p.destroyed)try{p.reconnect()}catch(e){}});
   p.on('error',e=>{if(e&&e.type==='peer-unavailable'){const m=/(\S+)\s*$/.exec(e.message||'');const s=m&&slotOf(m[1]);if(s&&R[s]&&!R[s].live)drop(s)}});
-  tryT=setInterval(connectLoop,3000);loopT=setInterval(tick,140);
+  tryT=setInterval(connectLoop,3000);loopT=setInterval(tick,200);
   connectLoop();enforce();refresh();
-  toast('🎙 وویس متصل شد');
+  toast('🎙 سرور ویس وصل شد؛ در حال وصل کردن صدای بازیکنان');
  }
  function send(s,m){const r=R[s];try{if(r&&r.conn&&r.conn.open)r.conn.send(m)}catch(e){}}
- function broadcast(m){Object.values(R).forEach(r=>{if(r.live)send(r.slot,m)})}
+ function broadcast(m){Object.values(R).forEach(r=>{if(r.live||(r.conn&&r.conn.open))send(r.slot,m)})}
  function newR(s){return R[s]||(R[s]={slot:s,t0:Date.now(),live:false,sp:false})}
  function dial(s){
   const id=room+'-'+s,r=newR(s);r.t0=Date.now();
@@ -827,18 +931,32 @@ const Voice=(()=>{
  }
  function connectLoop(){
   if(!peer||peer.destroyed)return;
-  for(let s=slot+1;s<=C.maxSlots;s++){ // فقط شماره‌ی کمتر به بیشتر زنگ می‌زند تا تماس دوتایی نشود
+  for(let s=slot+1;s<=C.maxSlots;s++){
    const r=R[s];
-   if(r&&r.live)continue;
+   // Keep an open game-data channel even when the separate WebRTC audio stream fails.
+   // Retry audio on its own; dropping the peer also drops game snapshots and actions.
+   if(r&&r.conn&&r.conn.open){
+    if(r.live)continue;
+    if(Date.now()-(r.callT0||r.t0)<10000)continue;
+    try{if(r.call)r.call.close()}catch(e){}
+    try{bindCall(s,peer.call(room+'-'+s,local))}catch(e){r.callT0=Date.now()}
+    continue;
+   }
    if(r&&Date.now()-r.t0<10000)continue;
    if(r)drop(s,true);
    dial(s);
   }
  }
  function bindCall(s,call){
-  const r=newR(s);if(r.call&&r.call!==call)try{r.call.close()}catch(e){}r.call=call;
+  const r=newR(s);if(r.call&&r.call!==call)try{r.call.close()}catch(e){}r.call=call;r.callT0=Date.now();
   call.on('stream',st=>{if(R[s]!==r||r.stream===st)return;r.stream=st;playRemote(r,st);r.live=true;refresh()});
-  const gone=()=>{if(R[s]===r&&r.call===call)drop(s)};
+  const gone=()=>{
+   if(R[s]!==r||r.call!==call)return;
+   // افتادن صدای WebRTC نباید کانال دادهٔ بازی را هم ببندد.
+   r.live=false;r.stream=null;r.an=null;r.buf=null;r.audioPlaying=false;clearTimeout(r.playRetry);r.playRetry=null;
+   if(r.audio){try{r.audio.pause()}catch(e){}r.audio.srcObject=null;r.audio.remove();r.audio=null}
+   refresh();
+  };
   call.on('close',gone);call.on('error',gone);
  }
  function bindConn(s,conn){
@@ -849,17 +967,28 @@ const Voice=(()=>{
   if(d.t==='p'){r.n=clean(d.n)||('بازیکن '+s);r.seed=Math.max(1,Math.min(12,parseInt(d.seed)||1));r.f=!!d.f;r.role=d.role==='god'?'god':'player';r.ready=!!d.rdy;r.mu=!!d.mu;r.uid=String(d.uid||'');refresh()}
   else if(d.t==='mu'){r.mu=!!d.v;refresh()}
   else if(d.t==='rdy'){r.ready=!!d.v;refresh()}
-  else if(typeof H[d.t]==='function'&&(d.t==='act'||r.role==='god')){H[d.t](s,d)}});
+  else if(typeof H[d.t]==='function'&&(d.t==='act'||d.t==='sync'||r.role==='god')){H[d.t](s,d)}});
  }
  function playRemote(r,st){
-  const a=document.createElement('audio');a.autoplay=true;a.playsInline=true;a.srcObject=st;a.style.display='none';document.body.appendChild(a);
-  const p=a.play&&a.play();if(p&&p.catch)p.catch(()=>{});r.audio=a;
+  const a=document.createElement('audio');a.autoplay=true;a.playsInline=true;a.setAttribute('autoplay','');a.setAttribute('playsinline','');a.muted=false;a.volume=1;a.srcObject=st;a.style.display='none';document.body.appendChild(a);r.audio=a;r.audioPlaying=false;
+  let tries=0;
+  const attemptPlay=()=>{try{if(ctx&&ctx.state==='suspended')ctx.resume();const p=a.play();if(p&&p.then)p.then(()=>{r.audioPlaying=true;refresh()}).catch(()=>{r.audioPlaying=false;if(tries<4&&!r.playRetry){r.playRetry=setTimeout(()=>{r.playRetry=null;tries++;if(a.isConnected&&a.paused)attemptPlay()},1600)}else setStatus('🔊 جریان ویس دریافت می‌شود؛ برای شنیدن، یک بار داخل بازی لمس کنید')});else r.audioPlaying=true}catch(e){r.audioPlaying=false}};
+  attemptPlay();st.getTracks().forEach(t=>t.addEventListener('ended',()=>{r.audioPlaying=false;r.live=false;r.stream=null;refresh()},{once:true}));
   try{const n=ctx.createAnalyser();n.fftSize=256;ctx.createMediaStreamSource(st).connect(n);r.an=n;r.buf=new Uint8Array(n.frequencyBinCount)}catch(e){}
  }
+ // Mobile browsers may block remote audio until a real user gesture. Resume audio and retry all received streams on tap.
+ function unlockRemoteAudio(){
+  try{if(ctx&&ctx.state==='suspended')ctx.resume()}catch(e){}
+  Object.values(R).forEach(r=>{if(r&&r.audio&&r.audio.paused){try{const p=r.audio.play();if(p&&p.then)p.then(()=>{r.audioPlaying=true;refresh()}).catch(()=>{})}catch(e){}}});
+ }
+ document.addEventListener('pointerdown',unlockRemoteAudio,{passive:true});
+ document.addEventListener('touchstart',unlockRemoteAudio,{passive:true});
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden)unlockRemoteAudio()});
+
  function drop(s,quiet){
   const r=R[s];if(!r)return;delete R[s];
   try{r.call&&r.call.close()}catch(e){}try{r.conn&&r.conn.close()}catch(e){}
-  if(r.audio){r.audio.srcObject=null;r.audio.remove()}
+  clearTimeout(r.playRetry);r.playRetry=null;r.audioPlaying=false;if(r.audio){try{r.audio.pause()}catch(e){}r.audio.srcObject=null;r.audio.remove()}
   if(!quiet)refresh();
  }
  const lvl=(n,b)=>{n.getByteFrequencyData(b);let t=0;for(let i=0;i<b.length;i++)t+=b[i];return t/b.length};
@@ -876,7 +1005,7 @@ const Voice=(()=>{
   Object.values(R).forEach(r=>{const sp=!!(r.live&&r.an&&lvl(r.an,r.buf)>10);if(sp!==r.sp){r.sp=sp;ch=true}});
   enforce();if(ch)refresh();
  }
- function humans(){return Object.values(R).filter(r=>r.live).sort((a,b)=>a.slot-b.slot)}
+ function humans(){return Object.values(R).filter(r=>r.live||(r.conn&&r.conn.open)).sort((a,b)=>a.slot-b.slot)}
  function applyLobbySeats(){
   if(window.MAFIA_ROOM_ONLINE){try{window.__rePresence&&window.__rePresence()}catch(e){}return}
   if(!base.length)return;const arr=base.map(x=>x&&{...x});
@@ -890,6 +1019,11 @@ const Voice=(()=>{
  }
  function patchSeats(){
   if(!on||!inGame()||!Array.isArray(seats)||(window.Net&&Net.isClient()))return;
+  // Online rooms assign real people from the shared Firebase roster; do not let WebRTC timing reorder their seats.
+  if(window.MAFIA_ROOM_ONLINE&&seats.some(s=>s&&s.uid)){
+   seats.forEach(s=>{if(s&&s.hv){const r=R[s.hv];s.sp=!!(r&&r.live&&r.sp);s.mu=!!(r&&r.mu)}});
+   return;
+  }
   const off=(typeof role!=='undefined'&&role==='player')?1:0;
   if(typeof started!=='undefined'&&started){ // بعد از شروع بازی، جایگاه‌ها ثابت می‌مانند
    seats.forEach(s=>{if(s&&s.hv){s.sp=!!(R[s.hv]&&R[s.hv].live&&R[s.hv].sp)}});
@@ -911,7 +1045,7 @@ const Voice=(()=>{
  }
  function refresh(){
   const n=humans().length+(on?1:0);
-  setStatus(on?'🎙 وویس متصل · '+n+' نفر در کانال'+(micOk?'':' · (بدون میکروفن)'):'');
+  const hasStream=humans().some(r=>r.live),hasPlayback=humans().some(r=>r.live&&r.audioPlaying);setStatus(on?(hasPlayback?'🟢 صدای دریافتی در حال پخش · '+n+' نفر':hasStream?'🟠 جریان صدا رسیده؛ گوشی هنوز آن را پخش نمی‌کند':'🟡 سرور ویس وصل است؛ منتظر جریان صدای بازیکنان')+(micOk?'':' · میکروفن در دسترس نیست'):'');
   const lr=g('lobbyRoom');
   if(lr&&lr.classList.contains('on')){applyLobbySeats();renderLobbyChairs();
    const sb=g('roomStartBtn');if(sb&&typeof lobbyMode!=='undefined'&&lobbyMode==='player'){const gd=on&&godHere();sb.textContent=gd?'⏳ منتظر گرداننده':'🎭 شروع بازی';sb.disabled=gd}}
@@ -953,8 +1087,8 @@ const Voice=(()=>{
   applyLobbySeats();renderLobbyChairs();
  }
  // یک بار لمس صفحه: اگر مرورگر پخش خودکار صدا را بلاک کرده بود، دوباره تلاش می‌کند
- document.addEventListener('click',()=>{if(ctx&&ctx.state==='suspended')ctx.resume();Object.values(R).forEach(r=>{if(r.audio&&r.audio.paused)r.audio.play().catch(()=>{})})},true);
- return{join,leave:leaveVoice,toggleMute,isMuted:()=>!!(muted||!micOk),byUid:u=>{if(u&&u===myUid)return{sp:meSp,mu:!!(muted||!micOk)};const r=Object.values(R).find(x=>x.uid&&x.uid===u);return r?{sp:!!r.sp,mu:!!r.mu,live:!!r.live}:null},captureBase,patchSeats,afterRender,active:()=>on,broadcast,refresh,godHere,onGo:f=>{H.go=f},onMsg:(t,f)=>{H[t]=f},send,liveSlots:()=>humans().map(r=>r.slot),speakingOf:sl=>sl===slot?meSp:!!(R[sl]&&R[sl].sp),mySlot:()=>slot,godInfo,isLive:sl=>!!(R[sl]&&R[sl].live),godSlot:()=>{const r=humans().find(x=>x.role==='god');return r?r.slot:0}};
+ document.addEventListener('click',()=>{if(ctx&&ctx.state==='suspended')ctx.resume();Object.values(R).forEach(r=>{if(r.audio&&(r.audio.paused||!r.audioPlaying)){try{Promise.resolve(r.audio.play()).then(()=>{r.audioPlaying=true;refresh()}).catch(()=>{r.audioPlaying=false})}catch(e){}}})},true);
+ return{join,leave:leaveVoice,toggleMute,isMuted:()=>!!(muted||!micOk),byUid:u=>{if(u&&u===myUid)return{sp:meSp,mu:!!(muted||!micOk)};const r=Object.values(R).find(x=>x.uid&&x.uid===u);return r?{sp:!!r.sp,mu:!!r.mu,live:!!r.live}:null},captureBase,patchSeats,afterRender,active:()=>on,broadcast,refresh,godHere,onGo:f=>{H.go=f},onMsg:(t,f)=>{H[t]=f},send,liveSlots:()=>humans().map(r=>r.slot),speakingOf:sl=>sl===slot?meSp:!!(R[sl]&&R[sl].sp),mySlot:()=>slot,godInfo,isLive:sl=>!!(R[sl]&&R[sl].live),godSlot:()=>{const r=humans().find(x=>x.role==='god');return r?r.slot:0},slotByUid:u=>{const r=Object.values(R).find(x=>x.uid&&x.uid===u);return r?r.slot:0}};
 })();
 
 const Net=(()=>{
@@ -983,9 +1117,8 @@ const Net=(()=>{
  function rChat(h,v){const m=seats[h];if(!m||typeof v!=='string')return;v=v.trim().slice(0,120);if(!v)return;
   if(mod(h,v))return;if(!canTalkI(h)){tellH(h,'الان نوبت صحبت شما نیست');return}
   m.sp=true;bub(h,v);setTimeout(()=>{if(seats[h]===m){m.sp=false;render()}},2400)}
- function onAct(slot,d){
-  if(role!=='god'||!d||typeof d!=='object')return;
-  const h=seats.findIndex(s=>s&&s.hv===slot);if(h<0)return;
+ function dispatchAct(h,d){
+  if(role!=='god'||!d||typeof d!=='object'||h<0)return;
   switch(d.a){
    case'pick':{const i=d.i|0;if(i>=0&&i<N)rPick(h,i);break}
    case'ch':rChallenge(h);break;
@@ -996,10 +1129,12 @@ const Net=(()=>{
   }
   render();
  }
+ function onAct(slot,d){const h=seats.findIndex(s=>s&&s.hv===slot);dispatchAct(h,d)}
+ function onFirebaseAct(uid,d){const h=seats.findIndex(s=>s&&s.uid===uid);dispatchAct(h,d)}
  /* ====== میزبان: ارسال وضعیت ====== */
- function snapFor(slot){
-  const my=seats.findIndex(s=>s&&s.hv===slot),me=seats[my],now=Date.now();
-  const vis=(s,i)=>{if(!s.r)return false;if(s.rev)return true;if(!me)return false;return !!(me.d||i===my||(me.r==='m'&&s.r==='m'))};
+ function snapForSeat(my){
+  const me=seats[my],now=Date.now();
+  const vis=(s,i)=>!!(s&&s.r&&i===my);
   const won=g('ovWin').classList.contains('s');
   return{t:'st',my,st:!!started,ph:G.ph||null,phase:g('phase').textContent,tm:g('timer').textContent,pb:g('pbar').style.width,gt:g('gt').textContent,
    acc:G.acc,cur:G.cur,cand:Array.isArray(G.cand)?G.cand.slice(0,N):null,vi:G.vi,ch:G.ch?{st:G.ch.st,by:G.ch.by,to:G.ch.to}:null,
@@ -1008,7 +1143,9 @@ const Net=(()=>{
      bt:(s.bt&&now<s.bx)?String(s.bt).slice(0,160):null,bm:!!s.bm,ro:vis(s,i)?{r:s.r,gf:!!s.gf,ng:!!s.ng,conv:!!s.conv}:null}:null),
    win:won?{t:g('winT').textContent,r:g('winR').textContent,w:g('winT').textContent.includes('مافیا')?'m':'c',l:seats.map(s=>s&&s.r?[s.d?1:0,s.n,rn(s).e,rn(s).n]:null)}:null};
  }
- function hostTick(){if(role!=='god'||!Voice.active())return;Voice.liveSlots().forEach(sl=>Voice.send(sl,snapFor(sl)))}
+ function snapFor(slot){return snapForSeat(seats.findIndex(s=>s&&s.hv===slot))}
+ function snapForUid(uid){const i=seats.findIndex(s=>s&&s.uid===uid);return i<0?null:snapForSeat(i)}
+ function hostTick(){if(role!=='god')return;if(Voice.active())Voice.liveSlots().forEach(sl=>Voice.send(sl,snapFor(sl)))}
  function hostStart(){clearInterval(hostT);hostT=setInterval(hostTick,600);hostTick()}
  function bcast(m){if(role==='god'&&Voice.active())Voice.broadcast(m)}
  /* ====== بازیکن (کلاینت) ====== */
@@ -1031,7 +1168,7 @@ const Net=(()=>{
    const acc=(dp||rp)&&d.acc==i,dim=(dp||rp)&&!acc&&!s.d,cl2=acc?' def':(spk==i?(d.ch&&dy?' chal':' spot'):'');
    const sp=s.hv?Voice.speakingOf(s.hv):s.sp,ro=s.ro?rn(s.ro):null;
    const lk=s.lk=='u'?'👍':s.lk=='d'?'👎':'';
-   return `<div class="seat${cl2}${dim?' dim':''}" id="s${i}" onclick="Net.tap(${i})"><div class="num">${i+1}</div><div class="cell"><span class="tg ${s.b&&!s.hv?'':'h'}">${s.hv?'🎙':s.b?'ر':'👤'}</span>${ro?`<span class="rl">${ro.e} ${esc(ro.n)}</span>`:''}${s.fell?'<span class="ar">🛡 زره‌پوش</span>':''}${acc?'<span class="dfl">⚖️ دفاعیه</span>':''}<div class="av ${sp?'sp':''} ${s.d?'dead':''}">${avatar(s.id|0,!!s.f,sp)}</div><div class="nm">${s.d?'✖ ':''}${esc(s.n)}${i===d.my?' ⭐':''}</div></div><div class="st">${(s.m?'<span>🔇</span>':'')+(s.v?'<span>🎤</span>':'')+(s.w?`<span>⚠️${s.w>1?'×'+(s.w|0):''}</span>`:'')+(lk?`<span>${lk}</span>`:'')+(spk==i?'<span>🎙</span>':'')}</div>${s.bt?`<div class="bub${s.bm?' mod':''}">${esc(s.bt)}</div>`:''}</div>`}).join('');
+   return `<div class="seat${cl2}${dim?' dim':''}" id="s${i}" onclick="Net.tap(${i})"><div class="num">${i+1}</div><div class="cell${ro?' roleVisible':''}"><span class="tg ${s.b&&!s.hv?'':'h'}">${s.hv?'🎙':s.b?'ر':'👤'}</span>${s.fell?'<span class="ar">🛡 زره‌پوش</span>':''}${acc?'<span class="dfl">⚖️ دفاعیه</span>':''}<div class="av ${sp?'sp':''} ${s.d?'dead':''}">${avatar(s.id|0,!!s.f,sp)}</div>${ro?`<span class="rl">${ro.e} ${esc(ro.n)}</span>`:''}<div class="nm">${s.d?'✖ ':''}${esc(s.n)}${i===d.my?' ⭐':''}</div></div><div class="st">${(s.m?'<span>🔇</span>':'')+(s.v?'<span>🎤</span>':'')+(s.w?`<span>⚠️${s.w>1?'×'+(s.w|0):''}</span>`:'')+(lk?`<span>${lk}</span>`:'')+(spk==i?'<span>🎙</span>':'')}</div>${s.bt?`<div class="bub${s.bm?' mod':''}">${esc(s.bt)}</div>`:''}</div>`}).join('');
  }
  function vbFor(d){
   const m=d.seats[d.my];if(!d.st||!m||m.d)return'';
@@ -1040,7 +1177,10 @@ const Net=(()=>{
   return'';
  }
  function apply(d){
-  if(!client||!d||!Array.isArray(d.seats)||d.seats.length>N)return;
+  if(!d||!Array.isArray(d.seats)||d.seats.length>N)return;
+  // Do not open an empty game screen on a bare start signal. Enter only when the host's real snapshot arrives.
+  if(!client&&d.st)enter();
+  if(!client)return;
   snap=d;rxT=Date.now();warned=false;G.ph=d.ph;started=!!d.st;
   g('phase').textContent=d.st?String(d.phase||'').slice(0,80):'منتظر شروع بازی توسط گرداننده...';g('timer').textContent=String(d.tm||'').slice(0,8);
   g('pbar').style.width=Math.max(0,Math.min(100,parseFloat(d.pb)||0))+'%';
@@ -1049,7 +1189,7 @@ const Net=(()=>{
   renderNet(d);
   const m=d.seats[d.my];
   if(d.st&&!lastSt){S.games++;save()}
-  if(d.st&&m&&m.ro&&!revealed){revealed=true;revealCard({r:m.ro.r,gf:m.ro.gf,ng:m.ro.ng,conv:m.ro.conv})}
+  if(d.st&&m&&m.ro&&!revealed){/* نقش فقط پس از لمس آواتار خود باز می‌شود */}
   if(!d.st){revealed=false}
   if(d.st&&!m&&hadSeat)toast('شما از بازی خارج شدید');
   hadSeat=!!m;
@@ -1069,7 +1209,17 @@ const Net=(()=>{
    g('winL').innerHTML=(d.win.l||[]).filter(Boolean).map(x=>`<div>${x[0]?'✖ ':''}${esc(x[1])}<br>${esc(x[2])} ${esc(x[3])}</div>`).join('');op('ovWin')}
   else{cl('ovWin');wonShown=false}
  }
- function toHost(m){const gs=Voice.godSlot();if(gs)Voice.send(gs,m)}
+ function toHost(m){
+  const c=String(window.MAFIA_ROOM_CODE||'').replace(/\D/g,'').slice(0,5);
+  const db=String(window.MAFIA_DB_URL||'').replace(/\/$/,'');
+  let uid='';try{uid=localStorage.getItem('mafia_uid')||''}catch(e){}
+  if(window.MAFIA_ROOM_ONLINE&&c&&db&&uid){
+   fetch(db+'/roomsV23/'+encodeURIComponent(c)+'/gameActions.json',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...m,uid,at:Date.now()}),cache:'no-store'})
+    .then(r=>{if(!r.ok)throw Error('game action '+r.status)}).catch(()=>{const gs=Voice.godSlot();if(gs)Voice.send(gs,m)});
+   return;
+  }
+  const gs=Voice.godSlot();if(gs)Voice.send(gs,m)
+ }
  function canSpeak(){const d=snap;if(!d||!d.st)return true;const m=d.seats[d.my];if(!m||m.d||m.m)return false;if(m.v)return true;
   if(d.ph=='day')return d.ch?((d.ch.st=='ask'?d.ch.by:d.ch.to)==d.my):d.cur==d.my;if(d.ph=='defense')return d.acc==d.my;return false}
  function reset(){client=false;snap=null;clearInterval(hostT);clearInterval(wd)}
@@ -1083,12 +1233,20 @@ const Net=(()=>{
   g('vpn').innerHTML='<b>🗳 جدول آرا</b>'+d.l.slice(0,N).map(x=>`<div>${esc(x[0])} ➜ <b>${esc(x[1])}</b></div>`).join('')+((d.ab&&d.ab.length)?'<div style="opacity:.7">ممتنع: '+d.ab.slice(0,N).map(esc).join('، ')+'</div>':'');
   g('vpn').style.display='block';clearTimeout(vpT);vpT=setTimeout(()=>g('vpn').style.display='none',5500)});
  Voice.onMsg('act',onAct);
- return{enter,hostStart,reset,bcast,canSpeak,snapshot:()=>snap,isClient:()=>client,mySeat:()=>snap?snap.my:-1,
+ return{enter,hostStart,reset,bcast,canSpeak,snapshot:()=>snap,isClient:()=>client,applySnapshot(d){apply(d)},snapshotForUid(uid){return role==='god'?snapForUid(uid):null},remoteAction(uid,d){onFirebaseAct(uid,d)},sendSnapshot(slot){if(role!=='god'||!Voice.active())return false;Voice.send(slot,snapFor(slot));return true},mySeat:()=>snap?snap.my:-1,
   tap(i){if(client&&snap&&snap.st)toHost({t:'act',a:'pick',i})},
   mode(m){toHost({t:'act',a:'mode',m})},rv(y){toHost({t:'act',a:'rv',y:y?1:0});g('vb').innerHTML='';lastVb=''},
   challenge(){if(!snap||!snap.st){toast('چالش فقط در بحث روز بازی ممکن است');return}toHost({t:'act',a:'ch'})},
   chat(v){toHost({t:'act',a:'chat',v:String(v).slice(0,120)})},react(e){toHost({t:'act',a:'rx',e})}};
 })();
+
+/* --- Publish shared game modules for the online-room recovery paths --- */
+/* These modules were declared with const, so they are not window properties by default.
+   Later room-start and Firebase recovery code intentionally checks window.Net/window.Voice. */
+window.Voice = Voice;
+window.Net = Net;
+// Recover a missed start/snapshot over the existing data channel without forcing a disconnect.
+Voice.onMsg('sync',(slot)=>{try{if(window.Net&&typeof Net.sendSnapshot==='function')Net.sendSnapshot(slot)}catch(e){}});
 
 /* --- اتصال به بقیه‌ی برنامه --- */
 (()=>{
@@ -1099,14 +1257,14 @@ const Net=(()=>{
  window.leave=function(){Net.reset();Voice.leave();_leave()};
  window.render=function(){if(Net.isClient())return;Voice.patchSeats();_render();Voice.afterRender()};
  window.sayAs=function(i,t){const s=seats[i];if(s&&s.hv)return;return _say(i,t)};
- window.toggleMic=function(){return Voice.active()?Voice.toggleMute():_mic()};
+ window.toggleMic=function(){if(!Voice.active()){try{Voice.join(window.__voiceKey||window.MAFIA_ROOM_CODE||lobbyKind||'main')}catch(e){}return}return Voice.toggleMute()};
  window.toggleRoomMic=function(){Voice.toggleMute()};
  window.toggleLobbyReady=function(){_tr();Voice.broadcast({t:'rdy',v:!!lobbyReady});Voice.refresh()};
  window.roomStartGame=function(){
   if(lobbyMode==='god'){Voice.broadcast({t:'go'});const r=_rsg();Net.hostStart();return r}
   if(Voice.active()&&Voice.godHere()){toast('منتظر شروع بازی توسط گرداننده باشید');return}
   return _rsg()};
- Voice.onGo(()=>{if(document.getElementById('lobbyRoom').classList.contains('on')&&lobbyMode==='player'){lobbyReady=true;Net.enter()}});
+ Voice.onGo(()=>{if(document.getElementById('lobbyRoom').classList.contains('on')&&lobbyMode==='player'){lobbyReady=true;try{Voice.broadcast({t:'sync'})}catch(e){}}});
  window.again=function(){if(Net.isClient()){leave();return}return _again()};
  window.rx=function(e){if(Net.isClient()){Net.react(e);return}return _rx(e)};
  window.humanChallenge=function(){if(Net.isClient()){Net.challenge();return}return _hc()};
@@ -1324,7 +1482,7 @@ setInterval(()=>{try{
 })();
 
 // Make the free PeerJS cloud endpoint explicit and robust; HTTPS hosting is required for mic access.
-try{if(typeof VOICE_CFG!=='undefined'){VOICE_CFG.peer={host:'0.peerjs.com',port:443,path:'/',secure:true};VOICE_CFG.ice=[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'}]}}catch(e){}
+try{if(typeof VOICE_CFG!=='undefined'){VOICE_CFG.peer={host:'0.peerjs.com',port:443,path:'/',secure:true};VOICE_CFG.ice=[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'}].concat(window.MAFIA_TURN||[])}}catch(e){}
 </script>
 
 <!-- ===== BLACK PRO STARTUP / ROOMS / ADMIN UPGRADE ===== -->
@@ -2864,7 +3022,137 @@ body.ingame #gFoot #gEqReserve>*{display:none!important}
 body.ingame .grid .seat .av.sp{animation:none!important;box-shadow:none!important;outline:none!important;background:linear-gradient(145deg,#f8dc82,#8a5f1e 48%,#f8dc82)!important}
 @media(max-height:700px){body.ingame #gFoot{height:clamp(92px,17vh,118px)!important;min-height:92px!important}}
 </style>
-</body></html>
+
+<!-- BLACK MAFIA v35: God challenge picker and role visibility/voice ICE fix -->
+<style id="bm-v35-role-challenge-css">
+body.ingame #grid .seat .cell .bmRoleUnder{font-size:9px!important;min-height:15px!important}
+#bmGodChallengePicker{max-height:58vh;overflow:auto;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;padding:6px}
+#bmGodChallengePicker .btn{min-width:0;white-space:normal;font-size:12px;padding:9px 5px}
+#bmGodChallengePicker .btn small{display:block;font-size:10px;opacity:.8}
+</style>
+<script id="bm-v35-god-challenge-js">
+(()=> {
+ if(window.__bmV35Installed)return;window.__bmV35Installed=true;
+ const $=id=>document.getElementById(id);
+ const isGod=()=>((typeof lobbyMode!=='undefined'&&lobbyMode==='god')||(typeof role!=='undefined'&&(role==='god'||role==='admin')));
+ function openGodChallenge(){
+  if(!isGod()){toast('این گزینه فقط برای گاد است');return}
+  if(!started){toast('ابتدا بازی را شروع کن');return}
+  if(!G||G.ph!=='day'){toast('چالش گرداننده در مرحله بحث روز انجام می‌شود');return}
+  if(G.ch){toast('یک چالش در حال اجراست');return}
+  const title=$('actName'),acts=$('acts');if(!title||!acts)return;
+  title.textContent='⚡ چالش گرداننده — شماره بازیکن را انتخاب کن';
+  acts.innerHTML='<div id="bmGodChallengePicker"></div>';
+  const picker=$('bmGodChallengePicker');
+  seats.forEach((s,i)=>{
+   if(!s||s.d)return;
+   const b=document.createElement('button');b.className='btn gold';
+   b.innerHTML='شماره '+(i+1)+'<small>'+String(s.n||'بازیکن').replace(/[&<>\"]/g,'')+'</small>';
+   b.onclick=()=>godChallengeTarget(i);picker.appendChild(b);
+  });
+  if(!picker.children.length)picker.textContent='بازیکن زنده‌ای برای چالش وجود ندارد';
+  op('ovAct');
+ }
+ function godChallengeTarget(target){
+  if(!isGod()||!started)return;
+  if(G.ph!=='day'){cl('ovAct');toast('چالش گرداننده فقط در بحث روز ممکن است');return}
+  if(G.ch){cl('ovAct');toast('یک چالش در حال اجراست');return}
+  target=Number(target);
+  if(!Number.isInteger(target)||target<0||target>=seats.length||!seats[target]||seats[target].d){toast('شماره انتخاب‌شده معتبر نیست');return}
+  if(!(G.t>0)){toast('زمان این نوبت تمام شده است');return}
+  let challenger=G.cur;
+  if(challenger===target||!seats[challenger]||seats[challenger].d)challenger=seats.findIndex((s,i)=>s&&!s.d&&i!==target);
+  if(challenger<0){toast('بازیکن دیگری برای شروع چالش وجود ندارد');return}
+  G.rem=G.t;G.ch={by:challenger,to:target,st:'ask',god:true};G.t=G.T=10;
+  cl('ovAct');chStep();render();
+ }
+ window.openGodChallenge=openGodChallenge;window.godChallengeTarget=godChallengeTarget;
+ function ensureButton(){
+  const dock=$('dock');if(!dock)return;
+  const old=$('bmGodChallengeBtn');
+  if(!isGod()||!document.body.classList.contains('ingame')||!started){if(old)old.remove();return}
+  if(old&&old.parentElement===dock)return;if(old)old.remove();
+  const b=document.createElement('button');b.id='bmGodChallengeBtn';b.className='ib2';
+  b.innerHTML='⚡<small>چالش گرداننده</small>';b.onclick=openGodChallenge;dock.appendChild(b);
+ }
+ const oldBuild=window.buildDock;
+ if(typeof oldBuild==='function'&&!window.__bmV35BuildDockWrapped){window.__bmV35BuildDockWrapped=true;window.buildDock=function(){const r=oldBuild.apply(this,arguments);ensureButton();return r}}
+ setInterval(ensureButton,500);
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden)ensureButton()});
+})();
+</script>
+<!-- END BLACK MAFIA v35 -->
+
+
+<!-- BLACK MAFIA v36: voice race, God role labels, and hide room ID during gameplay -->
+<style id="bm-v36-final-fix-css">
+/* Keep every shared-room code out of the live game UI, including the recreated footer pill. */
+body.ingame .roomCodeBadge,
+body.ingame .bmRoomPill,
+body.ingame #bmSharedRoomBadge,
+body.ingame .rdCode,
+body.ingame #gFoot #gEqReserve .bmEqRoom{display:none!important;visibility:hidden!important}
+/* Use the existing in-cell role area, rather than putting role text over the player's name. */
+body.ingame #grid .seat .cell .bmGodRole{
+ display:block!important;position:absolute!important;top:auto!important;bottom:22px!important;
+ left:3px!important;right:3px!important;max-width:calc(100% - 6px)!important;
+ z-index:12!important;visibility:visible!important;opacity:1!important;
+ text-align:center!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;
+ padding:2px 3px!important;border:1px solid #d0a54d!important;border-radius:5px!important;
+ background:#080604ed!important;color:#ffe39a!important;font-size:9px!important;font-weight:900!important;
+ line-height:1.25!important;pointer-events:none!important
+}
+body.ingame #grid .seat .cell.roleVisible .av{bottom:25px!important}
+</style>
+<script id="bm-v36-final-fix-js">
+(()=>{
+ if(window.__bmV36FinalFix)return;window.__bmV36FinalFix=true;
+ const $=id=>document.getElementById(id);
+ const isClient=()=>{try{return !!(window.Net&&typeof Net.isClient==='function'&&Net.isClient())}catch(e){return false}};
+ const isGod=()=>!isClient()&&(
+   (typeof lobbyMode!=='undefined'&&lobbyMode==='god')||
+   (typeof role!=='undefined'&&(role==='god'||role==='admin'))
+ );
+ function clearGodTags(){
+   document.querySelectorAll('#grid .bmGodRole').forEach(el=>el.remove());
+   if(isGod())document.querySelectorAll('#grid .bmRoleUnder').forEach(el=>el.remove());
+ }
+ function paintGodRoles(){
+   const game=document.body.classList.contains('ingame');
+   const godView=isGod();
+   if(!game||!godView||typeof started==='undefined'||!started||!Array.isArray(seats)){
+     document.querySelectorAll('#grid .bmGodRole').forEach(el=>el.remove());
+     if(godView)document.querySelectorAll('#grid .bmRoleUnder').forEach(el=>el.remove());
+     return;
+   }
+   seats.forEach((s,i)=>{
+     const seat=$('s'+i),cell=seat&&seat.querySelector('.cell');
+     if(!cell)return;
+     if(!s||!s.r){
+       cell.querySelectorAll('.bmGodRole').forEach(el=>el.remove());
+       return;
+     }
+     // Remove duplicate/legacy labels; the dedicated label below is restricted to the God view.
+     cell.querySelectorAll('.rl:not(.bmGodRole)').forEach(el=>el.remove());
+     let tag=cell.querySelector('.bmGodRole');
+     if(!tag){tag=document.createElement('span');tag.className='rl bmGodRole';cell.appendChild(tag)}
+     cell.classList.add('roleVisible');
+     let val='نقش نامشخص';
+     try{const rr=rn(s);val=(rr&&rr.e?rr.e+' ':'')+(rr&&rr.n?rr.n:'نقش نامشخص')}catch(e){}
+     if(tag.textContent!==val)tag.textContent=val;
+   });
+   document.querySelectorAll('#grid .bmRoleUnder').forEach(el=>el.remove());
+ }
+ const grid=$('grid');
+ if(grid&&window.MutationObserver)new MutationObserver(paintGodRoles).observe(grid,{childList:true,subtree:true});
+ setInterval(paintGodRoles,300);
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden)paintGodRoles()});
+ paintGodRoles();
+})();
+</script>
+
+<!-- Document end moved after all compatibility patches so browser parsing stays valid. -->
+
 
 <!-- BLACK MAFIA v31: clean controls, open moderator entry, clearer friendly-lobby choices -->
 <style id="bm-v31-clean-ui">
@@ -2897,11 +3185,11 @@ button[title], [role="button"][title]{cursor:pointer}button:focus-visible{outlin
   window.__bmSharedGameStartInstalled=true;
   const db=()=>String(window.MAFIA_DB_URL||'').replace(/\/$/,'');
   const originalStart=window.roomStartGame;
-  let entering=false,lastStartedRoom='';
+  let entering=false,lastStartedRoom='',startSeenAt=0,lastReconnectAt=0;
   // Save the start state to the shared room before sending the live voice signal.
   if(typeof originalStart==='function'){
     window.roomStartGame=async function(){
-      const isGod=window.lobbyMode==='god';
+      const isGod=(typeof lobbyMode!=='undefined'&&lobbyMode==='god');
       const code=String(window.MAFIA_ROOM_CODE||'');
       if(isGod&&code&&db()){
         try{
@@ -2916,7 +3204,8 @@ button[title], [role="button"][title]{cursor:pointer}button:focus-visible{outlin
   // the player phone enters as soon as it sees the persistent server state.
   setInterval(async()=>{
     const code=String(window.MAFIA_ROOM_CODE||'');
-    if(!code||window.lobbyMode!=='player'||entering)return;
+    const mode=(typeof lobbyMode!=='undefined'?lobbyMode:window.lobbyMode);
+    if(!code||mode!=='player'||entering)return;
     const lobby=document.getElementById('lobbyRoom');
     if(!lobby||!lobby.classList.contains('on'))return;
     const d=db();if(!d)return;
@@ -2924,11 +3213,18 @@ button[title], [role="button"][title]{cursor:pointer}button:focus-visible{outlin
       const r=await fetch(d+'/roomsV23/'+encodeURIComponent(code)+'.json',{cache:'no-store'});
       if(!r.ok)return;
       const room=await r.json();
-      if(!room||room.status!=='started'||lastStartedRoom===code)return;
-      if(window.Net&&Net.isClient()) {lastStartedRoom=code;return}
-      entering=true;lastStartedRoom=code;
-      try{window.lobbyReady=true;if(window.Net&&typeof Net.enter==='function')Net.enter()}
-      finally{entering=false}
+      if(!room||room.status!=='started'){startSeenAt=0;lastReconnectAt=0;lastStartedRoom='';return}
+      if(lastStartedRoom===code)return;
+      if(!startSeenAt)startSeenAt=Date.now();
+      const snap=window.Net&&typeof Net.snapshot==='function'?Net.snapshot():null;
+      if(snap&&snap.st){lastStartedRoom=code;return}
+      // Ask the host to resend a fresh game snapshot over the existing data channel.
+      // Do not tear down a working connection just because one snapshot was missed.
+      if(Date.now()-startSeenAt>1500&&Date.now()-lastReconnectAt>2000&&window.Voice&&typeof Voice.broadcast==='function'){
+        lastReconnectAt=Date.now();
+        try{Voice.broadcast({t:'sync'})}catch(re){}
+      }
+      return;
     }catch(e){}
   },1200);
 })();
@@ -2994,7 +3290,7 @@ button[title], [role="button"][title]{cursor:pointer}button:focus-visible{outlin
  if(acts&&timer&&timer.parentElement!==acts)acts.insertBefore(timer,deck?deck.nextSibling:mic?.nextSibling||null);
  if(acts&&chat&&chat.parentElement!==acts)acts.insertBefore(chat,timer?timer.nextSibling:deck?.nextSibling||null);
  function syncRole(){
-   const god=window.lobbyMode==='god';
+   const god=(typeof lobbyMode!=='undefined'&&lobbyMode==='god');
    if(start){start.style.display=god?'inline-flex':'none';start.textContent='🎭 شروع بازی';start.disabled=false}
    if(ready)ready.style.display='none';
    if(typeof lobbyReady!=='undefined'&&!god)lobbyReady=true;
@@ -3004,7 +3300,7 @@ button[title], [role="button"][title]{cursor:pointer}button:focus-visible{outlin
  const oldStart=window.roomStartGame;
  if(typeof oldStart==='function'&&!window.__bmGodOnlyStart){
    window.__bmGodOnlyStart=true;
-   window.roomStartGame=function(){if(window.lobbyMode!=='god'){try{toast('فقط گردانندهٔ اتاق می‌تواند بازی را شروع کند.')}catch(e){}return false}return oldStart.apply(this,arguments)}
+   window.roomStartGame=function(){if(!(typeof lobbyMode!=='undefined'&&lobbyMode==='god')){try{toast('فقط گردانندهٔ اتاق می‌تواند بازی را شروع کند.')}catch(e){}return false}return oldStart.apply(this,arguments)}
  }
  syncRole();
  const watch=new MutationObserver(syncRole);
@@ -3055,7 +3351,7 @@ button[title], [role="button"][title]{cursor:pointer}button:focus-visible{outlin
  const oldRoomStart=window.roomStartGame;
  if(typeof oldRoomStart==='function'){
    window.roomStartGame=function(){
-     if(window.lobbyMode!=='god'){
+     if(!(typeof lobbyMode!=='undefined'&&lobbyMode==='god')){
        try{toast('فقط گردانندهٔ اتاق می‌تواند بازی را شروع کند.')}catch(e){}
        return false;
      }
@@ -3083,7 +3379,7 @@ button[title], [role="button"][title]{cursor:pointer}button:focus-visible{outlin
 <!-- BLACK MAFIA: one shared waiting lobby and one room ID across devices -->
 <style id="bm-one-lobby-style">
 #bmSharedRoomBadge{display:none;position:fixed;top:calc(env(safe-area-inset-top,0px) + 5px);left:50%;transform:translateX(-50%);z-index:20010;padding:4px 11px;border:1px solid #d8ad50;border-radius:12px;background:#100904ed;color:#ffe6a0;font:800 11px/1.3 sans-serif;letter-spacing:1px;direction:rtl;box-shadow:0 3px 12px #0008;pointer-events:none;white-space:nowrap}
-body.ingame #bmSharedRoomBadge{display:block}
+#bmSharedRoomBadge,body.ingame #bmSharedRoomBadge{display:none!important}
 #lobbyRoom.bm-start-wait .roomActions #roomStartBtn{opacity:.55;pointer-events:none}
 #lobbyRoom.bm-start-wait .roomActions #readyBtn{display:none!important}
 </style>
@@ -3099,7 +3395,7 @@ body.ingame #bmSharedRoomBadge{display:block}
    const c=code(),b=$('bmSharedRoomBadge');
    if(!b)return;
    b.textContent=c?'شناسه مشترک اتاق: #'+c:'';
-   b.style.display=c&&document.body.classList.contains('ingame')?'block':'none';
+   b.style.display='none';
  }
  function keepWaitingRoom(){
    const c=code(),room=$('lobbyRoom');
@@ -3123,13 +3419,13 @@ body.ingame #bmSharedRoomBadge{display:block}
  if(window.Net&&typeof Net.enter==='function'&&!window.__bmNetEnterWrapped){
    window.__bmNetEnterWrapped=true;
    const enter=Net.enter;
-   Net.enter=function(){const r=enter.apply(this,arguments);if(code())keepWaitingRoom();return r};
+   Net.enter=function(){const r=enter.apply(this,arguments);if(code())leaveWaitingRoom();return r};
  }
  const priorStart=window.roomStartGame;
  if(typeof priorStart==='function'&&!window.__bmOneLobbyStartWrapped){
    window.__bmOneLobbyStartWrapped=true;
    window.roomStartGame=function(){
-     const isGod=window.lobbyMode==='god',c=code();
+     const isGod=(typeof lobbyMode!=='undefined'&&lobbyMode==='god'),c=code();
      if(!isGod||!c)return priorStart.apply(this,arguments);
      const start=$('roomStartBtn');
      if(start){start.disabled=true;start.textContent='⏳ در حال راه‌اندازی بازی…'}
@@ -3146,14 +3442,351 @@ body.ingame #bmSharedRoomBadge{display:block}
    if(!document.body.classList.contains('ingame')){paintBadge();return}
    let live=false;
    try{
-     if(window.lobbyMode==='god')live=typeof started!=='undefined'&&!!started;
+     if((typeof lobbyMode!=='undefined'&&lobbyMode==='god'))live=typeof started!=='undefined'&&!!started;
      else if(window.Net&&typeof Net.snapshot==='function'){const snap=Net.snapshot();live=!!(snap&&snap.st)}
    }catch(e){}
    if(live)leaveWaitingRoom();
-   else if(window.lobbyMode==='player'&&window.Net&&Net.isClient()&&!$('lobbyRoom')?.classList.contains('on'))keepWaitingRoom();
+   // Do not hide the waiting lobby merely because Net.enter() ran; wait for a real snapshot.
    paintBadge();
  },250);
  document.addEventListener('visibilitychange',()=>{if(!document.hidden)paintBadge()});
  paintBadge();
 })();
 </script>
+
+
+<!-- BLACK MAFIA FINAL FIX: host-only start and include data-connected players -->
+<style id="bm-start-sync-fix-css">
+#lobbyRoom .roomActions #roomStartBtn.bm-player-hidden{display:none!important}
+#lobbyRoom .roomActions #readyBtn{display:none!important}
+</style>
+<script id="bm-start-sync-fix-js">
+(()=>{
+ const $=id=>document.getElementById(id);
+ const isGod=()=>typeof lobbyMode!=='undefined'&&lobbyMode==='god';
+ function syncStartButton(){
+   const b=$('roomStartBtn');if(!b)return;
+   b.classList.toggle('bm-player-hidden',!isGod());
+   b.style.display=isGod()?'inline-flex':'none';
+   if(!isGod()){b.disabled=true;b.setAttribute('aria-hidden','true')}
+   else{
+     b.removeAttribute('aria-hidden');
+     const busy=!!window.__bmStartLocked||b.textContent.includes('در حال')||b.textContent.includes('در انتظار')||
+       (typeof started!=='undefined'&&!!started)||(typeof G!=='undefined'&&!!G.loading);
+     b.disabled=!!busy;
+     if(!busy)b.textContent='🎭 شروع بازی';
+   }
+   const r=$('readyBtn');if(r)r.style.display='none';
+ }
+ const previous=window.roomStartGame;
+ // This final guard uses the actual lexical game mode; older patches checked window.lobbyMode,
+ // which is not the same variable and could block the host or expose the button to players.
+ window.roomStartGame=function(){
+   if(!isGod()){try{toast('فقط گاد اتاق می‌تواند بازی را شروع کند.')}catch(e){}syncStartButton();return false}
+   if(window.__bmStartLocked||((typeof started!=='undefined')&&started)||((typeof G!=='undefined')&&G.loading))return false;
+   window.__bmStartLocked=true;
+   setTimeout(()=>{
+     if(!((typeof started!=='undefined')&&started)){
+       window.__bmStartLocked=false;
+       const btn=$('roomStartBtn');if(btn){btn.disabled=false;btn.style.pointerEvents='';btn.textContent='🎭 شروع بازی'}
+     }
+   },12000);
+   const b=$('roomStartBtn');if(b){b.disabled=true;b.style.pointerEvents='none';b.textContent='⏳ در حال اتصال بازیکنان…'}
+   // Give the shared PeerJS data channels time to settle; broadcasts now include open data
+   // channels even when an audio stream has not become live yet.
+   try{if(window.Voice&&Voice.active())Voice.broadcast({t:'go'})}catch(e){}
+   // Call the game-start implementation captured before the stale UI guards.
+   let result;
+   try{
+     if(typeof __bmOriginalStartGame==='function')result=__bmOriginalStartGame();
+     else if(typeof previous==='function')result=previous.apply(this,arguments);
+   }catch(e){console.error(e);if(b){b.disabled=false;b.textContent='🎭 شروع بازی'}return false}
+   setTimeout(()=>{
+     try{
+       if(typeof started!=='undefined'&&!started&&typeof G!=='undefined'&&!G.loading&&typeof window.launch==='function')window.launch(0);
+       if(window.Net&&typeof Net.hostStart==='function')Net.hostStart();
+     }catch(e){console.error(e)}
+   },700);
+   return result;
+ };
+ // Capture a direct reference to the pre-guard room start implementation.
+ // It performs the host transition without going through the broken window.lobbyMode check.
+ if(!window.__bmOriginalStartGame){
+   try{
+     const candidates=[previous];
+     window.__bmOriginalStartGame=candidates.find(f=>typeof f==='function'&&String(f).includes('Voice.broadcast'))||null;
+   }catch(e){window.__bmOriginalStartGame=null}
+ }
+ syncStartButton();
+ const room=$('lobbyRoom');
+ if(room)new MutationObserver(syncStartButton).observe(room,{attributes:true,attributeFilter:['class']});
+ setInterval(syncStartButton,500);
+})();
+</script>
+
+<!-- BLACK MAFIA: Firebase fallback transport for game state and player actions -->
+<script id="bm-firebase-game-transport">
+(()=> {
+ if(window.__bmFirebaseGameTransport)return;
+ window.__bmFirebaseGameTransport=true;
+ const db=()=>String(window.MAFIA_DB_URL||'').replace(/\/$/,'');
+ const code=()=>String(window.MAFIA_ROOM_CODE||'').replace(/\D/g,'').slice(0,5);
+ const myUid=()=>{try{return localStorage.getItem('mafia_uid')||''}catch(e){return ''}};
+ let rosterBusy=false,publishBusy=false,actionBusy=false,pollTimer=null;
+ const url=(path)=>db()+'/roomsV23/'+encodeURIComponent(code())+'/'+path+'.json';
+ async function get(path){const r=await fetch(url(path),{cache:'no-store'});if(!r.ok)throw Error('HTTP '+r.status);return r.json()}
+ async function put(path,data,method='PUT'){const r=await fetch(url(path),{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(data),cache:'no-store'});if(!r.ok)throw Error('HTTP '+r.status);return r}
+ async function livePlayers(){
+  const data=await get('players')||{},now=Date.now(),self=myUid();
+  return Object.entries(data).map(([id,p])=>({...p,uid:p&&p.uid||id}))
+   .filter(p=>p&&p.uid&&p.uid!==self&&p.role!=='god'&&now-(Number(p.at||p.t||p.updatedAt)||now)<18000)
+   .sort((a,b)=>String(a.uid).localeCompare(String(b.uid))).slice(0,Math.max(1,Number(N)||10));
+ }
+ async function prepareHostSeats(){
+  if(rosterBusy)return false;rosterBusy=true;
+  try{
+   const ps=await livePlayers();
+   if(!ps.length){try{toast('بازیکن دیگری در سرور اتاق ثبت نشده؛ گوشی دوم باید با همین کد در همین اتاق آنلاین باشد.')}catch(e){}return false}
+   const total=Math.max(1,Number(N)||10),next=[];
+   ps.forEach((p,i)=>{
+    const seed=Math.max(1,Math.min(12,Number(p.seed||p.avatarSeed)||1));
+    const seat=mk(i,false);
+    seat.uid=String(p.uid);seat.n=String(p.n||p.name||'بازیکن').replace(/[<>&"'\x60\\]/g,'').slice(0,18)||'بازیکن';
+    seat.id=seed;seat.f=(seed%3===0);seat.b=false;seat.w=0;seat.pc=0;
+    seat.hv=(window.Voice&&typeof Voice.slotByUid==='function')?Voice.slotByUid(seat.uid):0;
+    next.push(seat);
+   });
+   while(next.length<total)next.push(nbot());
+   seats=next.slice(0,total);
+   return true;
+  }catch(e){console.error('Firebase roster error',e);try{toast('فهرست بازیکنان از سرور خوانده نشد؛ اتصال اتاق را بررسی کن.')}catch(_){}return false}
+  finally{rosterBusy=false}
+ }
+ const originalLaunch=window.launch;
+ if(typeof originalLaunch==='function'&&!window.__bmFirebaseLaunchWrapped){
+  window.__bmFirebaseLaunchWrapped=true;
+  window.launch=function(){
+   const args=arguments;
+   if(!(typeof role!=='undefined'&&role==='god'&&window.MAFIA_ROOM_ONLINE&&code()&&db()))return originalLaunch.apply(this,args);
+   if(window.__bmFirebaseLaunchPending)return false;
+   window.__bmFirebaseLaunchPending=true;
+   prepareHostSeats().then(ok=>{
+    window.__bmFirebaseLaunchPending=false;
+    if(!ok)return;
+    originalLaunch.apply(this,args);
+   }).catch(e=>{window.__bmFirebaseLaunchPending=false;console.error(e)});
+   return false;
+  };
+ }
+ async function publishSnapshots(){
+  if(publishBusy||!(typeof role!=='undefined'&&role==='god')||!started||!code()||!db()||!window.Net||typeof Net.snapshotForUid!=='function')return;
+  publishBusy=true;
+  try{
+   const map={};
+   seats.forEach(s=>{if(s&&s.uid&&!s.b){const snap=Net.snapshotForUid(s.uid);if(snap)map[s.uid]=snap}});
+   if(Object.keys(map).length)await put('gameSnapshots',map,'PUT');
+  }catch(e){console.warn('Snapshot sync failed',e)}
+  finally{publishBusy=false}
+ }
+ async function handleActions(){
+  if(actionBusy||!(typeof role!=='undefined'&&role==='god')||!started||!code()||!db()||!window.Net||typeof Net.remoteAction!=='function')return;
+  actionBusy=true;
+  try{
+   const rows=await get('gameActions')||{};
+   for(const [id,a] of Object.entries(rows).slice(0,20)){
+    try{if(a&&typeof a.uid==='string')Net.remoteAction(a.uid,a)}catch(e){console.error(e)}
+    try{await put('gameActions/'+encodeURIComponent(id),null,'DELETE')}catch(e){}
+   }
+  }catch(e){console.warn('Action sync failed',e)}
+  finally{actionBusy=false}
+ }
+ async function pollClient(){
+  const c=code(),mode=(typeof lobbyMode!=='undefined'?lobbyMode:window.lobbyMode);
+  if(!c||mode!=='player'||!db())return;
+  const roomEl=document.getElementById('lobbyRoom'),waiting=!!(roomEl&&roomEl.classList.contains('on'));
+  const inGame=document.body.classList.contains('ingame');
+  if(!waiting&&!inGame)return;
+  try{
+   const room=await (async()=>{const r=await fetch(db()+'/roomsV23/'+encodeURIComponent(c)+'.json',{cache:'no-store'});if(!r.ok)throw Error('room');return r.json()})();
+   if(!room||room.status!=='started')return;
+   const uid=myUid();if(!uid)return;
+   const r=await fetch(url('gameSnapshots/'+encodeURIComponent(uid)),{cache:'no-store'});
+   if(r.ok){
+    const snap=await r.json();
+    if(snap&&snap.t==='st'&&window.Net&&typeof Net.applySnapshot==='function'){
+     Net.applySnapshot(snap);
+     if(snap.st)return;
+    }
+   }
+   // Move the player into the game screen when the shared God-start arrives, even if the
+   // WebRTC channel failed. The screen remains waiting until the personalized snapshot arrives.
+   if(waiting&&window.Net&&typeof Net.enter==='function'&&!(Net.isClient&&Net.isClient()))Net.enter();
+   try{if(window.Voice&&Voice.active()&&typeof Voice.broadcast==='function')Voice.broadcast({t:'sync'})}catch(e){}
+  }catch(e){/* transient network failures are retried on the next poll */}
+ }
+ async function transportTick(){
+  try{await Promise.allSettled([publishSnapshots(),handleActions(),pollClient()])}
+  finally{pollTimer=setTimeout(transportTick,1200)}
+ }
+ pollTimer=setTimeout(transportTick,0);
+})();
+</script>
+
+
+<!-- BLACK MAFIA v33: voice/role/turn/equalizer reliability -->
+<style id="bm-v33-final-style">
+body.ingame #gFoot #gEqReserve{
+ display:flex!important;flex-direction:column!important;align-items:stretch!important;justify-content:space-between!important;
+ gap:3px!important;padding:5px 7px!important;min-width:0!important;overflow:hidden!important;
+ background:linear-gradient(145deg,#130d06,#030303 72%)!important;border:2px solid #a77a25!important;
+ box-shadow:inset 0 0 15px #000,0 0 13px #d9a83b22!important;
+}
+body.ingame #gFoot #gEqReserve>*{display:flex!important;visibility:visible!important;animation:none!important}
+.bmEqRoom{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:5px!important;
+ color:#f4d98b!important;font-weight:900!important;font-size:10px!important;line-height:1.1!important;min-height:13px!important}
+.bmEqRoom .bmRoomPill{direction:ltr!important;letter-spacing:2px!important;color:#eec45b!important}
+.bmEqBars{flex:1 1 auto!important;min-height:20px!important;width:100%!important;align-items:center!important;justify-content:center!important;
+ gap:3px!important;overflow:hidden!important}
+.bmEqBars i{display:block!important;flex:0 0 4px!important;height:4px!important;max-height:28px!important;border-radius:3px!important;
+ background:linear-gradient(180deg,#fff4b0 0%,#e0b255 48%,#8a5b16 100%)!important;box-shadow:0 0 5px #e0b25566!important;opacity:.55!important}
+.bmEqBars.on i{opacity:1!important;animation:bmEqGold 380ms ease-in-out infinite alternate!important}
+.bmEqBars.on i:nth-child(3n){animation-duration:260ms!important}
+.bmEqBars.on i:nth-child(2n){animation-duration:520ms!important}
+.bmEqBars.on i:nth-child(4n){animation-duration:330ms!important}
+@keyframes bmEqGold{from{height:4px;filter:brightness(.8)}to{height:27px;filter:brightness(1.35)}}
+.bmReact{display:flex!important;align-items:center!important;justify-content:center!important;gap:6px!important;min-height:30px!important}
+.bmReact button{display:inline-flex!important;align-items:center!important;justify-content:center!important;flex:1 1 0!important;min-width:0!important;
+ height:28px!important;min-height:28px!important;padding:2px 5px!important;border:1px solid #a77a25!important;border-radius:7px!important;
+ background:linear-gradient(#201507,#070503)!important;color:#f5d985!important;font-size:16px!important;line-height:1!important}
+.bmReact button:active{transform:scale(.94)}
+.bmRoleUnder{display:block!important;position:absolute!important;top:calc(100% + 2px)!important;left:0!important;right:0!important;width:100%!important;min-height:15px!important;margin:0!important;padding:1px 2px!important;text-align:center!important;color:#f4d27a!important;background:linear-gradient(90deg,#070604,#211707,#070604)!important;border:1px solid #856323!important;border-radius:4px!important;font-size:9px!important;font-weight:900!important;line-height:1.2!important;overflow-wrap:anywhere!important;text-shadow:0 1px 3px #000!important;z-index:8!important;pointer-events:none!important}
+#bmNightResultsPanel{position:fixed;top:calc(52px + env(safe-area-inset-top));left:8px;right:8px;max-width:500px;margin:0 auto;
+ z-index:10020;max-height:32vh;overflow:auto;padding:10px 12px;border:1.5px solid #d9ad4d;border-radius:12px;
+ background:linear-gradient(145deg,#191006f7,#050403f7);color:#f6e8c5;box-shadow:0 10px 28px #000b;font-size:12px;line-height:1.7}
+#bmNightResultsPanel .bmNightHead{display:flex;align-items:center;justify-content:space-between;gap:10px;color:#f2ce6b;font-weight:900;font-size:13px}
+#bmNightResultsPanel button{background:#090603;border:1px solid #98702a;border-radius:6px;color:#f6dd91;padding:3px 8px;font-weight:900}
+#bmNightResultsPanel .bmNightLine{padding:3px 0;border-bottom:1px solid #80602b44;overflow-wrap:anywhere}
+@media(max-width:380px){.bmEqBars{gap:2px!important}.bmEqBars i{flex-basis:3px!important}.bmReact{gap:4px!important}.bmReact button{font-size:14px!important}}
+</style>
+<script id="bm-v33-final-script">
+(()=>{
+ const $=id=>document.getElementById(id);
+ let roleRevealed=false,lastPhase=null,nightSeen='';
+ const client=()=>!!(window.Net&&typeof Net.isClient==='function'&&Net.isClient());
+ const god=()=>!client()&&(((typeof lobbyMode!=='undefined')&&lobbyMode==='god')||(typeof role!=='undefined'&&(role==='god'||role==='admin')));
+ const safeRole=s=>{try{const r=rn(s||{});return (r&&r.e?r.e+' ':'')+(r&&r.n?r.n:'نقش نامشخص')}catch(e){return 'نقش نامشخص'}};
+ const getTurn=d=>{
+  let i=-1,phase=d?d.ph:(typeof G!=='undefined'?G.ph:null),ch=d?d.ch:(typeof G!=='undefined'?G.ch:null);
+  if(!phase)return null;
+  if(phase==='day')i=ch?(ch.st==='ask'?ch.by:ch.to):(d?d.cur:G.cur);
+  else if(phase==='defense'||phase==='revote')i=d?d.acc:G.acc;
+  else if(phase==='vote'){const cand=d&&Array.isArray(d.cand)?d.cand:(typeof G!=='undefined'?G.cand:null);const vi=d?d.vi:G.vi;i=cand&&cand[vi]!=null?cand[vi]:-1}
+  if(i<0)return null;
+  const seatsNow=d?d.seats:seats,s=seatsNow&&seatsNow[i];if(!s)return null;
+  return {s,i,isMe:!!(d&&i===d.my),isGod:false,phase};
+ };
+ function speakerInfo(){
+  try{
+   if(client()){
+    const d=Net.snapshot();if(d&&d.st){const turn=getTurn(d);if(turn)return turn;
+     const i=(d.seats||[]).findIndex(s=>s&&s.sp);if(i>=0)return {s:d.seats[i],i,isMe:i===d.my,isGod:false,phase:d.ph};}
+    const gi=window.Voice&&Voice.godInfo?Voice.godInfo():null;if(gi&&gi.sp)return{s:gi,i:-1,isMe:!!gi.me,isGod:true,phase:d&&d.ph};
+    return null;
+   }
+   if(typeof started!=='undefined'&&started){const turn=getTurn(null);if(turn)return turn;
+    const i=Array.isArray(seats)?seats.findIndex(s=>s&&s.sp):-1;if(i>=0)return{s:seats[i],i,isMe:i===0,isGod:false,phase:G.ph};}
+   const gi=window.Voice&&Voice.godInfo?Voice.godInfo():null;if(gi&&gi.sp)return{s:gi,i:-1,isMe:!!gi.me,isGod:true,phase:typeof G!=='undefined'?G.ph:null};
+  }catch(e){}
+  return null;
+ }
+ function drawFooter(){
+  if(!document.body.classList.contains('ingame'))return;
+  const bay=$('gEqReserve'),img=$('gMeAv'),name=$('gMeName');if(!bay)return;
+  if(!bay.querySelector('.bmEqRoom')){
+   bay.innerHTML='';
+   const room=document.createElement('div');room.className='bmEqRoom';
+   const label=document.createElement('span');label.textContent='شماره اتاق';
+   const code=document.createElement('span');code.className='bmRoomPill';
+   room.append(label,code);
+   const bars=document.createElement('div');bars.className='bmEqBars';bars.setAttribute('aria-label','اکولایزر صدا');
+   for(let i=0;i<13;i++){const bar=document.createElement('i');bars.appendChild(bar)}
+   const reactions=document.createElement('div');reactions.className='bmReact';
+   const add=(label,aria,fn)=>{const b=document.createElement('button');b.textContent=label;b.setAttribute('aria-label',aria);b.onclick=fn;reactions.appendChild(b)};
+   add('👍','لایک به صحبت',()=>{try{window.rx('👍')}catch(e){}});
+   add('👎','دیسلایک به صحبت',()=>{try{window.rx('👎')}catch(e){}});
+   add('🎭','استیکرها',()=>{try{openEmo()}catch(e){toast('استیکرها در دسترس نیستند')}});
+   bay.append(room,bars,reactions);
+  }
+  const code=bay.querySelector('.bmRoomPill');
+  const roomCode=String(window.MAFIA_ROOM_CODE||window.MAFIA_ROOM_META?.code||'').replace(/[^\d]/g,'').slice(0,5);
+  if(code)code.textContent=roomCode||'—';
+  const reacts=bay.querySelector('.bmReact');
+  if(reacts){const d=client()?Net.snapshot():null;const allowReact=!!(d&&d.st&&!Net.canSpeak());reacts.style.display=allowReact?'flex':'none'}
+  const bar=bay.querySelector('.bmEqBars');let active=false;
+  try{
+   if(Voice&&Voice.active&&Voice.active()){
+    const own=Voice.mySlot&&Voice.mySlot();if(own&&Voice.speakingOf(own))active=true;
+    if(!active&&Array.isArray(seats))active=seats.some(s=>s&&((s.hv&&Voice.speakingOf(s.hv))||(s.uid&&Voice.byUid(s.uid)?.sp)));
+    const d=client()?Net.snapshot():null;
+    if(!active&&d&&Array.isArray(d.seats))active=d.seats.some(s=>s&&(s.sp||(s.hv&&Voice.speakingOf(s.hv))||(s.uid&&Voice.byUid(s.uid)?.sp)));
+    const gi=Voice.godInfo&&Voice.godInfo();if(!active&&gi&&gi.sp)active=true;
+   }
+  }catch(e){}
+  if(bar)bar.classList.toggle('on',active);
+  const info=speakerInfo();if(!img||!name)return;
+  if(!info){if(img.dataset.bmKey!==''){img.innerHTML='';img.dataset.bmKey=''}name.textContent='';name.style.display='none';img.style.borderColor='#c9972f';return}
+  const s=info.s||{},seed=s.id||s.seed||1,isMe=!!info.isMe&&!!S.photo;
+  const key=(info.isGod?'god':'player')+'|'+info.i+'|'+seed+'|'+(s.f?1:0)+'|'+(isMe?'me-photo':'');
+  if(img.dataset.bmKey!==key){img.innerHTML=isMe?'<div class="avi avme"></div>':avatar(seed,!!s.f,false);img.dataset.bmKey=key}
+  const nextName=(s.n||'بازیکن')+(info.phase==='day'||info.phase==='defense'?' · نوبت صحبت':' · نوبت فعال');if(name.textContent!==nextName)name.textContent=nextName;if(name.style.display!=='block')name.style.display='block';const nextBorder=active?'rgb(224, 178, 85)':'rgb(201, 151, 47)';if(img.style.borderColor!==nextBorder)img.style.borderColor=nextBorder;
+ }
+ function decorateSeats(){
+  if(!document.body.classList.contains('ingame'))return;
+  const clientView=client(),isGod=god();
+  if(clientView){
+   document.querySelectorAll('#grid .rl').forEach(el=>el.remove());
+   const d=Net.snapshot();
+   document.querySelectorAll('#grid .bmRoleUnder').forEach(el=>{if(!d||!el.closest('#s'+d.my))el.remove()});
+   const s=d&&d.seats&&d.seats[d.my];
+   if(s&&s.ro){const seat=$('s'+d.my),cell=seat&&seat.querySelector('.cell');if(cell){let tag=cell.querySelector('.bmRoleUnder');if(!tag){tag=document.createElement('div');tag.className='bmRoleUnder';cell.appendChild(tag)}const val=safeRole(s.ro);if(tag.textContent!==val)tag.textContent=val}}
+  }else if(isGod&&typeof started!=='undefined'&&started&&Array.isArray(seats)){
+   seats.forEach((s,i)=>{const seat=$('s'+i),cell=seat&&seat.querySelector('.cell');if(!cell)return;
+    let tag=cell.querySelector('.bmRoleUnder');if(!s||!s.r){if(tag)tag.remove();return}
+    if(!tag){tag=document.createElement('div');tag.className='bmRoleUnder';cell.appendChild(tag)}
+    const val=safeRole(s);if(tag.textContent!==val)tag.textContent=val;
+   });
+  }else document.querySelectorAll('#grid .bmRoleUnder').forEach(el=>el.remove());
+ }
+ const originalTap=window.Net&&Net.tap;
+ if(originalTap&&!originalTap.__bmRoleTap){
+  const wrappedTap=function(i){
+   try{if(client()){const d=Net.snapshot();if(d&&d.st&&i===d.my){const m=d.seats&&d.seats[d.my];
+     if(m&&m.ro){roleRevealed=true;revealCard({r:m.ro.r,gf:!!m.ro.gf,ng:!!m.ro.ng,conv:!!m.ro.conv});decorateSeats()}
+     else toast('نقش هنوز دریافت نشده است؛ پس از شروع بازی دوباره بزنید');return}}}catch(e){}
+   return originalTap.call(this,i);
+  };
+  wrappedTap.__bmRoleTap=true;Net.tap=wrappedTap;
+ }
+ function showNightResults(){
+  if(!god()||!Array.isArray(logs))return;
+  const key=String(window.MAFIA_ROOM_CODE||'local')+'|'+logs.length+'|'+(G&&G.nn||0);if(key===nightSeen)return;nightSeen=key;
+  let panel=$('bmNightResultsPanel');if(!panel){panel=document.createElement('div');panel.id='bmNightResultsPanel';document.body.appendChild(panel)}
+  panel.innerHTML='';const head=document.createElement('div');head.className='bmNightHead';
+  const title=document.createElement('span');title.textContent='🌙 نتایج شب — فقط گاد';const close=document.createElement('button');close.textContent='بستن';close.onclick=()=>panel.remove();head.append(title,close);panel.appendChild(head);
+  const rows=logs.slice(-9);if(!rows.length){const x=document.createElement('div');x.textContent='نتیجه‌ای ثبت نشده است';panel.appendChild(x)}
+  rows.forEach(t=>{const line=document.createElement('div');line.className='bmNightLine';line.textContent=String(t);panel.appendChild(line)});
+  panel.style.display='block';clearTimeout(panel.__hideTimer);panel.__hideTimer=setTimeout(()=>{if(panel.isConnected)panel.remove()},14000);
+ }
+ function poll(){
+  try{if(lastPhase==='night'&&typeof G!=='undefined'&&G.ph==='day'&&god())showNightResults();
+   lastPhase=typeof G!=='undefined'?G.ph:null;drawFooter();decorateSeats();if(!god()){const p=$('bmNightResultsPanel');if(p)p.remove()}
+  }catch(e){}
+ }
+ const obs=new MutationObserver(()=>{decorateSeats()});const grid=$('grid');if(grid)obs.observe(grid,{subtree:true,childList:true});
+ /* Removed body-wide childList observer: it caused self-triggering DOM mutation loops. */
+ setInterval(poll,450);document.addEventListener('visibilitychange',()=>{if(!document.hidden)poll()});
+})();
+</script>
+<!-- END BLACK MAFIA v33 -->
+</body>
+</html>
