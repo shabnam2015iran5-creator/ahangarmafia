@@ -775,6 +775,20 @@ const Voice=(()=>{
   else if(d.t==='rdy'){r.ready=!!d.v;refresh()}
   else if(typeof H[d.t]==='function'&&(d.t==='act'||d.t==='sync'||r.role==='god')){H[d.t](s,d)}});
  }
+ function unlockRemoteAudio(){
+  // Android/embedded browsers may block autoplay until a real tap. Retry from the
+  // actual user gesture instead of exhausting the 14-second retry window.
+  try{if(ctx&&ctx.state==='suspended')ctx.resume().catch(()=>{})}catch(e){}
+  Object.values(R).forEach(r=>{
+   const a=r&&r.audio;
+   if(a&&r.stream&&a.isConnected){
+    try{const p=a.play();if(p&&typeof p.then==='function')p.then(()=>{r.audioPlaying=true;refresh()}).catch(()=>{})}catch(e){}
+   }
+  });
+ }
+ document.addEventListener('pointerdown',unlockRemoteAudio,{capture:true,passive:true});
+ document.addEventListener('touchstart',unlockRemoteAudio,{capture:true,passive:true});
+ document.addEventListener('keydown',unlockRemoteAudio,{capture:true});
  function playRemote(r,st){
   // Replace any stale player before binding the newest remote stream.
   clearTimeout(r.playRetry);r.playRetry=null;
@@ -2845,11 +2859,17 @@ window.APP_VERSION='27.0';
   if(actionBusy||!(typeof role!=='undefined'&&role==='god')||!started||!code()||!db()||!window.Net||typeof Net.remoteAction!=='function')return;
   actionBusy=true;
   try{
-   const rows=await get('gameActions')||{};
-   for(const [id,a] of Object.entries(rows).slice(0,20)){
+   const rows=await get('gameActions')||{},entries=Object.entries(rows).slice(0,100);
+   if(!entries.length)return;
+   const ack={};
+   // Apply the whole batch immediately, then acknowledge it with ONE PATCH.
+   // The old loop awaited a separate network round-trip for every action, so a
+   // burst of taps could build a queue and make commands appear many seconds late.
+   for(const [id,a] of entries){
     try{if(a&&typeof a.uid==='string')Net.remoteAction(a.uid,a)}catch(e){console.error(e)}
-    try{await put('gameActions/'+encodeURIComponent(id),null,'DELETE')}catch(e){}
+    ack[encodeURIComponent(id)]=null;
    }
+   try{await put('gameActions',ack,'PATCH')}catch(e){console.warn('Action batch acknowledgement failed',e)}
   }catch(e){console.warn('Action sync failed',e)}
   finally{actionBusy=false}
  }
