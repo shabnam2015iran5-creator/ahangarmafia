@@ -469,7 +469,7 @@ function dlg(v){
 }
 
 /* ---------- ui ---------- */
-function showRole(i){const s=seats[i];if(!s||!s.r)return false;return s.rev||isG()||(role=='player'&&(i==0||me().d||(me().r=='m'&&s.r=='m')))}
+function showRole(i){const s=seats[i];if(!s||!s.r)return false;return role==='god'||role==='admin'||s.rev||isG()||(role=='player'&&(i==0||me().d||(me().r=='m'&&s.r=='m')))}
 function bh(s){if(!s.bt||Date.now()>s.bx)return'';const n=s.bn;s.bn=false;return `<div class="bub${s.bm?' mod':''}${n?' new':''}">${s.bt}</div>`}
 function stc(s,i,vp,rp,spk){let h='';if(s.m)h+='<span>🔇</span>';if(s.v)h+='<span>🎤</span>';if(s.w)h+=`<span>⚠️${s.w>1?'×'+s.w:''}</span>`;if(spk==i)h+='<span>🎙</span>';
  if(vp){if(s.hand)h+=`<span>✋</span><b>→${G.v[i]!=null?G.v[i]+1:''}</b>`;else if(!s.d)h+='<span>⏳</span>';if(s.cnt)h+=`<b>🗳${s.cnt}</b>`}
@@ -958,6 +958,15 @@ const Voice=(()=>{
   attemptPlay();st.getTracks().forEach(t=>t.addEventListener('ended',()=>{r.audioPlaying=false},{once:true}));
   try{const n=ctx.createAnalyser();n.fftSize=256;ctx.createMediaStreamSource(st).connect(n);r.an=n;r.buf=new Uint8Array(n.frequencyBinCount)}catch(e){}
  }
+ // Mobile browsers may block remote audio until a real user gesture. Resume audio and retry all received streams on tap.
+ function unlockRemoteAudio(){
+  try{if(ctx&&ctx.state==='suspended')ctx.resume()}catch(e){}
+  Object.values(R).forEach(r=>{if(r&&r.audio&&r.audio.paused){try{const p=r.audio.play();if(p&&p.then)p.then(()=>{r.audioPlaying=true;refresh()}).catch(()=>{})}catch(e){}}});
+ }
+ document.addEventListener('pointerdown',unlockRemoteAudio,{passive:true});
+ document.addEventListener('touchstart',unlockRemoteAudio,{passive:true});
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden)unlockRemoteAudio()});
+
  function drop(s,quiet){
   const r=R[s];if(!r)return;delete R[s];
   try{r.call&&r.call.close()}catch(e){}try{r.conn&&r.conn.close()}catch(e){}
@@ -3283,7 +3292,7 @@ button[title], [role="button"][title]{cursor:pointer}button:focus-visible{outlin
 <!-- BLACK MAFIA: one shared waiting lobby and one room ID across devices -->
 <style id="bm-one-lobby-style">
 #bmSharedRoomBadge{display:none;position:fixed;top:calc(env(safe-area-inset-top,0px) + 5px);left:50%;transform:translateX(-50%);z-index:20010;padding:4px 11px;border:1px solid #d8ad50;border-radius:12px;background:#100904ed;color:#ffe6a0;font:800 11px/1.3 sans-serif;letter-spacing:1px;direction:rtl;box-shadow:0 3px 12px #0008;pointer-events:none;white-space:nowrap}
-body.ingame #bmSharedRoomBadge{display:block}
+#bmSharedRoomBadge,body.ingame #bmSharedRoomBadge{display:none!important}
 #lobbyRoom.bm-start-wait .roomActions #roomStartBtn{opacity:.55;pointer-events:none}
 #lobbyRoom.bm-start-wait .roomActions #readyBtn{display:none!important}
 </style>
@@ -3299,7 +3308,7 @@ body.ingame #bmSharedRoomBadge{display:block}
    const c=code(),b=$('bmSharedRoomBadge');
    if(!b)return;
    b.textContent=c?'شناسه مشترک اتاق: #'+c:'';
-   b.style.display=c&&document.body.classList.contains('ingame')?'block':'none';
+   b.style.display='none';
  }
  function keepWaitingRoom(){
    const c=code(),room=$('lobbyRoom');
