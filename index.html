@@ -758,9 +758,19 @@ const Voice=(()=>{
     const pc=call.peerConnection;if(!pc||pc.__mfDiagBound)return;pc.__mfDiagBound=true;
     const report=()=>{
      const st=pc.iceConnectionState||pc.connectionState||'';
-     if(st==='failed'){voiceDiag=' · اتصال صوتی ناموفق؛ شبکه یا TURN';refresh()}
-     else if(st==='disconnected'){voiceDiag=' · اتصال صوتی ناپایدار؛ تلاش برای وصل مجدد';refresh()}
-     else if(st==='connected'||st==='completed'){voiceDiag='';refresh()}
+     if(st==='failed'){
+      voiceDiag=' · مسیر صدا شکست خورد؛ اتصال مجدد خودکار';
+      // A failed ICE path can leave PeerJS's data channel alive while audio is silent.
+      // Close only this media call; connectLoop will establish a fresh call without
+      // disconnecting the player from the shared game/data channel.
+      if(!r.iceFailHandled){
+       r.iceFailHandled=true;r.live=false;r.audioPlaying=false;
+       setTimeout(()=>{if(R[s]===r&&r.call===call){try{call.close()}catch(e){}refresh()}},250);
+      }
+      refresh();
+     }
+     else if(st==='disconnected'){voiceDiag=' · اتصال صوتی ناپایدار؛ در حال بررسی';refresh()}
+     else if(st==='connected'||st==='completed'){r.iceFailHandled=false;voiceDiag='';refresh()}
     };
     pc.addEventListener('iceconnectionstatechange',report);
     pc.addEventListener('connectionstatechange',report);
