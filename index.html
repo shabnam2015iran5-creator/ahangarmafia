@@ -1378,7 +1378,7 @@ setInterval(()=>{try{
 })();
 
 // Make the free PeerJS cloud endpoint explicit and robust; HTTPS hosting is required for mic access.
-try{if(typeof VOICE_CFG!=='undefined'){VOICE_CFG.peer={host:'0.peerjs.com',port:443,path:'/',secure:true};VOICE_CFG.ice=[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'}]}}catch(e){}
+try{if(typeof VOICE_CFG!=='undefined'){VOICE_CFG.peer={host:'0.peerjs.com',port:443,path:'/',secure:true};VOICE_CFG.ice=[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'}].concat(window.MAFIA_TURN||[])}}catch(e){}
 </script>
 
 <!-- ===== BLACK PRO STARTUP / ROOMS / ADMIN UPGRADE ===== -->
@@ -2918,6 +2918,67 @@ body.ingame #gFoot #gEqReserve>*{display:none!important}
 body.ingame .grid .seat .av.sp{animation:none!important;box-shadow:none!important;outline:none!important;background:linear-gradient(145deg,#f8dc82,#8a5f1e 48%,#f8dc82)!important}
 @media(max-height:700px){body.ingame #gFoot{height:clamp(92px,17vh,118px)!important;min-height:92px!important}}
 </style>
+
+<!-- BLACK MAFIA v35: God challenge picker and role visibility/voice ICE fix -->
+<style id="bm-v35-role-challenge-css">
+body.ingame #grid .seat .cell .bmRoleUnder{font-size:9px!important;min-height:15px!important}
+#bmGodChallengePicker{max-height:58vh;overflow:auto;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;padding:6px}
+#bmGodChallengePicker .btn{min-width:0;white-space:normal;font-size:12px;padding:9px 5px}
+#bmGodChallengePicker .btn small{display:block;font-size:10px;opacity:.8}
+</style>
+<script id="bm-v35-god-challenge-js">
+(()=> {
+ if(window.__bmV35Installed)return;window.__bmV35Installed=true;
+ const $=id=>document.getElementById(id);
+ const isGod=()=>((typeof lobbyMode!=='undefined'&&lobbyMode==='god')||(typeof role!=='undefined'&&(role==='god'||role==='admin')));
+ function openGodChallenge(){
+  if(!isGod()){toast('این گزینه فقط برای گاد است');return}
+  if(!started){toast('ابتدا بازی را شروع کن');return}
+  if(!G||G.ph!=='day'){toast('چالش گرداننده در مرحله بحث روز انجام می‌شود');return}
+  if(G.ch){toast('یک چالش در حال اجراست');return}
+  const title=$('actName'),acts=$('acts');if(!title||!acts)return;
+  title.textContent='⚡ چالش گرداننده — شماره بازیکن را انتخاب کن';
+  acts.innerHTML='<div id="bmGodChallengePicker"></div>';
+  const picker=$('bmGodChallengePicker');
+  seats.forEach((s,i)=>{
+   if(!s||s.d)return;
+   const b=document.createElement('button');b.className='btn gold';
+   b.innerHTML='شماره '+(i+1)+'<small>'+String(s.n||'بازیکن').replace(/[&<>\"]/g,'')+'</small>';
+   b.onclick=()=>godChallengeTarget(i);picker.appendChild(b);
+  });
+  if(!picker.children.length)picker.textContent='بازیکن زنده‌ای برای چالش وجود ندارد';
+  op('ovAct');
+ }
+ function godChallengeTarget(target){
+  if(!isGod()||!started)return;
+  if(G.ph!=='day'){cl('ovAct');toast('چالش گرداننده فقط در بحث روز ممکن است');return}
+  if(G.ch){cl('ovAct');toast('یک چالش در حال اجراست');return}
+  target=Number(target);
+  if(!Number.isInteger(target)||target<0||target>=seats.length||!seats[target]||seats[target].d){toast('شماره انتخاب‌شده معتبر نیست');return}
+  if(!(G.t>0)){toast('زمان این نوبت تمام شده است');return}
+  let challenger=G.cur;
+  if(challenger===target||!seats[challenger]||seats[challenger].d)challenger=seats.findIndex((s,i)=>s&&!s.d&&i!==target);
+  if(challenger<0){toast('بازیکن دیگری برای شروع چالش وجود ندارد');return}
+  G.rem=G.t;G.ch={by:challenger,to:target,st:'ask',god:true};G.t=G.T=10;
+  cl('ovAct');chStep();render();
+ }
+ window.openGodChallenge=openGodChallenge;window.godChallengeTarget=godChallengeTarget;
+ function ensureButton(){
+  const dock=$('dock');if(!dock)return;
+  const old=$('bmGodChallengeBtn');
+  if(!isGod()||!document.body.classList.contains('ingame')||!started){if(old)old.remove();return}
+  if(old&&old.parentElement===dock)return;if(old)old.remove();
+  const b=document.createElement('button');b.id='bmGodChallengeBtn';b.className='ib2';
+  b.innerHTML='⚡<small>چالش گرداننده</small>';b.onclick=openGodChallenge;dock.appendChild(b);
+ }
+ const oldBuild=window.buildDock;
+ if(typeof oldBuild==='function'&&!window.__bmV35BuildDockWrapped){window.__bmV35BuildDockWrapped=true;window.buildDock=function(){const r=oldBuild.apply(this,arguments);ensureButton();return r}}
+ setInterval(ensureButton,500);
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden)ensureButton()});
+})();
+</script>
+<!-- END BLACK MAFIA v35 -->
+
 </body></html>
 
 <!-- BLACK MAFIA v31: clean controls, open moderator entry, clearer friendly-lobby choices -->
@@ -3422,8 +3483,7 @@ body.ingame #gFoot #gEqReserve>*{display:flex!important;visibility:visible!impor
  height:28px!important;min-height:28px!important;padding:2px 5px!important;border:1px solid #a77a25!important;border-radius:7px!important;
  background:linear-gradient(#201507,#070503)!important;color:#f5d985!important;font-size:16px!important;line-height:1!important}
 .bmReact button:active{transform:scale(.94)}
-.bmRoleUnder{display:block!important;width:100%!important;margin:2px 0 0!important;text-align:center!important;color:#f4d27a!important;
- font-size:10px!important;font-weight:900!important;line-height:1.25!important;overflow-wrap:anywhere!important;text-shadow:0 1px 3px #000!important}
+.bmRoleUnder{display:block!important;position:absolute!important;top:calc(100% + 2px)!important;left:0!important;right:0!important;width:100%!important;min-height:15px!important;margin:0!important;padding:1px 2px!important;text-align:center!important;color:#f4d27a!important;background:linear-gradient(90deg,#070604,#211707,#070604)!important;border:1px solid #856323!important;border-radius:4px!important;font-size:9px!important;font-weight:900!important;line-height:1.2!important;overflow-wrap:anywhere!important;text-shadow:0 1px 3px #000!important;z-index:8!important;pointer-events:none!important}
 #bmNightResultsPanel{position:fixed;top:calc(52px + env(safe-area-inset-top));left:8px;right:8px;max-width:500px;margin:0 auto;
  z-index:10020;max-height:32vh;overflow:auto;padding:10px 12px;border:1.5px solid #d9ad4d;border-radius:12px;
  background:linear-gradient(145deg,#191006f7,#050403f7);color:#f6e8c5;box-shadow:0 10px 28px #000b;font-size:12px;line-height:1.7}
@@ -3437,7 +3497,7 @@ body.ingame #gFoot #gEqReserve>*{display:flex!important;visibility:visible!impor
  const $=id=>document.getElementById(id);
  let roleRevealed=false,lastPhase=null,nightSeen='';
  const client=()=>!!(window.Net&&typeof Net.isClient==='function'&&Net.isClient());
- const god=()=>!client()&&typeof role!=='undefined'&&(role==='god'||role==='admin');
+ const god=()=>!client()&&(((typeof lobbyMode!=='undefined')&&lobbyMode==='god')||(typeof role!=='undefined'&&(role==='god'||role==='admin')));
  const safeRole=s=>{try{const r=rn(s||{});return (r&&r.e?r.e+' ':'')+(r&&r.n?r.n:'نقش نامشخص')}catch(e){return 'نقش نامشخص'}};
  const getTurn=d=>{
   let i=-1,phase=d?d.ph:(typeof G!=='undefined'?G.ph:null),ch=d?d.ch:(typeof G!=='undefined'?G.ch:null);
@@ -3509,11 +3569,10 @@ body.ingame #gFoot #gEqReserve>*{display:flex!important;visibility:visible!impor
   const clientView=client(),isGod=god();
   if(clientView){
    document.querySelectorAll('#grid .rl').forEach(el=>el.remove());
-   document.querySelectorAll('#grid .bmRoleUnder').forEach(el=>{if(!roleRevealed||!el.closest('#s'+(Net.snapshot()?.my)))el.remove()});
-   if(roleRevealed){
-    const d=Net.snapshot(),s=d&&d.seats&&d.seats[d.my];
-    if(s&&s.ro){const seat=$('s'+d.my),cell=seat&&seat.querySelector('.cell');if(cell){let tag=cell.querySelector('.bmRoleUnder');if(!tag){tag=document.createElement('div');tag.className='bmRoleUnder';cell.appendChild(tag)}const val=safeRole(s.ro);if(tag.textContent!==val)tag.textContent=val}}
-   }
+   const d=Net.snapshot();
+   document.querySelectorAll('#grid .bmRoleUnder').forEach(el=>{if(!d||!el.closest('#s'+d.my))el.remove()});
+   const s=d&&d.seats&&d.seats[d.my];
+   if(s&&s.ro){const seat=$('s'+d.my),cell=seat&&seat.querySelector('.cell');if(cell){let tag=cell.querySelector('.bmRoleUnder');if(!tag){tag=document.createElement('div');tag.className='bmRoleUnder';cell.appendChild(tag)}const val=safeRole(s.ro);if(tag.textContent!==val)tag.textContent=val}}
   }else if(isGod&&typeof started!=='undefined'&&started&&Array.isArray(seats)){
    seats.forEach((s,i)=>{const seat=$('s'+i),cell=seat&&seat.querySelector('.cell');if(!cell)return;
     let tag=cell.querySelector('.bmRoleUnder');if(!s||!s.r){if(tag)tag.remove();return}
