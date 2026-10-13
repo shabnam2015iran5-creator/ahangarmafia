@@ -776,10 +776,45 @@ const Voice=(()=>{
   else if(typeof H[d.t]==='function'&&(d.t==='act'||d.t==='sync'||r.role==='god')){H[d.t](s,d)}});
  }
  function playRemote(r,st){
-  const a=document.createElement('audio');a.autoplay=true;a.playsInline=true;a.setAttribute('autoplay','');a.setAttribute('playsinline','');a.muted=false;a.volume=1;a.srcObject=st;a.style.display='none';document.body.appendChild(a);r.audio=a;r.audioPlaying=false;
-  let tries=0;
-  const attemptPlay=()=>{try{if(ctx&&ctx.state==='suspended')ctx.resume();const p=a.play();if(p&&p.then)p.then(()=>{r.audioPlaying=true;refresh()}).catch(()=>{r.audioPlaying=false;if(tries<4&&!r.playRetry){r.playRetry=setTimeout(()=>{r.playRetry=null;tries++;if(a.isConnected&&a.paused)attemptPlay()},1600)}else setStatus('🔊 جریان ویس دریافت می‌شود؛ برای شنیدن، یک بار داخل بازی لمس کنید')});else r.audioPlaying=true}catch(e){r.audioPlaying=false}};
-  attemptPlay();st.getTracks().forEach(t=>t.addEventListener('ended',()=>{if(R[r.slot]!==r||r.stream!==st)return;r.audioPlaying=false;r.live=false;r.stream=null;refresh()},{once:true}));
+  // Replace any stale player before binding the newest remote stream.
+  clearTimeout(r.playRetry);r.playRetry=null;
+  if(r.audio){try{r.audio.pause()}catch(e){}try{r.audio.srcObject=null;r.audio.remove()}catch(e){}}
+  const a=document.createElement('audio');
+  a.autoplay=true;a.playsInline=true;a.preload='auto';a.muted=false;a.volume=1;
+  a.setAttribute('autoplay','');a.setAttribute('playsinline','');
+  // Keep the media element attached and renderable on mobile browsers; display:none
+  // can prevent playback on some embedded/mobile WebViews.
+  a.style.position='fixed';a.style.width='1px';a.style.height='1px';a.style.opacity='0.01';
+  a.style.left='-10px';a.style.bottom='0';a.style.pointerEvents='none';
+  a.srcObject=st;document.body.appendChild(a);r.audio=a;r.audioPlaying=false;
+  let tries=0,removed=false;
+  const current=()=>!removed&&R[r.slot]===r&&r.stream===st&&r.audio===a&&a.isConnected;
+  const schedule=()=>{
+   if(!current()||r.playRetry||tries>=12)return;
+   r.playRetry=setTimeout(()=>{r.playRetry=null;tries++;attemptPlay()},1200);
+  };
+  const attemptPlay=()=>{
+   if(!current())return;
+   try{if(ctx&&ctx.state==='suspended')ctx.resume().catch(()=>{})}catch(e){}
+   try{
+    const p=a.play();
+    if(p&&typeof p.then==='function')p.then(()=>{
+     if(!current())return;
+     r.audioPlaying=true;refresh();
+    }).catch(()=>{r.audioPlaying=false;schedule()});
+    else {r.audioPlaying=true;refresh()}
+   }catch(e){r.audioPlaying=false;schedule()}
+  };
+  // Mobile browsers may deliver the stream before its first audio frame.
+  ['loadedmetadata','canplay','playing'].forEach(ev=>a.addEventListener(ev,attemptPlay));
+  st.getAudioTracks().forEach(t=>{
+   t.addEventListener('unmute',attemptPlay);
+   t.addEventListener('ended',()=>{
+    if(!current())return;
+    r.audioPlaying=false;r.live=false;refresh();
+   },{once:true});
+  });
+  attemptPlay();
   try{const n=ctx.createAnalyser();n.fftSize=256;ctx.createMediaStreamSource(st).connect(n);r.an=n;r.buf=new Uint8Array(n.frequencyBinCount)}catch(e){}
  }
  // Mobile browsers may block remote audio until a real user gesture. Resume audio and retry all received streams on tap.
