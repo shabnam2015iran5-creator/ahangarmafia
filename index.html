@@ -859,6 +859,11 @@ const Voice=(()=>{
  }
  function openPeer(id){return new Promise(res=>{
   let d=false;const p=new Peer(id,{config:{iceServers:C.ice},debug:1,...C.peer});
+  // Queue incoming calls/data that arrive immediately after PeerServer opens this slot.
+  // Without this buffer, a fast phone could call before join() installs its handlers.
+  p.__mfVoiceReady=false;p.__mfPendingCalls=[];p.__mfPendingConns=[];
+  p.on('call',call=>{if(p.__mfVoiceReady&&p.__mfAcceptCall)p.__mfAcceptCall(call);else p.__mfPendingCalls.push(call)});
+  p.on('connection',conn=>{if(p.__mfVoiceReady&&p.__mfAcceptConn)p.__mfAcceptConn(conn);else p.__mfPendingConns.push(conn)});
   const fin=v=>{if(d)return;d=true;clearTimeout(tm);if(v!==p){try{p.destroy()}catch(e){}}res(v)};
   const tm=setTimeout(()=>fin(undefined),5000);
   p.on('open',()=>fin(p));
@@ -896,8 +901,21 @@ const Voice=(()=>{
   if(!p){joining=false;if(micOk)local.getTracks().forEach(t=>t.stop());local=null;rawTrack=null;
    setStatus(fail?'❌ اتصال به سرور وویس برقرار نشد':'⚠️ ظرفیت وویس این لابی پر است');return}
   peer=p;on=true;joining=false;
-  p.on('call',call=>{const s=slotOf(call.peer);if(!s||s===slot){try{call.close()}catch(e){}return}call.answer(local);bindCall(s,call)});
-  p.on('connection',conn=>{const s=slotOf(conn.peer);if(!s||s===slot){try{conn.close()}catch(e){}return}bindConn(s,conn)});
+  // Install call handlers before answering so the remote "stream" event cannot be missed.
+  p.__mfAcceptCall=call=>{
+   const s=slotOf(call.peer);
+   if(!s||s===slot){try{call.close()}catch(e){}return}
+   bindCall(s,call);
+   try{call.answer(local)}catch(e){try{call.close()}catch(_){}}
+  };
+  p.__mfAcceptConn=conn=>{
+   const s=slotOf(conn.peer);
+   if(!s||s===slot){try{conn.close()}catch(e){}return}
+   bindConn(s,conn);
+  };
+  p.__mfVoiceReady=true;
+  (p.__mfPendingCalls||[]).splice(0).forEach(call=>p.__mfAcceptCall(call));
+  (p.__mfPendingConns||[]).splice(0).forEach(conn=>p.__mfAcceptConn(conn));
   p.on('disconnected',()=>{if(peer===p&&!p.destroyed)try{p.reconnect()}catch(e){}});
   p.on('error',e=>{if(e&&e.type==='peer-unavailable'){const m=/(\S+)\s*$/.exec(e.message||'');const s=m&&slotOf(m[1]);if(s&&R[s]&&!R[s].live)drop(s)}});
   tryT=setInterval(connectLoop,3000);loopT=setInterval(tick,140);
@@ -3065,6 +3083,73 @@ body.ingame #grid .seat .cell .bmRoleUnder{font-size:9px!important;min-height:15
 </script>
 <!-- END BLACK MAFIA v35 -->
 
+
+<!-- BLACK MAFIA v36: voice race, God role labels, and hide room ID during gameplay -->
+<style id="bm-v36-final-fix-css">
+/* Keep every shared-room code out of the live game UI, including the recreated footer pill. */
+body.ingame .roomCodeBadge,
+body.ingame .bmRoomPill,
+body.ingame #bmSharedRoomBadge,
+body.ingame .rdCode,
+body.ingame #gFoot #gEqReserve .bmEqRoom{display:none!important;visibility:hidden!important}
+/* Use the existing in-cell role area, rather than putting role text over the player's name. */
+body.ingame #grid .seat .cell .bmGodRole{
+ display:block!important;position:absolute!important;top:auto!important;bottom:22px!important;
+ left:3px!important;right:3px!important;max-width:calc(100% - 6px)!important;
+ z-index:12!important;visibility:visible!important;opacity:1!important;
+ text-align:center!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;
+ padding:2px 3px!important;border:1px solid #d0a54d!important;border-radius:5px!important;
+ background:#080604ed!important;color:#ffe39a!important;font-size:9px!important;font-weight:900!important;
+ line-height:1.25!important;pointer-events:none!important
+}
+body.ingame #grid .seat .cell.roleVisible .av{bottom:25px!important}
+</style>
+<script id="bm-v36-final-fix-js">
+(()=>{
+ if(window.__bmV36FinalFix)return;window.__bmV36FinalFix=true;
+ const $=id=>document.getElementById(id);
+ const isClient=()=>{try{return !!(window.Net&&typeof Net.isClient==='function'&&Net.isClient())}catch(e){return false}};
+ const isGod=()=>!isClient()&&(
+   (typeof lobbyMode!=='undefined'&&lobbyMode==='god')||
+   (typeof role!=='undefined'&&(role==='god'||role==='admin'))
+ );
+ function clearGodTags(){
+   document.querySelectorAll('#grid .bmGodRole').forEach(el=>el.remove());
+   if(isGod())document.querySelectorAll('#grid .bmRoleUnder').forEach(el=>el.remove());
+ }
+ function paintGodRoles(){
+   const game=document.body.classList.contains('ingame');
+   const godView=isGod();
+   if(!game||!godView||typeof started==='undefined'||!started||!Array.isArray(seats)){
+     document.querySelectorAll('#grid .bmGodRole').forEach(el=>el.remove());
+     if(godView)document.querySelectorAll('#grid .bmRoleUnder').forEach(el=>el.remove());
+     return;
+   }
+   seats.forEach((s,i)=>{
+     const seat=$('s'+i),cell=seat&&seat.querySelector('.cell');
+     if(!cell)return;
+     if(!s||!s.r){
+       cell.querySelectorAll('.bmGodRole').forEach(el=>el.remove());
+       return;
+     }
+     // Remove duplicate/legacy labels; the dedicated label below is restricted to the God view.
+     cell.querySelectorAll('.rl:not(.bmGodRole)').forEach(el=>el.remove());
+     let tag=cell.querySelector('.bmGodRole');
+     if(!tag){tag=document.createElement('span');tag.className='rl bmGodRole';cell.appendChild(tag)}
+     cell.classList.add('roleVisible');
+     let val='نقش نامشخص';
+     try{const rr=rn(s);val=(rr&&rr.e?rr.e+' ':'')+(rr&&rr.n?rr.n:'نقش نامشخص')}catch(e){}
+     if(tag.textContent!==val)tag.textContent=val;
+   });
+   document.querySelectorAll('#grid .bmRoleUnder').forEach(el=>el.remove());
+ }
+ const grid=$('grid');
+ if(grid&&window.MutationObserver)new MutationObserver(paintGodRoles).observe(grid,{childList:true,subtree:true});
+ setInterval(paintGodRoles,300);
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden)paintGodRoles()});
+ paintGodRoles();
+})();
+</script>
 </body></html>
 
 <!-- BLACK MAFIA v31: clean controls, open moderator entry, clearer friendly-lobby choices -->
