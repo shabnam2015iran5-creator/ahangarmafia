@@ -2120,68 +2120,63 @@ window.APP_VERSION='27.0';
     if(!validProfile()||!ageOK(kind)){if(!ageOK(kind))toast('برای این لابی باید ۱۶ سال یا بیشتر باشید');return}
     let rooms={};
     try{rooms=await getRooms()}catch(e){toast('اتصال به سرور اتاق‌ها برقرار نشد؛ اتصال اینترنت را بررسی کنید.');return}
-    const now=Date.now();
-    // اتاق‌های تازه و دارای بازیکن آنلاین را برای پیشنهاد ورود پیدا کن.
-    const active=Object.values(rooms||{}).filter(r=>{
-      if(!r||!r.code||r.kind!==kind||!['waiting','started'].includes(r.status)||now-(r.updatedAt||r.createdAt||0)>43200000)return false;
-      const players=Object.values(r.players||{});
-      return players.some(p=>p&&now-(p.at||0)<15000);
-    }).sort((a,b)=>(b.updatedAt||b.createdAt||0)-(a.updatedAt||a.createdAt||0));
-    let c='',createNew=!active.length;
-    if(active.length){
-      const r=active[0];
-      const goIn=confirm('یک اتاق در حال فعالیت است (#'+r.code+').\n\nبرای ورود به همین اتاق «تأیید» را بزن؛ برای ساخت اتاق جدید «لغو» را بزن.');
-      createNew=!goIn;
-      if(goIn)c=String(r.code);
-    }
-    // همه قبل از ورود نقش خود را انتخاب می‌کنند؛ درِ گرداننده هم همین انتخاب را نشان می‌دهد.
-    // ورود به اتاق موجود همیشه با نقش بازیکن انجام می‌شود؛ انتخاب گاد فقط هنگام ساخت اتاق جدید است.
-    const asGod=createNew ? confirm('برای اتاق جدید چگونه وارد شوی؟\n\n«تأیید» = گرداننده (گاد)\n«لغو» = بازیکن') : false;
-    lobbyMode=asGod?'god':'player';window.lobbyMode=lobbyMode;
-    lobbyReady=!asGod;
-    if(createNew){
-      do{c=String(Math.floor(10000+Math.random()*90000))}while(rooms[c]);
-    }
-    const mine=me();
-    mine.role=asGod?'god':'player';
-    const patchMeta=async patch=>{
-      if(db()){
-        const res=await fetch(db()+'/roomsV23/'+c+'.json',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(patch)});
-        if(!res.ok)throw Error('server '+res.status);
-      }else{
-        const all=localAll(),r=all[c]||{code:c,kind:kind,players:{}};
-        Object.assign(r,patch);all[c]=r;localSave(all);
-      }
-    };
+    const now=Date.now(),c='10000';
+    // One canonical shared room. Close duplicate rooms without deleting their records.
+    const closePatch={};
+    Object.entries(rooms||{}).forEach(([id,r])=>{
+      if(id!==c&&r&&['waiting','started'].includes(r.status))closePatch[id]={...r,status:'closed',closedAt:now,updatedAt:now};
+    });
     try{
-      let found=rooms[c]||null;
-      if(createNew||!found){
-        found={code:c,kind:kind,createdAt:now,updatedAt:now,status:'waiting',players:{}};
-        await patchMeta({code:c,kind:kind,createdAt:now,updatedAt:now,status:'waiting',host:null,hostName:''});
-      }else{
-        found.players=found.players||{};
+      if(db()&&Object.keys(closePatch).length){
+        const res=await fetch(db()+'/roomsV23.json',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(closePatch)});
+        if(!res.ok)throw Error('close duplicate rooms '+res.status);
+      }else if(!db()&&Object.keys(closePatch).length){
+        Object.entries(closePatch).forEach(([id,r])=>{rooms[id]=r});localSave(rooms);
       }
-      if(asGod){
-        const oldHost=found.host&&found.players&&found.players[found.host];
-        const hostIsActive=!!(oldHost&&now-(oldHost.at||0)<15000);
-        if(found.host&&found.host!==uid()&&hostIsActive){
-          const makeAnother=confirm('این اتاق گردانندهٔ فعالی دارد.\nبرای اینکه گرداننده روی کارت پایین نمایش داده شود و دو گرداننده در یک اتاق نباشند، اتاق جدید بسازیم؟');
-          if(!makeAnother){toast('برای ورود به این اتاق، نقش بازیکن را انتخاب کن.');return}
-          do{c=String(Math.floor(10000+Math.random()*90000))}while(rooms[c]);
-          found={code:c,kind:kind,createdAt:now,updatedAt:now,status:'waiting',players:{}};
-          await patchMeta({code:c,kind:kind,createdAt:now,updatedAt:now,status:'waiting',host:null,hostName:''});
-        }
-        await patchMeta({host:uid(),hostName:mine.n,kind:kind,updatedAt:now,status:'waiting'});
-      }else{
-        await patchMeta({code:c,kind:kind,updatedAt:now});
-      }
-      // هر گوشی فقط رکورد خودش را می‌نویسد؛ گرداننده روی صندلی بازیکنان قرار نمی‌گیرد.
+    }catch(e){console.warn('Could not close duplicate rooms',e)}
+    let found=rooms[c]||null;
+    const mine=me(),oldHost=found&&found.host&&found.players&&found.players[found.host];
+    const hostIsActive=!!(oldHost&&now-(Number(oldHost.at)||0)<15000);
+    const sameHost=!!(found&&found.host===uid());
+    const staleStarted=!!(found&&found.status==='started'&&!hostIsActive&&!sameHost);
+    const needsNew=!found||found.status==='closed'||found.status==='finished';
+    if(needsNew){
+      found={code:c,kind:kind,createdAt:now,updatedAt:now,status:'waiting',players:{}};
+      try{
+        if(db()){
+          const res=await fetch(db()+'/roomsV23/'+c+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(found)});
+          if(!res.ok)throw Error('create canonical room '+res.status);
+        }else{rooms[c]=found;localSave(rooms)}
+      }catch(e){toast('اتاق مشترک ساخته نشد؛ اتصال سرور را بررسی کن.');console.error(e);return}
+    }else if(staleStarted){
+      found={...found,kind:found.kind||kind,status:'waiting',updatedAt:now,host:null,hostName:''};
+      try{
+        if(db()){
+          const res=await fetch(db()+'/roomsV23/'+c+'.json',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:'waiting',updatedAt:now,host:null,hostName:null,startedAt:null,finishedAt:null})});
+          if(!res.ok)throw Error('reset stale room '+res.status);
+          await fetch(db()+'/roomsV23/'+c+'/gameSnapshots.json',{method:'DELETE'});
+          await fetch(db()+'/roomsV23/'+c+'/gameActions.json',{method:'DELETE'});
+        }else{rooms[c]=found;localSave(rooms)}
+      }catch(e){console.warn('Could not reset stale room',e)}
+    }
+    found=found||{code:c,kind:kind,status:'waiting',players:{}};
+    const currentHost=found.host&&found.players&&found.players[found.host];
+    const currentHostActive=!!(currentHost&&now-(Number(currentHost.at)||0)<15000);
+    const asGod=sameHost||(!currentHostActive&&confirm('این اتاق گاد فعال ندارد.\n\n«تأیید» = ورود به‌عنوان گاد\n«لغو» = ورود به‌عنوان بازیکن'));
+    lobbyMode=asGod?'god':'player';window.lobbyMode=lobbyMode;lobbyReady=!asGod;
+    mine.role=asGod?'god':'player';
+    const roomKind=found.kind||kind;
+    try{
+      const meta={code:c,kind:roomKind,updatedAt:now};
+      if(asGod)Object.assign(meta,{host:uid(),hostName:mine.n,status:'waiting'});
+      const res=await fetch(db()+'/roomsV23/'+c+'.json',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(meta)});
+      if(db()&&!res.ok)throw Error('room meta '+res.status);
       await updatePlayer(c,{...mine,at:now});
-      rooms=await getRooms();found=rooms[c]||found;
+      rooms=await getRooms();found=rooms[c]||{...found,...meta};
       found.players=found.players||{};
-      window.__voiceKey=kind+'-'+c;
+      window.__voiceKey=roomKind+'-'+c;
       enterRealRoom(found);
-    }catch(e){toast('ورود یا ساخت اتاق ناموفق بود؛ لطفاً دوباره تلاش کنید.');console.error(e)}
+    }catch(e){toast('ورود به اتاق مشترک ناموفق بود؛ اتصال سرور را بررسی کن.');console.error(e)}
   }
   function enterRealRoom(r){
     window.MAFIA_ROOM_CODE=r.code;window.MAFIA_ROOM_META=r;window.MAFIA_ROOM_ONLINE=!!db();
@@ -2691,7 +2686,10 @@ window.APP_VERSION='27.0';
    }catch(e){console.error(e);if(b){b.disabled=false;b.textContent='🎭 شروع بازی'}return false}
    setTimeout(()=>{
      try{
-       if(typeof started!=='undefined'&&!started&&typeof G!=='undefined'&&!G.loading&&typeof window.launch==='function')window.launch(0);
+       if(typeof started!=='undefined'&&!started&&typeof G!=='undefined'&&!G.loading){
+         if(typeof window.__bmStartHostGame==='function')window.__bmStartHostGame(0);
+         else if(typeof window.launch==='function')window.launch(0);
+       }
        if(window.Net&&typeof Net.hostStart==='function')Net.hostStart();
      }catch(e){console.error(e)}
    },700);
@@ -2762,6 +2760,21 @@ window.APP_VERSION='27.0';
   finally{rosterBusy=false}
  }
  const originalLaunch=window.launch;
+ // One explicit start path avoids the nested window.launch wrapper chain.
+ window.__bmStartHostGame=async function(si=0){
+  if(!(typeof role!=='undefined'&&role==='god'&&window.MAFIA_ROOM_ONLINE&&code()&&db()))return false;
+  if(window.__bmStartHostGamePending||started||G.loading)return false;
+  window.__bmStartHostGamePending=true;
+  try{
+   const ok=await prepareHostSeats();
+   if(!ok)return false;
+   if(typeof originalLaunch!=='function')throw Error('core launch is unavailable');
+   originalLaunch(si);
+   if(window.Net&&typeof Net.hostStart==='function')Net.hostStart();
+   return true;
+  }catch(e){console.error('Shared game start failed',e);try{toast('بازی مشترک آماده نشد؛ اتصال بازیکنان را بررسی کن.')}catch(_){}return false}
+  finally{window.__bmStartHostGamePending=false}
+ };
  if(typeof originalLaunch==='function'&&!window.__bmFirebaseLaunchWrapped){
   window.__bmFirebaseLaunchWrapped=true;
   window.launch=function(){
