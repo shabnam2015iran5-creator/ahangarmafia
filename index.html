@@ -2903,7 +2903,7 @@ button[title], [role="button"][title]{cursor:pointer}button:focus-visible{outlin
   window.__bmSharedGameStartInstalled=true;
   const db=()=>String(window.MAFIA_DB_URL||'').replace(/\/$/,'');
   const originalStart=window.roomStartGame;
-  let entering=false,lastStartedRoom='';
+  let entering=false,lastStartedRoom='',startSeenAt=0,lastReconnectAt=0;
   // Save the start state to the shared room before sending the live voice signal.
   if(typeof originalStart==='function'){
     window.roomStartGame=async function(){
@@ -2922,7 +2922,8 @@ button[title], [role="button"][title]{cursor:pointer}button:focus-visible{outlin
   // the player phone enters as soon as it sees the persistent server state.
   setInterval(async()=>{
     const code=String(window.MAFIA_ROOM_CODE||'');
-    if(!code||window.lobbyMode!=='player'||entering)return;
+    const mode=(typeof lobbyMode!=='undefined'?lobbyMode:window.lobbyMode);
+    if(!code||mode!=='player'||entering)return;
     const lobby=document.getElementById('lobbyRoom');
     if(!lobby||!lobby.classList.contains('on'))return;
     const d=db();if(!d)return;
@@ -2930,9 +2931,25 @@ button[title], [role="button"][title]{cursor:pointer}button:focus-visible{outlin
       const r=await fetch(d+'/roomsV23/'+encodeURIComponent(code)+'.json',{cache:'no-store'});
       if(!r.ok)return;
       const room=await r.json();
-      if(!room||room.status!=='started'||lastStartedRoom===code)return;
-      if(window.Net&&Net.isClient()) {lastStartedRoom=code;return}
-      entering=true;lastStartedRoom=code;
+      if(!room||room.status!=='started'){startSeenAt=0;lastReconnectAt=0;lastStartedRoom='';return}
+      if(lastStartedRoom===code)return;
+      if(!startSeenAt)startSeenAt=Date.now();
+      if(window.Net&&typeof Net.isClient==='function'&&Net.isClient()){
+        const snap=typeof Net.snapshot==='function'?Net.snapshot():null;
+        if(snap&&snap.st){lastStartedRoom=code;return}
+        // If the start signal arrived but no real game snapshot follows, repair the
+        // PeerJS connection; do not mark the room handled until the game is synchronized.
+        if(Date.now()-startSeenAt>9000&&Date.now()-lastReconnectAt>10000&&window.Voice&&typeof Voice.join==='function'){
+          lastReconnectAt=Date.now();
+          try{
+            Voice.leave();
+            await new Promise(resolve=>setTimeout(resolve,350));
+            await Voice.join((window.MAFIA_ROOM_META&&window.MAFIA_ROOM_META.kind)||(typeof lobbyKind!=='undefined'?lobbyKind:'friendly'));
+          }catch(re){}
+        }
+        return;
+      }
+      entering=true;
       try{window.lobbyReady=true;if(window.Net&&typeof Net.enter==='function')Net.enter()}
       finally{entering=false}
     }catch(e){}
@@ -3156,7 +3173,7 @@ body.ingame #bmSharedRoomBadge{display:block}
      else if(window.Net&&typeof Net.snapshot==='function'){const snap=Net.snapshot();live=!!(snap&&snap.st)}
    }catch(e){}
    if(live)leaveWaitingRoom();
-   else if(window.lobbyMode==='player'&&window.Net&&Net.isClient()&&!$('lobbyRoom')?.classList.contains('on'))keepWaitingRoom();
+   else if((typeof lobbyMode!=='undefined'?lobbyMode:window.lobbyMode)==='player'&&window.Net&&Net.isClient()&&!$('lobbyRoom')?.classList.contains('on'))keepWaitingRoom();
    paintBadge();
  },250);
  document.addEventListener('visibilitychange',()=>{if(!document.hidden)paintBadge()});
@@ -3179,7 +3196,13 @@ body.ingame #bmSharedRoomBadge{display:block}
    b.classList.toggle('bm-player-hidden',!isGod());
    b.style.display=isGod()?'inline-flex':'none';
    if(!isGod()){b.disabled=true;b.setAttribute('aria-hidden','true')}
-   else{b.disabled=false;b.removeAttribute('aria-hidden');if(!b.textContent.includes('در حال'))b.textContent='🎭 شروع بازی'}
+   else{
+     b.removeAttribute('aria-hidden');
+     const busy=b.textContent.includes('در حال')||b.textContent.includes('در انتظار')||
+       (typeof started!=='undefined'&&!!started)||(typeof G!=='undefined'&&!!G.loading);
+     b.disabled=!!busy;
+     if(!busy)b.textContent='🎭 شروع بازی';
+   }
    const r=$('readyBtn');if(r)r.style.display='none';
  }
  const previous=window.roomStartGame;
