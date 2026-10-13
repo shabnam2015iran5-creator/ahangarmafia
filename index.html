@@ -918,7 +918,7 @@ const Voice=(()=>{
   (p.__mfPendingConns||[]).splice(0).forEach(conn=>p.__mfAcceptConn(conn));
   p.on('disconnected',()=>{if(peer===p&&!p.destroyed)try{p.reconnect()}catch(e){}});
   p.on('error',e=>{if(e&&e.type==='peer-unavailable'){const m=/(\S+)\s*$/.exec(e.message||'');const s=m&&slotOf(m[1]);if(s&&R[s]&&!R[s].live)drop(s)}});
-  tryT=setInterval(connectLoop,3000);loopT=setInterval(tick,140);
+  tryT=setInterval(connectLoop,3000);loopT=setInterval(tick,200);
   connectLoop();enforce();refresh();
   toast('🎙 سرور ویس وصل شد؛ در حال وصل کردن صدای بازیکنان');
  }
@@ -973,7 +973,7 @@ const Voice=(()=>{
   const a=document.createElement('audio');a.autoplay=true;a.playsInline=true;a.setAttribute('autoplay','');a.setAttribute('playsinline','');a.muted=false;a.volume=1;a.srcObject=st;a.style.display='none';document.body.appendChild(a);r.audio=a;r.audioPlaying=false;
   let tries=0;
   const attemptPlay=()=>{try{if(ctx&&ctx.state==='suspended')ctx.resume();const p=a.play();if(p&&p.then)p.then(()=>{r.audioPlaying=true;refresh()}).catch(()=>{r.audioPlaying=false;if(tries<4&&!r.playRetry){r.playRetry=setTimeout(()=>{r.playRetry=null;tries++;if(a.isConnected&&a.paused)attemptPlay()},1600)}else setStatus('🔊 جریان ویس دریافت می‌شود؛ برای شنیدن، یک بار داخل بازی لمس کنید')});else r.audioPlaying=true}catch(e){r.audioPlaying=false}};
-  attemptPlay();st.getTracks().forEach(t=>t.addEventListener('ended',()=>{r.audioPlaying=false},{once:true}));
+  attemptPlay();st.getTracks().forEach(t=>t.addEventListener('ended',()=>{r.audioPlaying=false;r.live=false;r.stream=null;refresh()},{once:true}));
   try{const n=ctx.createAnalyser();n.fftSize=256;ctx.createMediaStreamSource(st).connect(n);r.an=n;r.buf=new Uint8Array(n.frequencyBinCount)}catch(e){}
  }
  // Mobile browsers may block remote audio until a real user gesture. Resume audio and retry all received streams on tap.
@@ -3150,7 +3150,9 @@ body.ingame #grid .seat .cell.roleVisible .av{bottom:25px!important}
  paintGodRoles();
 })();
 </script>
-</body></html>
+
+<!-- Document end moved after all compatibility patches so browser parsing stays valid. -->
+
 
 <!-- BLACK MAFIA v31: clean controls, open moderator entry, clearer friendly-lobby choices -->
 <style id="bm-v31-clean-ui">
@@ -3622,8 +3624,11 @@ button[title], [role="button"][title]{cursor:pointer}button:focus-visible{outlin
    try{if(window.Voice&&Voice.active()&&typeof Voice.broadcast==='function')Voice.broadcast({t:'sync'})}catch(e){}
   }catch(e){/* transient network failures are retried on the next poll */}
  }
- pollTimer=setInterval(()=>{publishSnapshots();handleActions();pollClient()},850);
- pollClient();
+ async function transportTick(){
+  try{await Promise.allSettled([publishSnapshots(),handleActions(),pollClient()])}
+  finally{pollTimer=setTimeout(transportTick,1200)}
+ }
+ pollTimer=setTimeout(transportTick,0);
 })();
 </script>
 
@@ -3783,3 +3788,5 @@ body.ingame #gFoot #gEqReserve>*{display:flex!important;visibility:visible!impor
 })();
 </script>
 <!-- END BLACK MAFIA v33 -->
+</body>
+</html>
