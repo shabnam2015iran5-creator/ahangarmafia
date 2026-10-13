@@ -1239,7 +1239,7 @@ Voice.onMsg('sync',(slot)=>{try{if(window.Net&&typeof Net.sendSnapshot==='functi
  window.leave=function(){Net.reset();Voice.leave();_leave()};
  window.render=function(){if(Net.isClient())return;Voice.patchSeats();_render();Voice.afterRender()};
  window.sayAs=function(i,t){const s=seats[i];if(s&&s.hv)return;return _say(i,t)};
- window.toggleMic=function(){return Voice.active()?Voice.toggleMute():_mic()};
+ window.toggleMic=function(){if(!Voice.active()){try{Voice.join(window.__voiceKey||window.MAFIA_ROOM_CODE||lobbyKind||'main')}catch(e){}return}return Voice.toggleMute()};
  window.toggleRoomMic=function(){Voice.toggleMute()};
  window.toggleLobbyReady=function(){_tr();Voice.broadcast({t:'rdy',v:!!lobbyReady});Voice.refresh()};
  window.roomStartGame=function(){
