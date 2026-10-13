@@ -819,7 +819,7 @@ const Voice=(()=>{
   toast('🎙 وویس متصل شد');
  }
  function send(s,m){const r=R[s];try{if(r&&r.conn&&r.conn.open)r.conn.send(m)}catch(e){}}
- function broadcast(m){Object.values(R).forEach(r=>{if(r.live)send(r.slot,m)})}
+ function broadcast(m){Object.values(R).forEach(r=>{if(r.live||(r.conn&&r.conn.open))send(r.slot,m)})}
  function newR(s){return R[s]||(R[s]={slot:s,t0:Date.now(),live:false,sp:false})}
  function dial(s){
   const id=room+'-'+s,r=newR(s);r.t0=Date.now();
@@ -876,7 +876,7 @@ const Voice=(()=>{
   Object.values(R).forEach(r=>{const sp=!!(r.live&&r.an&&lvl(r.an,r.buf)>10);if(sp!==r.sp){r.sp=sp;ch=true}});
   enforce();if(ch)refresh();
  }
- function humans(){return Object.values(R).filter(r=>r.live).sort((a,b)=>a.slot-b.slot)}
+ function humans(){return Object.values(R).filter(r=>r.live||(r.conn&&r.conn.open)).sort((a,b)=>a.slot-b.slot)}
  function applyLobbySeats(){
   if(window.MAFIA_ROOM_ONLINE){try{window.__rePresence&&window.__rePresence()}catch(e){}return}
   if(!base.length)return;const arr=base.map(x=>x&&{...x});
@@ -2901,7 +2901,7 @@ button[title], [role="button"][title]{cursor:pointer}button:focus-visible{outlin
   // Save the start state to the shared room before sending the live voice signal.
   if(typeof originalStart==='function'){
     window.roomStartGame=async function(){
-      const isGod=window.lobbyMode==='god';
+      const isGod=(typeof lobbyMode!=='undefined'&&lobbyMode==='god');
       const code=String(window.MAFIA_ROOM_CODE||'');
       if(isGod&&code&&db()){
         try{
@@ -2994,7 +2994,7 @@ button[title], [role="button"][title]{cursor:pointer}button:focus-visible{outlin
  if(acts&&timer&&timer.parentElement!==acts)acts.insertBefore(timer,deck?deck.nextSibling:mic?.nextSibling||null);
  if(acts&&chat&&chat.parentElement!==acts)acts.insertBefore(chat,timer?timer.nextSibling:deck?.nextSibling||null);
  function syncRole(){
-   const god=window.lobbyMode==='god';
+   const god=(typeof lobbyMode!=='undefined'&&lobbyMode==='god');
    if(start){start.style.display=god?'inline-flex':'none';start.textContent='🎭 شروع بازی';start.disabled=false}
    if(ready)ready.style.display='none';
    if(typeof lobbyReady!=='undefined'&&!god)lobbyReady=true;
@@ -3004,7 +3004,7 @@ button[title], [role="button"][title]{cursor:pointer}button:focus-visible{outlin
  const oldStart=window.roomStartGame;
  if(typeof oldStart==='function'&&!window.__bmGodOnlyStart){
    window.__bmGodOnlyStart=true;
-   window.roomStartGame=function(){if(window.lobbyMode!=='god'){try{toast('فقط گردانندهٔ اتاق می‌تواند بازی را شروع کند.')}catch(e){}return false}return oldStart.apply(this,arguments)}
+   window.roomStartGame=function(){if(!(typeof lobbyMode!=='undefined'&&lobbyMode==='god')){try{toast('فقط گردانندهٔ اتاق می‌تواند بازی را شروع کند.')}catch(e){}return false}return oldStart.apply(this,arguments)}
  }
  syncRole();
  const watch=new MutationObserver(syncRole);
@@ -3055,7 +3055,7 @@ button[title], [role="button"][title]{cursor:pointer}button:focus-visible{outlin
  const oldRoomStart=window.roomStartGame;
  if(typeof oldRoomStart==='function'){
    window.roomStartGame=function(){
-     if(window.lobbyMode!=='god'){
+     if(!(typeof lobbyMode!=='undefined'&&lobbyMode==='god')){
        try{toast('فقط گردانندهٔ اتاق می‌تواند بازی را شروع کند.')}catch(e){}
        return false;
      }
@@ -3129,7 +3129,7 @@ body.ingame #bmSharedRoomBadge{display:block}
  if(typeof priorStart==='function'&&!window.__bmOneLobbyStartWrapped){
    window.__bmOneLobbyStartWrapped=true;
    window.roomStartGame=function(){
-     const isGod=window.lobbyMode==='god',c=code();
+     const isGod=(typeof lobbyMode!=='undefined'&&lobbyMode==='god'),c=code();
      if(!isGod||!c)return priorStart.apply(this,arguments);
      const start=$('roomStartBtn');
      if(start){start.disabled=true;start.textContent='⏳ در حال راه‌اندازی بازی…'}
@@ -3146,7 +3146,7 @@ body.ingame #bmSharedRoomBadge{display:block}
    if(!document.body.classList.contains('ingame')){paintBadge();return}
    let live=false;
    try{
-     if(window.lobbyMode==='god')live=typeof started!=='undefined'&&!!started;
+     if((typeof lobbyMode!=='undefined'&&lobbyMode==='god'))live=typeof started!=='undefined'&&!!started;
      else if(window.Net&&typeof Net.snapshot==='function'){const snap=Net.snapshot();live=!!(snap&&snap.st)}
    }catch(e){}
    if(live)leaveWaitingRoom();
@@ -3155,5 +3155,61 @@ body.ingame #bmSharedRoomBadge{display:block}
  },250);
  document.addEventListener('visibilitychange',()=>{if(!document.hidden)paintBadge()});
  paintBadge();
+})();
+</script>
+
+
+<!-- BLACK MAFIA FINAL FIX: host-only start and include data-connected players -->
+<style id="bm-start-sync-fix-css">
+#lobbyRoom .roomActions #roomStartBtn.bm-player-hidden{display:none!important}
+#lobbyRoom .roomActions #readyBtn{display:none!important}
+</style>
+<script id="bm-start-sync-fix-js">
+(()=>{
+ const $=id=>document.getElementById(id);
+ const isGod=()=>typeof lobbyMode!=='undefined'&&lobbyMode==='god';
+ function syncStartButton(){
+   const b=$('roomStartBtn');if(!b)return;
+   b.classList.toggle('bm-player-hidden',!isGod());
+   b.style.display=isGod()?'inline-flex':'none';
+   if(!isGod()){b.disabled=true;b.setAttribute('aria-hidden','true')}
+   else{b.disabled=false;b.removeAttribute('aria-hidden');if(!b.textContent.includes('در حال'))b.textContent='🎭 شروع بازی'}
+   const r=$('readyBtn');if(r)r.style.display='none';
+ }
+ const previous=window.roomStartGame;
+ // This final guard uses the actual lexical game mode; older patches checked window.lobbyMode,
+ // which is not the same variable and could block the host or expose the button to players.
+ window.roomStartGame=function(){
+   if(!isGod()){try{toast('فقط گاد اتاق می‌تواند بازی را شروع کند.')}catch(e){}syncStartButton();return false}
+   const b=$('roomStartBtn');if(b){b.disabled=true;b.textContent='⏳ در حال اتصال بازیکنان…'}
+   // Give the shared PeerJS data channels time to settle; broadcasts now include open data
+   // channels even when an audio stream has not become live yet.
+   try{if(window.Voice&&Voice.active())Voice.broadcast({t:'go'})}catch(e){}
+   // Call the game-start implementation captured before the stale UI guards.
+   let result;
+   try{
+     if(typeof __bmOriginalStartGame==='function')result=__bmOriginalStartGame();
+     else if(typeof previous==='function')result=previous.apply(this,arguments);
+   }catch(e){console.error(e);if(b){b.disabled=false;b.textContent='🎭 شروع بازی'}return false}
+   setTimeout(()=>{
+     try{
+       if(typeof started!=='undefined'&&!started&&typeof G!=='undefined'&&!G.loading&&typeof window.launch==='function')window.launch(0);
+       if(window.Net&&typeof Net.hostStart==='function')Net.hostStart();
+     }catch(e){console.error(e)}
+   },700);
+   return result;
+ };
+ // Capture a direct reference to the pre-guard room start implementation.
+ // It performs the host transition without going through the broken window.lobbyMode check.
+ if(!window.__bmOriginalStartGame){
+   try{
+     const candidates=[previous];
+     window.__bmOriginalStartGame=candidates.find(f=>typeof f==='function'&&String(f).includes('Voice.broadcast'))||null;
+   }catch(e){window.__bmOriginalStartGame=null}
+ }
+ syncStartButton();
+ const room=$('lobbyRoom');
+ if(room)new MutationObserver(syncStartButton).observe(room,{attributes:true,attributeFilter:['class']});
+ setInterval(syncStartButton,500);
 })();
 </script>
