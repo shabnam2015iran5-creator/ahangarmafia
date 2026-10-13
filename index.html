@@ -707,7 +707,7 @@ const Voice=(()=>{
   connectLoop();enforce();refresh();
   toast('🎙 سرور ویس وصل شد؛ در حال وصل کردن صدای بازیکنان');
  }
- function send(s,m){const r=R[s];try{if(r&&r.conn&&r.conn.open)r.conn.send(m)}catch(e){}}
+ function send(s,m){const r=R[s];try{if(r&&r.conn&&r.conn.open){r.conn.send(m);return true}}catch(e){}return false}
  function broadcast(m){Object.values(R).forEach(r=>{if(r.live||(r.conn&&r.conn.open))send(r.slot,m)})}
  function newR(s){return R[s]||(R[s]={slot:s,t0:Date.now(),live:false,sp:false})}
  function dial(s){
@@ -970,7 +970,11 @@ const Net=(()=>{
   }
   render();
  }
- function onAct(slot,d){const h=seats.findIndex(s=>s&&s.hv===slot);dispatchAct(h,d)}
+ function onAct(slot,d){
+  let h=seats.findIndex(s=>s&&s.hv===slot);
+  if(h<0&&d&&typeof d.uid==='string')h=seats.findIndex(s=>s&&s.uid===d.uid);
+  dispatchAct(h,d)
+ }
  function onFirebaseAct(uid,d){const h=seats.findIndex(s=>s&&s.uid===uid);dispatchAct(h,d)}
  /* ====== میزبان: ارسال وضعیت ====== */
  function snapForSeat(my){
@@ -1058,12 +1062,15 @@ const Net=(()=>{
   const c=String(window.MAFIA_ROOM_CODE||'').replace(/\D/g,'').slice(0,5);
   const db=String(window.MAFIA_DB_URL||'').replace(/\/$/,'');
   let uid='';try{uid=localStorage.getItem('mafia_uid')||''}catch(e){}
+  // مسیر سریع: فرمان‌های بازی را اول از DataChannel همان اتصال WebRTC بفرست؛
+  // Firebase فقط مسیر پشتیبان باشد، چون polling پایگاه داده می‌تواند تأخیر ایجاد کند.
+  const gs=Voice.godSlot();
+  if(gs&&Voice.send(gs,{...m,uid,at:Date.now()}))return;
   if(window.MAFIA_ROOM_ONLINE&&c&&db&&uid){
    fetch(db+'/roomsV23/'+encodeURIComponent(c)+'/gameActions.json',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...m,uid,at:Date.now()}),cache:'no-store'})
-    .then(r=>{if(!r.ok)throw Error('game action '+r.status)}).catch(()=>{const gs=Voice.godSlot();if(gs)Voice.send(gs,m)});
+    .then(r=>{if(!r.ok)throw Error('game action '+r.status)}).catch(()=>{});
    return;
   }
-  const gs=Voice.godSlot();if(gs)Voice.send(gs,m)
  }
  function canSpeak(){const d=snap;if(!d||!d.st)return true;const m=d.seats[d.my];if(!m||m.d||m.m)return false;if(m.v)return true;
   if(d.ph=='day')return d.ch?((d.ch.st=='ask'?d.ch.by:d.ch.to)==d.my):d.cur==d.my;if(d.ph=='defense')return d.acc==d.my;return false}
