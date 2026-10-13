@@ -3502,14 +3502,14 @@ body.ingame #gFoot #gEqReserve>*{display:flex!important;visibility:visible!impor
   const s=info.s||{},seed=s.id||s.seed||1,isMe=!!info.isMe&&!!S.photo;
   const key=(info.isGod?'god':'player')+'|'+info.i+'|'+seed+'|'+(s.f?1:0)+'|'+(isMe?'me-photo':'');
   if(img.dataset.bmKey!==key){img.innerHTML=isMe?'<div class="avi avme"></div>':avatar(seed,!!s.f,false);img.dataset.bmKey=key}
-  name.textContent=(s.n||'بازیکن')+(info.phase==='day'||info.phase==='defense'?' · نوبت صحبت':' · نوبت فعال');name.style.display='block';img.style.borderColor=active?'#e0b255':'#c9972f';
+  const nextName=(s.n||'بازیکن')+(info.phase==='day'||info.phase==='defense'?' · نوبت صحبت':' · نوبت فعال');if(name.textContent!==nextName)name.textContent=nextName;if(name.style.display!=='block')name.style.display='block';const nextBorder=active?'rgb(224, 178, 85)':'rgb(201, 151, 47)';if(img.style.borderColor!==nextBorder)img.style.borderColor=nextBorder;
  }
  function decorateSeats(){
   if(!document.body.classList.contains('ingame'))return;
   const clientView=client(),isGod=god();
   if(clientView){
    document.querySelectorAll('#grid .rl').forEach(el=>el.remove());
-   document.querySelectorAll('#grid .bmRoleUnder').forEach(el=>el.remove());
+   document.querySelectorAll('#grid .bmRoleUnder').forEach(el=>{if(!roleRevealed||!el.closest('#s'+(Net.snapshot()?.my)))el.remove()});
    if(roleRevealed){
     const d=Net.snapshot(),s=d&&d.seats&&d.seats[d.my];
     if(s&&s.ro){const seat=$('s'+d.my),cell=seat&&seat.querySelector('.cell');if(cell){let tag=cell.querySelector('.bmRoleUnder');if(!tag){tag=document.createElement('div');tag.className='bmRoleUnder';cell.appendChild(tag)}const val=safeRole(s.ro);if(tag.textContent!==val)tag.textContent=val}}
@@ -3548,9 +3548,8 @@ body.ingame #gFoot #gEqReserve>*{display:flex!important;visibility:visible!impor
   }catch(e){}
  }
  const obs=new MutationObserver(()=>{decorateSeats()});const grid=$('grid');if(grid)obs.observe(grid,{subtree:true,childList:true});
- const bodyObs=new MutationObserver(()=>{if(document.body.classList.contains('ingame')){drawFooter();decorateSeats()}});
- bodyObs.observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['class']});
- setInterval(poll,180);document.addEventListener('visibilitychange',()=>{if(!document.hidden)poll()});
+ /* Removed body-wide childList observer: it caused self-triggering DOM mutation loops. */
+ setInterval(poll,450);document.addEventListener('visibilitychange',()=>{if(!document.hidden)poll()});
 })();
 </script>
 <!-- END BLACK MAFIA v33 -->
