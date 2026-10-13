@@ -2197,6 +2197,11 @@ window.APP_VERSION='27.0';
     if(window.Voice?.join)setTimeout(()=>{try{Voice.join(r.kind)}catch(e){}},150);
     if(window.__v25Poll)clearInterval(window.__v25Poll);
     window.__v25Poll=setInterval(refreshRealRoom,2200);
+    // بازیکن‌ها نباید در صفحهٔ «اتاق مشترک» بمانند؛ مستقیم وارد پوستهٔ بازی شوند
+    // و تا رسیدن snapshot واقعی، پیام انتظار شروع گاد را داخل خود بازی ببینند.
+    if(lobbyMode==='player'&&window.Net&&typeof Net.enter==='function'){
+      setTimeout(()=>{try{Net.enter()}catch(e){console.error('Player direct game entry failed',e)}},250);
+    }
   }
   async function refreshRealRoom(){
     const c=window.MAFIA_ROOM_CODE;if(!c)return;
