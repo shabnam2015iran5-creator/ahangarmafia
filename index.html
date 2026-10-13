@@ -762,7 +762,7 @@ const VOICE_CFG={
 };
 const Voice=(()=>{
  const C=VOICE_CFG,g=id=>document.getElementById(id);
- let peer=null,slot=0,room='',local=null,rawTrack=null,micOk=false,ctx=null,an=null,anBuf=null,muted=false,on=false,joining=false,gen=0,tryT=null,loopT=null,meSp=false,base=[],meSeat=null,lastMu=null,myUid=(()=>{try{return localStorage.getItem('mafia_uid')||''}catch(e){return ''}})();
+ let peer=null,slot=0,room='',local=null,rawTrack=null,micOk=false,ctx=null,an=null,anBuf=null,muted=false,on=false,serverConnected=false,joining=false,gen=0,tryT=null,loopT=null,meSp=false,base=[],meSeat=null,lastMu=null,myUid=(()=>{try{return localStorage.getItem('mafia_uid')||''}catch(e){return ''}})();
  const R={},H={};
  const myName=()=>String(S.nick||'بازیکن').replace(/[<>&"'`\\]/g,'').slice(0,18)||'بازیکن';
  const mySeed=()=>Math.max(1,Math.min(12,parseInt(selectedAvSeed)||1));
@@ -791,7 +791,7 @@ const Voice=(()=>{
  function watchLocal(){try{an=ctx.createAnalyser();an.fftSize=256;ctx.createMediaStreamSource(local).connect(an);anBuf=new Uint8Array(an.frequencyBinCount)}catch(e){an=null}}
 
  async function join(kind){
-  if(on||joining)return;joining=true;const my=gen;room=C.prefix+'-'+(window.MAFIA_ROOM_CODE||kind);
+  if(on||joining)return;joining=true;const my=gen;try{myUid=localStorage.getItem('mafia_uid')||myUid||''}catch(e){}room=C.prefix+'-'+(window.MAFIA_ROOM_CODE||kind);
   setStatus('⏳ در حال اتصال وویس...');
   try{ctx=new (window.AudioContext||window.webkitAudioContext)();ctx.resume&&ctx.resume()}catch(e){}
   try{await loadPeer()}catch(e){joining=false;setStatus('❌ کتابخانه وویس (peerjs) بارگذاری نشد');return}
@@ -803,16 +803,23 @@ const Voice=(()=>{
   rawTrack=local.getAudioTracks()[0];watchLocal();
   let p=null,fail=false;
   for(let s=1;s<=C.maxSlots&&!p;s++){
-   const r=await openPeer(room+'-'+s);
+   let r=await openPeer(room+'-'+s);
+   // Retry transient signaling-server failures; an unavailable ID means another phone owns that slot.
+   for(let retry=0;r===undefined&&retry<2;retry++){
+    await new Promise(resolve=>setTimeout(resolve,700));
+    if(my!==gen)break;
+    r=await openPeer(room+'-'+s);
+   }
    if(my!==gen){if(r)try{r.destroy()}catch(e){}if(micOk)local.getTracks().forEach(t=>t.stop());joining=false;return}
    if(r){p=r;slot=s}else if(r===undefined){fail=true;break}
   }
   if(!p){joining=false;if(micOk)local.getTracks().forEach(t=>t.stop());local=null;rawTrack=null;
    setStatus(fail?'❌ اتصال به سرور وویس برقرار نشد':'⚠️ ظرفیت وویس این لابی پر است');return}
-  peer=p;on=true;joining=false;
+  peer=p;on=true;serverConnected=true;joining=false;
+  p.on('open',()=>{if(peer===p&&!p.destroyed){serverConnected=true;refresh();connectLoop()}});
   p.on('call',call=>{const s=slotOf(call.peer);if(!s||s===slot){try{call.close()}catch(e){}return}call.answer(local);bindCall(s,call)});
   p.on('connection',conn=>{const s=slotOf(conn.peer);if(!s||s===slot){try{conn.close()}catch(e){}return}bindConn(s,conn)});
-  p.on('disconnected',()=>{if(peer===p&&!p.destroyed)try{p.reconnect()}catch(e){}});
+  p.on('disconnected',()=>{if(peer===p&&!p.destroyed){serverConnected=false;refresh();try{p.reconnect()}catch(e){setStatus('❌ اتصال سرور وویس قطع شد؛ دوباره وارد اتاق شو')}}});
   p.on('error',e=>{if(e&&e.type==='peer-unavailable'){const m=/(\S+)\s*$/.exec(e.message||'');const s=m&&slotOf(m[1]);if(s&&R[s]&&!R[s].live)drop(s)}});
   tryT=setInterval(connectLoop,3000);loopT=setInterval(tick,140);
   connectLoop();enforce();refresh();
@@ -916,6 +923,7 @@ const Voice=(()=>{
    hs.forEach((r,j)=>{
     // Keep the Firebase-assigned chair for this player when PeerJS connects later.
     let i=r.uid?seats.findIndex((s,k)=>s&&s.uid===r.uid&&!used[k]):-1;
+    if(i<0)i=seats.findIndex((s,k)=>s&&s.hv===r.slot&&!used[k]);
     if(i<0)i=seats.findIndex((s,k)=>k>=off&&s&&!s.hv&&!s.uid&&!used[k]);
     if(i<0)i=seats.findIndex((s,k)=>k>=off&&!s&&!used[k]);
     if(i<0)return;
@@ -936,7 +944,7 @@ const Voice=(()=>{
  }
  function refresh(){
   const n=humans().length+(on?1:0);
-  setStatus(on?'🎙 وویس متصل · '+n+' نفر در کانال'+(micOk?'':' · (بدون میکروفن)'):'');
+  setStatus(on&&serverConnected?'🎙 وویس متصل · '+n+' نفر در کانال'+(micOk?'':' · (بدون میکروفن)'):on?'⚠️ ارتباط با سرور وویس قطع است؛ تلاش برای اتصال مجدد…':'');
   const lr=g('lobbyRoom');
   if(lr&&lr.classList.contains('on')){applyLobbySeats();renderLobbyChairs();
    const sb=g('roomStartBtn');if(sb&&typeof lobbyMode!=='undefined'&&lobbyMode==='player'){const gd=on&&godHere();sb.textContent=gd?'⏳ منتظر گرداننده':'🎭 شروع بازی';sb.disabled=gd}}
@@ -963,7 +971,7 @@ const Voice=(()=>{
   muted=!muted;enforce();toast(muted?'🔇 میکروفن بی‌صدا شد':'🎤 میکروفن روشن شد');
  }
  function leaveVoice(){
-  gen++;joining=false;on=false;clearInterval(tryT);clearInterval(loopT);
+  gen++;joining=false;on=false;serverConnected=false;clearInterval(tryT);clearInterval(loopT);
   Object.keys(R).forEach(s=>drop(s,true));
   try{peer&&peer.destroy()}catch(e){}peer=null;slot=0;
   try{local&&local.getTracks().forEach(t=>t.stop())}catch(e){}local=null;rawTrack=null;micOk=false;an=null;
