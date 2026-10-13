@@ -3146,7 +3146,7 @@ body.ingame #bmSharedRoomBadge{display:block}
  if(window.Net&&typeof Net.enter==='function'&&!window.__bmNetEnterWrapped){
    window.__bmNetEnterWrapped=true;
    const enter=Net.enter;
-   Net.enter=function(){const r=enter.apply(this,arguments);if(code())keepWaitingRoom();return r};
+   Net.enter=function(){const r=enter.apply(this,arguments);if(code())leaveWaitingRoom();return r};
  }
  const priorStart=window.roomStartGame;
  if(typeof priorStart==='function'&&!window.__bmOneLobbyStartWrapped){
@@ -3173,7 +3173,7 @@ body.ingame #bmSharedRoomBadge{display:block}
      else if(window.Net&&typeof Net.snapshot==='function'){const snap=Net.snapshot();live=!!(snap&&snap.st)}
    }catch(e){}
    if(live)leaveWaitingRoom();
-   else if((typeof lobbyMode!=='undefined'?lobbyMode:window.lobbyMode)==='player'&&window.Net&&Net.isClient()&&!$('lobbyRoom')?.classList.contains('on'))keepWaitingRoom();
+   else if((typeof lobbyMode!=='undefined'?lobbyMode:window.lobbyMode)==='player'&&window.Net&&Net.isClient())leaveWaitingRoom();
    paintBadge();
  },250);
  document.addEventListener('visibilitychange',()=>{if(!document.hidden)paintBadge()});
