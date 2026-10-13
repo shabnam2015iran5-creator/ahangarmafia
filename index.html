@@ -2788,6 +2788,8 @@ window.APP_VERSION='27.0';
    if(!response.ok)throw Error('snapshot '+response.status);
    const snap=await response.json();
    if(snap&&snap.t==='st'&&window.Net&&typeof Net.applySnapshot==='function'){
+    // A finish event can arrive before this phone ever received the start snapshot.
+    if(!(Net.isClient&&Net.isClient())&&cachedRoomStatus==='finished'&&typeof Net.enter==='function')Net.enter();
     Net.applySnapshot(snap);
     if(snap.st)return;
     if(cachedRoomStatus==='finished'){clientFinished=true;return}
@@ -2906,7 +2908,7 @@ window.APP_VERSION='27.0';
   }catch(e){}
  }
  /* Role labels are rendered by the main game renderer; no second DOM observer is needed. */
- setInterval(poll,450);document.addEventListener('visibilitychange',()=>{if(!document.hidden)poll()});
+ setInterval(poll,650);document.addEventListener('visibilitychange',()=>{if(!document.hidden)poll()});
 })();
 </script>
 <!-- END BLACK MAFIA v33 -->
