@@ -1075,7 +1075,15 @@ const Net=(()=>{
   g('vpn').style.display='block';clearTimeout(vpT);vpT=setTimeout(()=>g('vpn').style.display='none',5500)});
  Voice.onMsg('act',onAct);
  return{enter,hostStart,reset,bcast,canSpeak,snapshot:()=>snap,isClient:()=>client,applySnapshot(d){apply(d)},snapshotForUid(uid){return role==='god'?snapForUid(uid):null},remoteAction(uid,d){onFirebaseAct(uid,d)},sendSnapshot(slot){if(role!=='god'||!Voice.active())return false;Voice.send(slot,snapFor(slot));return true},mySeat:()=>snap?snap.my:-1,
-  tap(i){if(client&&snap&&snap.st)toHost({t:'act',a:'pick',i})},
+  tap(i){
+   if(!client||!snap||!snap.st)return;
+   // لمس جایگاه خود بازیکن، کارت نقش خودش را باز می‌کند؛ لمس بقیه جایگاه‌ها فرمان بازی است.
+   if(i===snap.my){
+    const own=snap.seats&&snap.seats[i];
+    if(own&&own.ro){revealCard(own.ro);return}
+   }
+   toHost({t:'act',a:'pick',i})
+  },
   mode(m){toHost({t:'act',a:'mode',m})},rv(y){toHost({t:'act',a:'rv',y:y?1:0});g('vb').innerHTML='';lastVb=''},
   challenge(){if(!snap||!snap.st){toast('چالش فقط در بحث روز بازی ممکن است');return}toHost({t:'act',a:'ch'})},
   chat(v){toHost({t:'act',a:'chat',v:String(v).slice(0,120)})},react(e){toHost({t:'act',a:'rx',e})}};
@@ -2887,8 +2895,12 @@ window.APP_VERSION='27.0';
   }catch(e){/* transient network failures are retried on the next poll */}
   finally{clientBusy=false}
  }
- pollTimer=setInterval(()=>{publishSnapshots();handleActions();pollClient()},1200);
+ // کانال‌ها مستقل‌اند تا انتشار snapshotهای حجیم، فرمان‌های بازی را معطل نکند.
+ const actionTimer=setInterval(()=>{handleActions()},220);
+ const snapshotTimer=setInterval(()=>{publishSnapshots()},650);
+ pollTimer=setInterval(()=>{pollClient()},350);
  pollClient();
+ window.__bmOnlineSyncTimers={actionTimer,snapshotTimer,pollTimer};
 })();
 </script>
 
