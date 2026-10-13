@@ -31,3 +31,6 @@
 ```json
 {"rules":{"roomsV23":{".read":true,".write":true},"rooms":{".read":true,"$kind":{"$id":{".write":true}}},"godPerms":{".read":true,".write":true}}}
 ```
+
+## قواعد فعلی Firebase برای تست
+فایل `database.rules.json` نسخهٔ معتبر JSON از قواعد آزمایشی فعلی است. برای اعمال آن در Firebase Console، وارد **Realtime Database → Rules** شو، محتوای این فایل را جایگزین کن و **Publish** را بزن. این نسخه عمداً همان دسترسی آزمایشی و تاریخ انقضای فعلی را حفظ می‌کند؛ احراز هویت و سیاست امنیتی در این مرحله تغییر داده نشده‌اند. تاریخ پایان قواعد آزمایشی: **۹ نوامبر ۲۰۲۶**.
