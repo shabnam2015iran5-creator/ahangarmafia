@@ -623,7 +623,7 @@ const VOICE_CFG={
 };
 const Voice=(()=>{
  const C=VOICE_CFG,g=id=>document.getElementById(id);
- let peer=null,slot=0,room='',local=null,rawTrack=null,micOk=false,ctx=null,an=null,anBuf=null,muted=false,on=false,joining=false,gen=0,tryT=null,loopT=null,meSp=false,base=[],meSeat=null,lastMu=null,signalRetryAt=0,myUid=(()=>{try{return localStorage.getItem('mafia_uid')||''}catch(e){return ''}})();
+ let peer=null,slot=0,room='',local=null,rawTrack=null,micOk=false,ctx=null,an=null,anBuf=null,muted=false,on=false,joining=false,gen=0,tryT=null,loopT=null,meSp=false,base=[],meSeat=null,lastMu=null,signalRetryAt=0,voiceDiag='',myUid=(()=>{try{return localStorage.getItem('mafia_uid')||''}catch(e){return ''}})();
  const R={},H={};
  const myName=()=>String(S.nick||'بازیکن').replace(/[<>&"'`\\]/g,'').slice(0,18)||'بازیکن';
  const mySeed=()=>Math.max(1,Math.min(24,parseInt(selectedAvSeed)||1));
@@ -750,6 +750,22 @@ const Voice=(()=>{
    r.live=false;r.stream=null;r.an=null;r.buf=null;r.audioPlaying=false;
   }
   r.call=call;r.callT0=Date.now();
+  // Expose the actual WebRTC ICE state in the voice status so a silent call can
+  // be distinguished from a browser autoplay block.
+  try{
+   const pc=call.peerConnection;
+   if(pc){
+    const report=()=>{
+     const st=pc.iceConnectionState||pc.connectionState||'';
+     if(st==='failed'){voiceDiag=' · اتصال صوتی ناموفق؛ شبکه یا TURN';refresh()}
+     else if(st==='disconnected'){voiceDiag=' · اتصال صوتی ناپایدار؛ تلاش برای وصل مجدد';refresh()}
+     else if(st==='connected'||st==='completed'){voiceDiag='';refresh()}
+    };
+    pc.addEventListener('iceconnectionstatechange',report);
+    pc.addEventListener('connectionstatechange',report);
+    report();
+   }
+  }catch(e){}
   call.on('stream',st=>{
    if(R[s]!==r||r.call!==call||r.stream===st)return;
    r.stream=st;playRemote(r,st);r.live=true;refresh();
@@ -900,7 +916,7 @@ const Voice=(()=>{
  }
  function refresh(){
   const n=humans().length+(on?1:0);
-  const hasStream=humans().some(r=>r.live),hasPlayback=humans().some(r=>r.live&&r.audioPlaying);setStatus(on?(hasPlayback?'🟢 صدای دریافتی در حال پخش · '+n+' نفر':hasStream?'🟠 جریان صدا رسیده؛ گوشی هنوز آن را پخش نمی‌کند':'🟡 سرور ویس وصل است؛ منتظر جریان صدای بازیکنان')+(micOk?'':' · میکروفن در دسترس نیست'):'');
+  const hasStream=humans().some(r=>r.live),hasPlayback=humans().some(r=>r.live&&r.audioPlaying);setStatus(on?(hasPlayback?'🟢 صدای دریافتی در حال پخش · '+n+' نفر':hasStream?'🟠 جریان صدا رسیده؛ گوشی هنوز آن را پخش نمی‌کند':'🟡 سرور ویس وصل است؛ منتظر جریان صدای بازیکنان')+(micOk?'':' · میکروفن در دسترس نیست')+voiceDiag:'');
   const lr=g('lobbyRoom');
   if(lr&&lr.classList.contains('on')){applyLobbySeats();renderLobbyChairs();
    const sb=g('roomStartBtn');if(sb&&typeof lobbyMode!=='undefined'&&lobbyMode==='player'){const gd=on&&godHere();sb.textContent=gd?'⏳ منتظر گرداننده':'🎭 شروع بازی';sb.disabled=gd}}
