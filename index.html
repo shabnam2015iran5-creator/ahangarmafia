@@ -612,7 +612,7 @@ save();buildNav();rHome();injectMe();try{startFx()}catch(e){};renderAvatarGaller
 const VOICE_CFG={
  // بهترین حالت: فایل peerjs.min.js را کنار همین HTML روی هاست آپلود کنید.
  // اگر نبود، به‌ترتیب از CDNهای زیر خوانده می‌شود.
- scripts:['peerjs.min.js','https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js','https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js','https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js'],
+ scripts:['https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js','https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js','https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js'],
  // سرور سیگنالینگ: {} = سرور رایگان PeerJS. برای سرور خودتان مثلاً:
  // {host:'yourdomain.com',port:443,path:'/peerjs',secure:true}
  peer:{host:'0.peerjs.com',port:443,path:'/',secure:true},
@@ -639,7 +639,7 @@ const Voice=(()=>{
    if(i>=C.scripts.length)return rej(new Error('peer'));
    const s=document.createElement('script');let d=false;
    const fin=ok=>{if(d)return;d=true;clearTimeout(tm);if(ok&&window.Peer)res();else{s.remove();next()}};
-   const tm=setTimeout(()=>fin(false),7000);
+   const tm=setTimeout(()=>fin(false),4000);
    s.src=C.scripts[i++];s.onload=()=>fin(true);s.onerror=()=>fin(false);document.head.appendChild(s)})()});
  }
  function openPeer(id){return new Promise(res=>{
@@ -650,7 +650,7 @@ const Voice=(()=>{
   p.on('call',call=>{if(p.__mfVoiceReady&&p.__mfAcceptCall)p.__mfAcceptCall(call);else p.__mfPendingCalls.push(call)});
   p.on('connection',conn=>{if(p.__mfVoiceReady&&p.__mfAcceptConn)p.__mfAcceptConn(conn);else p.__mfPendingConns.push(conn)});
   const fin=v=>{if(d)return;d=true;clearTimeout(tm);if(v!==p){try{p.destroy()}catch(e){}}res(v)};
-  const tm=setTimeout(()=>fin(undefined),5000);
+  const tm=setTimeout(()=>fin(undefined),3000);
   p.on('open',()=>fin(p));
   // An occupied ID is normal while finding a free slot. Other errors may be transient;
   // the caller retries them rather than abandoning the whole lobby immediately.
@@ -1105,15 +1105,16 @@ const Net=(()=>{
   const c=String(window.MAFIA_ROOM_CODE||'').replace(/\D/g,'').slice(0,5);
   const db=String(window.MAFIA_DB_URL||'').replace(/\/$/,'');
   let uid='';try{uid=localStorage.getItem('mafia_uid')||''}catch(e){}
-  // مسیر سریع: فرمان‌های بازی را اول از DataChannel همان اتصال WebRTC بفرست؛
-  // Firebase فقط مسیر پشتیبان باشد، چون polling پایگاه داده می‌تواند تأخیر ایجاد کند.
-  const gs=Voice.godSlot();
-  if(gs&&Voice.send(gs,{...m,uid,at:Date.now()}))return;
+  // در اتاق آنلاین، صف Firebase مسیر اصلی و قابل‌تأیید فرمان‌هاست.
+  // DataChannel ممکن است باز باشد ولی سمت مقابل دیگر پیام‌ها را پردازش نکند؛
+  // بنابراین فرمان آنلاین را به صف پایدار می‌فرستیم تا گاد آن را دریافت و تأیید کند.
   if(window.MAFIA_ROOM_ONLINE&&c&&db&&uid){
    fetch(db+'/roomsV23/'+encodeURIComponent(c)+'/gameActions.json',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...m,uid,at:Date.now()}),cache:'no-store'})
-    .then(r=>{if(!r.ok)throw Error('game action '+r.status)}).catch(()=>{});
+    .then(r=>{if(!r.ok)throw Error('game action '+r.status)}).catch(e=>console.warn('Game command queue failed',e));
    return;
   }
+  const gs=Voice.godSlot();
+  if(gs)Voice.send(gs,{...m,uid,at:Date.now()});
  }
  function canSpeak(){const d=snap;if(!d||!d.st)return true;const m=d.seats[d.my];if(!m||m.d||m.m)return false;if(m.v)return true;
   if(d.ph=='day')return d.ch?((d.ch.st=='ask'?d.ch.by:d.ch.to)==d.my):d.cur==d.my;if(d.ph=='defense')return d.acc==d.my;return false}
