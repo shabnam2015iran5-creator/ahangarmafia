@@ -2907,7 +2907,7 @@ window.APP_VERSION='27.0';
   finally{clientBusy=false}
  }
  // کانال‌ها مستقل‌اند تا انتشار snapshotهای حجیم، فرمان‌های بازی را معطل نکند.
- const actionTimer=setInterval(()=>{handleActions()},220);
+ const actionTimer=setInterval(()=>{handleActions()},450);
  const snapshotTimer=setInterval(()=>{publishSnapshots()},650);
  pollTimer=setInterval(()=>{pollClient()},350);
  pollClient();
