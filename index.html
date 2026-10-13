@@ -863,7 +863,7 @@ const Voice=(()=>{
   if(d.t==='p'){r.n=clean(d.n)||('بازیکن '+s);r.seed=Math.max(1,Math.min(12,parseInt(d.seed)||1));r.f=!!d.f;r.role=d.role==='god'?'god':'player';r.ready=!!d.rdy;r.mu=!!d.mu;r.uid=String(d.uid||'');refresh()}
   else if(d.t==='mu'){r.mu=!!d.v;refresh()}
   else if(d.t==='rdy'){r.ready=!!d.v;refresh()}
-  else if(typeof H[d.t]==='function'&&(d.t==='act'||r.role==='god')){H[d.t](s,d)}});
+  else if(typeof H[d.t]==='function'&&(d.t==='act'||d.t==='sync'||r.role==='god')){H[d.t](s,d)}});
  }
  function playRemote(r,st){
   const a=document.createElement('audio');a.autoplay=true;a.playsInline=true;a.srcObject=st;a.style.display='none';document.body.appendChild(a);
@@ -1100,7 +1100,7 @@ const Net=(()=>{
   g('vpn').innerHTML='<b>🗳 جدول آرا</b>'+d.l.slice(0,N).map(x=>`<div>${esc(x[0])} ➜ <b>${esc(x[1])}</b></div>`).join('')+((d.ab&&d.ab.length)?'<div style="opacity:.7">ممتنع: '+d.ab.slice(0,N).map(esc).join('، ')+'</div>':'');
   g('vpn').style.display='block';clearTimeout(vpT);vpT=setTimeout(()=>g('vpn').style.display='none',5500)});
  Voice.onMsg('act',onAct);
- return{enter,hostStart,reset,bcast,canSpeak,snapshot:()=>snap,isClient:()=>client,mySeat:()=>snap?snap.my:-1,
+ return{enter,hostStart,reset,bcast,canSpeak,snapshot:()=>snap,isClient:()=>client,sendSnapshot(slot){if(role!=='god'||!Voice.active())return false;Voice.send(slot,snapFor(slot));return true},mySeat:()=>snap?snap.my:-1,
   tap(i){if(client&&snap&&snap.st)toHost({t:'act',a:'pick',i})},
   mode(m){toHost({t:'act',a:'mode',m})},rv(y){toHost({t:'act',a:'rv',y:y?1:0});g('vb').innerHTML='';lastVb=''},
   challenge(){if(!snap||!snap.st){toast('چالش فقط در بحث روز بازی ممکن است');return}toHost({t:'act',a:'ch'})},
@@ -1112,6 +1112,8 @@ const Net=(()=>{
    Later room-start and Firebase recovery code intentionally checks window.Net/window.Voice. */
 window.Voice = Voice;
 window.Net = Net;
+// Recover a missed start/snapshot over the existing data channel without forcing a disconnect.
+Voice.onMsg('sync',(slot)=>{try{if(window.Net&&typeof Net.sendSnapshot==='function')Net.sendSnapshot(slot)}catch(e){}});
 
 /* --- اتصال به بقیه‌ی برنامه --- */
 (()=>{
@@ -1129,7 +1131,7 @@ window.Net = Net;
   if(lobbyMode==='god'){Voice.broadcast({t:'go'});const r=_rsg();Net.hostStart();return r}
   if(Voice.active()&&Voice.godHere()){toast('منتظر شروع بازی توسط گرداننده باشید');return}
   return _rsg()};
- Voice.onGo(()=>{if(document.getElementById('lobbyRoom').classList.contains('on')&&lobbyMode==='player'){lobbyReady=true;/* Wait for the host's first game snapshot before leaving the lobby. */}});
+ Voice.onGo(()=>{if(document.getElementById('lobbyRoom').classList.contains('on')&&lobbyMode==='player'){lobbyReady=true;try{Voice.broadcast({t:'sync'})}catch(e){}}});
  window.again=function(){if(Net.isClient()){leave();return}return _again()};
  window.rx=function(e){if(Net.isClient()){Net.react(e);return}return _rx(e)};
  window.humanChallenge=function(){if(Net.isClient()){Net.challenge();return}return _hc()};
@@ -2953,16 +2955,11 @@ button[title], [role="button"][title]{cursor:pointer}button:focus-visible{outlin
       if(!startSeenAt)startSeenAt=Date.now();
       const snap=window.Net&&typeof Net.snapshot==='function'?Net.snapshot():null;
       if(snap&&snap.st){lastStartedRoom=code;return}
-      // The database status is only a signal to reconnect, not a game snapshot.
-      // Keep the player in the lobby until a real host snapshot arrives; otherwise
-      // the game screen is empty and has no seats or player portrait.
-      if(Date.now()-startSeenAt>7000&&Date.now()-lastReconnectAt>10000&&window.Voice&&typeof Voice.join==='function'){
+      // Ask the host to resend a fresh game snapshot over the existing data channel.
+      // Do not tear down a working connection just because one snapshot was missed.
+      if(Date.now()-startSeenAt>1500&&Date.now()-lastReconnectAt>2000&&window.Voice&&typeof Voice.broadcast==='function'){
         lastReconnectAt=Date.now();
-        try{
-          Voice.leave();
-          await new Promise(resolve=>setTimeout(resolve,350));
-          await Voice.join((window.MAFIA_ROOM_META&&window.MAFIA_ROOM_META.kind)||(typeof lobbyKind!=='undefined'?lobbyKind:'friendly'));
-        }catch(re){}
+        try{Voice.broadcast({t:'sync'})}catch(re){}
       }
       return;
     }catch(e){}
