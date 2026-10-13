@@ -1133,7 +1133,7 @@ const Net=(()=>{
   g('vpn').innerHTML='<b>🗳 جدول آرا</b>'+d.l.slice(0,N).map(x=>`<div>${esc(x[0])} ➜ <b>${esc(x[1])}</b></div>`).join('')+((d.ab&&d.ab.length)?'<div style="opacity:.7">ممتنع: '+d.ab.slice(0,N).map(esc).join('، ')+'</div>':'');
   g('vpn').style.display='block';clearTimeout(vpT);vpT=setTimeout(()=>g('vpn').style.display='none',5500)});
  function reconcileFirebasePlayers(players){
-  if(role!=='god'||!Array.isArray(seats)||!inGame())return;
+  if(role!=='god'||!Array.isArray(seats)||!document.body.classList.contains('ingame'))return;
   const now=Date.now();
   const active=Object.entries(players||{}).filter(([uid,p])=>p&&p.role==='player'&&now-(+p.at||0)<15000);
   const activeUids=new Set(active.map(([uid])=>uid));
