@@ -169,7 +169,7 @@ nav{background:#0009;border:1px solid var(--g2);border-radius:12px;padding:3px}n
 .setupAv{width:88px;height:88px;border-radius:16px;border:3px solid #e0b255;background:#160a05;overflow:hidden;box-shadow:0 0 18px #e0b25533}.setupAv .avi{width:100%;height:100%;background-size:cover;background-position:center}
 .profileSetup input,.ageInput{width:100%;padding:9px;border-radius:9px;border:1px solid #a87528;background:#050202;color:#f6ead0;font-family:inherit}
 .ageLine{display:flex;gap:7px;align-items:center}.ageLine label{font-size:12px;white-space:nowrap}.ageLine input{max-width:100px}
-.avGallery{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-top:7px}.avChoice{border:2px solid #6f4818;border-radius:10px;background:#090403;padding:3px;cursor:pointer;aspect-ratio:1;overflow:hidden}.avChoice.on{border-color:#ffe28a;box-shadow:0 0 14px #e0b25599}.avChoice .avi{width:100%;height:100%;background-size:cover;background-position:center;border-radius:7px}
+.avGallery{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-top:7px}.avChoice{position:relative;border:2px solid #6f4818;border-radius:10px;background:#090403;padding:3px;cursor:pointer;aspect-ratio:1;overflow:hidden}.avChoice.on{border-color:#ffe28a;box-shadow:0 0 14px #e0b25599}.avChoice .avi{width:100%;height:100%;background-size:cover;background-position:center;border-radius:7px}.avChoice small{position:absolute;bottom:4px;left:4px;min-width:18px;padding:1px 3px;border-radius:5px;background:#000c;color:#ffe7a3;font-size:9px}
 .lobbyCards{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}.lobbyCard{position:relative;text-align:right;border:1px solid #7c531b;border-radius:15px;padding:11px;background:linear-gradient(145deg,#2a1208,#0d0503);min-height:142px}.lobbyCard.locked{opacity:.62}.lobbyCard h3{margin:0 0 5px;font-size:14px}.lobbyCard p{margin:0 0 9px;font-size:10.5px;line-height:1.65;color:#cbb58c}.lobbyCard .badge{display:inline-block;border-radius:10px;padding:3px 7px;background:#0008;border:1px solid #79521c;font-size:10px}.lobbyCard .go{position:absolute;bottom:9px;left:9px;right:9px}
 .lobbyRoomWrap{width:min(96vw,520px);height:min(96vh,900px);position:relative;border:3px solid #a87528;border-radius:24px;overflow:hidden;background:radial-gradient(circle at 50% 25%,#71461d 0,#34200d 35%,#160b05 70%,#080403);box-shadow:0 0 45px #000, inset 0 0 30px #000}.lobbyRoomWrap:before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 50% 78%,#d8a83b22,transparent 35%),linear-gradient(#0001,#0007);pointer-events:none}
 .lobbyTop{position:relative;display:flex;align-items:center;gap:7px;padding:10px}.roomTitle{flex:1;text-align:center;font-size:19px;font-weight:900;color:#f6dda1;text-shadow:0 2px 8px #000}.roomIcon{width:43px;height:43px;border:1px solid #a87528;background:#1b0b05;border-radius:12px;color:#f5d88e;font-size:20px}.roomCount{font-size:11px;color:#dbc18d}
@@ -395,12 +395,60 @@ const CHQ=['{t}، چرا اینقدر مطمئنی؟','{t}، حرفت با او�
 const CHA=['سؤالت منطقیه؛ من فقط حقیقت رو گفتم','من چیزی برای پنهان کردن ندارم','دارید منو به حاشیه می‌برید','قسم می‌خورم شهروندم'];
 const dfn=()=>rs(seats[G.acc]&&seats[G.acc].r=='m'?DEFM:DEFC);
 function pickT(v){const s=seats[v],c=alive().filter(x=>x!=v&&!(s.r=='m'&&seats[x].r=='m'));if(s.sus!=null&&c.includes(s.sus)&&Math.random()<.6)return s.sus;return c.length?rs(c):null}
-function dlg(v){const s=seats[v];if(!started)return rs(LOB);const T=pickT(v),o={},L=(G.last!=null&&G.last!=v&&seats[G.last]&&!seats[G.last].d)?G.last:null;
- if(T!=null)o.t=seats[T].n;if(L!=null)o.a=seats[L].n;if(G.kd)o.d=G.kd;let P=[];
- if(G.kd&&(G.dn||0)<3){G.dn=(G.dn||0)+1;P.push(...DEAD)}else if(!G.kd&&G.nn>1&&(G.dn||0)<2){G.dn=(G.dn||0)+1;P.push(...NODEAD)}
- if(T!=null)P.push(...ACC,...ACC);if(L!=null)P.push(...REACT);P.push(...GEN);if(s.per=='aggr')P.push(...AGG);if(s.per=='care')P.push(...CARE);
- if(s.r=='m')P.push(...MAF);if(s.r=='d')P.push(...DOC);if(s.r=='k')P.push(...DET);
- const t=rs(P);if(t.includes('{t}')&&T!=null){s.sus=T;G.rep={to:T,from:v}}return FM(t,o)}
+function dlg(v){
+ const s=seats[v];if(!started)return rs(LOB);
+ const T=pickT(v),L=(G.last!=null&&G.last!=v&&seats[G.last]&&!seats[G.last].d)?G.last:null;
+ const o={t:T!=null?seats[T].n:'یکی از بازیکنان',a:L!=null?seats[L].n:'دوستان',d:G.kd||'بازیکن حذف‌شده',n:s.n};
+ const P=[];
+ if(G.kd&&(G.dn||0)<3){G.dn=(G.dn||0)+1;P.push(...DEAD)}
+ else if(!G.kd&&G.nn>1&&(G.dn||0)<2){G.dn=(G.dn||0)+1;P.push(...NODEAD)}
+ const strategic=[
+  'قبل از رأی، هرکس فقط یک دلیل مشخص برای اتهامش بگوید؛ تکرار اتهام مدرک نیست.',
+  'من حرف‌ها را با رأی‌های دور قبل مقایسه می‌کنم؛ تغییر موضع بدون توضیح برایم مهم است.',
+  'به نظرم باید بین «حدس» و «سرنخ» فرق بگذاریم. چه کسی می‌تواند حرفش را با رفتار قبلی ثابت کند؟',
+  'اگر به کسی رأی می‌دهید، توضیح بدهید چرا؛ رأی هماهنگ و بی‌دلیل می‌تواند نشانه‌ی مافیا باشد.',
+  'بیایید تناقض‌ها را بررسی کنیم، نه اینکه فقط به کسی که بلندتر حرف می‌زند اعتماد کنیم.',
+  'من هنوز حکم قطعی نمی‌دهم؛ می‌خواهم ببینم چه کسی از پاسخ مستقیم فرار می‌کند.',
+  'یک سؤال مشخص: اگر امروز اشتباه کنیم، چه کسی از حذف این بازیکن سود می‌برد؟',
+  'به ترتیب صحبت کنیم تا همه فرصت دفاع داشته باشند؛ قطع کردن حرف دیگران چیزی را ثابت نمی‌کند.'
+ ];
+ const town=[
+  'من دنبال تناقض می‌گردم، نه صرفاً رفتار عصبی؛ فشار بازی ممکن است هرکسی را مضطرب کند.',
+  'اگر شهروندیم، باید اطلاعاتمان را کنار هم بگذاریم و عجولانه رأی ندهیم.',
+  'برای اتهامم دلیل دارم، اما آماده‌ام اگر توضیح قانع‌کننده‌ای بشنوم نظرم را عوض کنم.',
+  'کسی که امروز رأی می‌دهد ولی حاضر نیست دلیلش را بگوید باید توضیح بدهد.'
+ ];
+ const mafia=[
+  'اتهام بدون دلیل کمکی نمی‌کند؛ بهتر است از همه یک سؤال یکسان بپرسیم.',
+  'من هم می‌خواهم سرنخ روشن ببینم؛ فعلاً چند نفر دارند با قطعیت بیش از حد حرف می‌زنند.',
+  'بیایید روی حرف‌های متناقض تمرکز کنیم، نه روی شایعه و حدس‌های زنجیره‌ای.'
+ ];
+ const investigator=[
+  'من دارم حرف‌های هر نفر را با رفتار دورهای قبل می‌سنجم؛ یک پاسخ کوتاه کافی نیست.',
+  'اگر کسی ادعای مهمی دارد، باید توضیح بدهد از کجا به آن نتیجه رسیده است.',
+  'سرنخ را با اطمینان اشتباه نگیرید؛ هنوز باید چند احتمال را کنار هم بررسی کنیم.'
+ ];
+ if(T!=null){
+  const target=seats[T];
+  if(target&&target.sus===v)P.push('جالبه که '+target.n+' حالا منو متهم می‌کنه؛ بیایید ببینیم چه کسی اول اتهام را شروع کرد.');
+  P.push(...ACC.filter(x=>!x.includes('دیشب')||G.dayNo>1));
+  if(s.r==='m')P.push('رفتار '+target.n+' را بررسی کنیم؛ اما قبل از نتیجه‌گیری از او سؤال مستقیم بپرسیم.');
+ }
+ if(L!=null)P.push(...REACT);
+ P.push(...strategic,...town);
+ if(s.per==='aggr')P.push(...AGG,'من جواب روشن می‌خواهم؛ '+o.t+' لطفاً مستقیم پاسخ بده.');
+ if(s.per==='care')P.push(...CARE,'قبل از حذف کسی، دفاعش را کامل بشنویم.');
+ if(s.r==='m')P.push(...MAF,...mafia);
+ if(s.r==='d')P.push(...DOC,'من امشب باید انتخابم را بر اساس خطر واقعی انجام بدهم؛ لطفاً نشانه‌ها را دقیق بگویید.');
+ if(s.r==='k')P.push(...DET,...investigator);
+ if(s.r==='j')P.push('من ترجیح می‌دهم ادعاها را با ترتیب اتفاق‌ها بسنجیم؛ زمان‌بندی حرف‌ها مهم است.');
+ if(s.r==='a')P.push('در تصمیم‌گیری عجله نکنید؛ یک رأی اشتباه می‌تواند مسیر بازی را عوض کند.');
+ let t=rs(P);
+ if(s.lastDlg===t){const alt=P.filter(x=>x!==t);if(alt.length)t=rs(alt)}
+ s.lastDlg=t;
+ if(t.includes('{t}')&&T!=null){s.sus=T;G.rep={to:T,from:v}}
+ return FM(t,o);
+}
 
 /* ---------- ui ---------- */
 function showRole(i){const s=seats[i];if(!s||!s.r)return false;return s.rev||isG()||(role=='player'&&(i==0||me().d||(me().r=='m'&&s.r=='m')))}
@@ -659,13 +707,24 @@ function proSvg(seed,f){
  const bangs=f?`<path d="M29 40Q29 10 51 14Q74 11 71 40Q62 31 56 27Q47 38 29 40Z" fill="${hair}"/><path d="M34 28Q28 45 31 58Q38 47 40 32Z" fill="${hair}"/>`:`<path d="M29 38Q30 10 51 13Q72 10 71 39Q62 27 53 25Q42 31 29 38Z" fill="${hair}"/>`;
  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><radialGradient id="bg"><stop stop-color="#76501f"/><stop offset="1" stop-color="#120805"/></radialGradient><linearGradient id="skin" x2="0" y2="1"><stop stop-color="#fff" stop-opacity=".22"/><stop offset=".5" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".2"/></linearGradient><linearGradient id="coat" x2="0" y2="1"><stop stop-color="#ffffff" stop-opacity=".12"/><stop offset="1" stop-color="#000" stop-opacity=".35"/></linearGradient></defs><rect width="100" height="100" rx="16" fill="url(#bg)"/><circle cx="50" cy="48" r="39" fill="#000" opacity=".12"/><path d="M15 100Q17 73 35 68L50 78L65 68Q83 73 85 100Z" fill="${coat}" stroke="#d3a74e" stroke-opacity=".35"/><path d="M39 69L50 82L61 69L57 62L43 62Z" fill="${skin}" opacity=".8"/><path d="${female}" fill="${skin}" stroke="#d9aa72" stroke-width=".7"/><ellipse cx="39" cy="45" rx="5" ry="3.2" fill="#fff" opacity=".65"/><ellipse cx="61" cy="45" rx="5" ry="3.2" fill="#fff" opacity=".65"/><circle cx="39" cy="45" r="1.8" fill="${eye}"/><circle cx="61" cy="45" r="1.8" fill="${eye}"/><path d="M34 39Q39 35 44 39M56 39Q61 35 66 39" fill="none" stroke="#24130c" stroke-width="2" stroke-linecap="round"/><path d="M50 46L47 55L51 56" fill="none" stroke="#8f5b3c" stroke-width="1.5"/><path d="M43 61Q50 65 57 61" fill="none" stroke="#6f2830" stroke-width="2" stroke-linecap="round"/>${bangs}<path d="M23 100Q24 78 38 73L50 82L62 73Q76 78 77 100Z" fill="${coat}"/><path d="M44 76L50 88L56 76" fill="none" stroke="#d0a44e" stroke-width="1.3" opacity=".8"/><path d="M18 96Q22 81 35 77M82 96Q78 81 65 77" fill="none" stroke="#e2ba60" stroke-opacity=".35"/><circle cx="50" cy="82" r="2" fill="#e0b255"/><circle cx="50" cy="82" r="5" fill="none" stroke="#e0b255" stroke-opacity=".2"/></svg>`;
 }
-function proAvatar(seed,f){return `<div class="avi" style="background-image:url("data:image/svg+xml;charset=utf-8,${encodeURIComponent(proSvg(seed,!!f))}")"></div>`}
+const PRO_AV_CACHE={};
+function proAvatar(seed,f){
+ const n=Math.max(1,Math.abs(Number(seed)||1)),female=!!f,k='proAv'+n+(female?'f':'m');
+ if(!PRO_AV_CACHE[k]){
+  const svg=proSvg(n,female),css='.'+k+'{background-image:url("data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg)+'")!important;background-size:cover;background-position:center}';
+  let st=document.getElementById('proAvStyles');if(!st){st=document.createElement('style');st.id='proAvStyles';document.head.appendChild(st)}
+  st.appendChild(document.createTextNode(css));PRO_AV_CACHE[k]=true;
+ }
+ return '<div class="avi '+k+'" role="img" aria-label="آواتار حرفه‌ای"></div>';
+}
 function avatar(seed,f,open){return proAvatar(seed,f)}
 function renderAvatarGallery(){
- const g=$('proAvGallery'); if(!g)return; let h=''; for(let i=1;i<=12;i++){const f=i%3===0; h+=`<button class="avChoice ${selectedAvSeed===i?'on':''}" onclick="chooseProAvatar(${i})">${proAvatar(i,f)}</button>`} g.innerHTML=h; updateSetupPreview();
+ const g=$('proAvGallery'); if(!g)return; let h='';
+ for(let i=1;i<=24;i++){const f=(i%4===0||i%7===0);h+=`<button class="avChoice ${selectedAvSeed===i?'on':''}" aria-label="انتخاب آواتار ${i}" onclick="chooseProAvatar(${i})">${proAvatar(i,f)}<small>${String(i).padStart(2,'0')}</small></button>`}
+ g.innerHTML=h; updateSetupPreview();
 }
 function chooseProAvatar(i){selectedAvSeed=i;S.avatarSeed=i;S.photo='';save();injectMe();renderAvatarGallery();toast('آواتار حرفه‌ای انتخاب شد')}
-function updateSetupPreview(){const e=$('setupPreview');if(!e)return;e.innerHTML=S.photo?'<div class="avi avme"></div>':proAvatar(selectedAvSeed,selectedAvSeed%3===0)}
+function updateSetupPreview(){const e=$('setupPreview');if(!e)return;e.innerHTML=S.photo?'<div class="avi avme"></div>':proAvatar(selectedAvSeed,(selectedAvSeed%4===0||selectedAvSeed%7===0))}
 function openDoorFlow(mode){lobbyMode=mode||'player';$('doorScreen').classList.add('on');$('doorFrame').classList.remove('doorOpen');setTimeout(openLobbyDoor,300)}
 function openLobbyDoor(){if(!$('doorScreen').classList.contains('on'))return;doorSfx();$('doorFrame').classList.add('doorOpen');setTimeout(()=>{$('doorScreen').classList.remove('on');openLobbyGate()},900)}
 function doorSfx(){try{const A=new (window.AudioContext||window.webkitAudioContext)(),t=A.currentTime;const o=A.createOscillator(),g=A.createGain();o.type='triangle';o.frequency.setValueAtTime(90,t);o.frequency.exponentialRampToValueAtTime(48,t+.42);g.gain.setValueAtTime(.001,t);g.gain.exponentialRampToValueAtTime(.32,t+.03);g.gain.exponentialRampToValueAtTime(.001,t+.5);o.connect(g);g.connect(A.destination);o.start(t);o.stop(t+.55);const o2=A.createOscillator(),g2=A.createGain();o2.type='sine';o2.frequency.value=420;g2.gain.setValueAtTime(.001,t+.18);g2.gain.exponentialRampToValueAtTime(.08,t+.22);g2.gain.exponentialRampToValueAtTime(.001,t+.5);o2.connect(g2);g2.connect(A.destination);o2.start(t+.18);o2.stop(t+.55);setTimeout(()=>A.close(),800)}catch(e){}}
@@ -682,7 +741,7 @@ function enterLobby(kind){if(!saveProfile())return;const age=+S.age||0;if(kind!=
 function lobbyLabel(k){return k==='edu'?['🎓 لابی آموزشی','آموزش قوانین، نقش‌ها و تمرین قبل از بازی']:k==='friendly'?['🤝 لابی دوستانه','بازی دوستانه با فضای سبک و قوانین کامل']:['🏆 لابی حرفه‌ای','بازی رقابتی با گرداننده و قوانین کامل']}
 function buildLobbyRoom(){const [title,sub]=lobbyLabel(lobbyKind);$('roomTitle').textContent=title;$('roomBanner').innerHTML=title+`<small>${sub}</small>`;const names=lobbyKind==='pro'?['Rafael','ARIANA','MHD-SH','اربابی','Parissa','کیان','مهسا','بهروز','یلدا','آرمان','سارا']:lobbyKind==='friendly'?['دلارام','آرمان','سارا','کیان','مهسا','بهروز','نیلوفر','امیر','ستایش','فرهاد','یلدا']:['آموزش ۱','آموزش ۲','آموزش ۳','آموزش ۴','آموزش ۵','آموزش ۶','آموزش ۷','آموزش ۸','آموزش ۹','آموزش ۱۰','آموزش ۱۱'];
  lobbyRoomSeats=(lobbyMode==='player'?names.slice(0,10):names).map((n,i)=>({n,id:i+1,f:i%3===1,bot:true,seed:(i%12)+1}));
- if(lobbyMode==='player')lobbyRoomSeats[0]={n:S.nick||'رضا',id:7,f:selectedAvSeed%3===0,bot:false,seed:selectedAvSeed};
+ if(lobbyMode==='player')lobbyRoomSeats[0]={n:S.nick||'رضا',id:7,f:(selectedAvSeed%4===0||selectedAvSeed%7===0),bot:false,seed:selectedAvSeed};
  else lobbyRoomSeats[0]={n:'گاد',id:999,f:false,bot:false,seed:8,role:'god'};
  lobbyReady=false;$('readyBtn').style.display=lobbyMode==='player'?'inline-block':'none';$('roomStartBtn').textContent=lobbyMode==='god'?'🎭 شروع لابی':'🎭 شروع بازی';
  $('roomCount').textContent='👥 '+lobbyRoomSeats.filter(s=>s&&s.role!=='god').length+'/10';$('modName').textContent=lobbyMode==='god'?(S.nick||'گاد'):'گاد اصلی';$('modRole').textContent=lobbyMode==='god'?'گاد اصلی':'گرداننده لابی';$('modAvatar').innerHTML=proAvatar(lobbyMode==='god'?selectedAvSeed:8,false);renderLobbyChairs();
@@ -765,7 +824,7 @@ const Voice=(()=>{
  let peer=null,slot=0,room='',local=null,rawTrack=null,micOk=false,ctx=null,an=null,anBuf=null,muted=false,on=false,joining=false,gen=0,tryT=null,loopT=null,meSp=false,base=[],meSeat=null,lastMu=null,myUid=(()=>{try{return localStorage.getItem('mafia_uid')||''}catch(e){return ''}})();
  const R={},H={};
  const myName=()=>String(S.nick||'بازیکن').replace(/[<>&"'`\\]/g,'').slice(0,18)||'بازیکن';
- const mySeed=()=>Math.max(1,Math.min(12,parseInt(selectedAvSeed)||1));
+ const mySeed=()=>Math.max(1,Math.min(24,parseInt(selectedAvSeed)||1));
  const clean=s=>String(s||'').replace(/[<>&"'`\\]/g,'').trim().slice(0,18);
  const slotOf=id=>{const p=room+'-';if(typeof id!=='string'||!id.startsWith(p))return 0;const n=parseInt(id.slice(p.length),10);return n>=1&&n<=C.maxSlots?n:0};
  const inGame=()=>document.body.classList.contains('ingame');
