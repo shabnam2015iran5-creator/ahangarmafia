@@ -2786,7 +2786,7 @@ window.APP_VERSION='27.0';
  const db=()=>String(window.MAFIA_DB_URL||'').replace(/\/$/,'');
  const code=()=>String(window.MAFIA_ROOM_CODE||'').replace(/\D/g,'').slice(0,5);
  const myUid=()=>{try{return localStorage.getItem('mafia_uid')||''}catch(e){return ''}};
- let rosterBusy=false,publishBusy=false,actionBusy=false,pollTimer=null,clientBusy=false,lastClientRoom='',lastRoomCheck=0,cachedRoomStatus='',lastSyncAt=0,clientFinished=false,hostHadStarted=false,lastHostRoom='',lastSnapshotJSON='',liveStreams={};
+ let rosterBusy=false,publishBusy=false,actionBusy=false,actionWakePending=false,pollTimer=null,clientBusy=false,lastClientRoom='',lastRoomCheck=0,cachedRoomStatus='',lastSyncAt=0,clientFinished=false,hostHadStarted=false,lastHostRoom='',lastSnapshotJSON='',liveStreams={};
  const url=(path)=>db()+'/roomsV23/'+encodeURIComponent(code())+'/'+path+'.json';
  async function get(path){const r=await fetch(url(path),{cache:'no-store'});if(!r.ok)throw Error('HTTP '+r.status);return r.json()}
  async function put(path,data,method='PUT'){const r=await fetch(url(path),{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(data),cache:'no-store'});if(!r.ok)throw Error('HTTP '+r.status);return r}
@@ -2901,7 +2901,8 @@ window.APP_VERSION='27.0';
   finally{publishBusy=false}
  }
  async function handleActions(){
-  if(actionBusy||!(typeof role!=='undefined'&&role==='god')||!started||!code()||!db()||!window.Net||typeof Net.remoteAction!=='function')return;
+  if(actionBusy){actionWakePending=true;return}
+  if(!(typeof role!=='undefined'&&role==='god')||!started||!code()||!db()||!window.Net||typeof Net.remoteAction!=='function')return;
   actionBusy=true;
   try{
    const rows=await get('gameActions')||{},entries=Object.entries(rows).slice(0,100);
@@ -2916,7 +2917,12 @@ window.APP_VERSION='27.0';
    }
    try{await put('gameActions',ack,'PATCH')}catch(e){console.warn('Action batch acknowledgement failed',e)}
   }catch(e){console.warn('Action sync failed',e)}
-  finally{actionBusy=false}
+  finally{
+   actionBusy=false;
+   // If a realtime wake arrived while a fetch was in flight, immediately drain
+   // the queue again rather than waiting for the next 450 ms timer.
+   if(actionWakePending){actionWakePending=false;Promise.resolve().then(()=>handleActions())}
+  }
  }
  async function pollClient(){
   const c=code(),mode=(typeof lobbyMode!=='undefined'?lobbyMode:window.lobbyMode);
