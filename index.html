@@ -913,9 +913,16 @@ const Voice=(()=>{
    });
   }else{
    const used={};
-   hs.forEach((r,j)=>{const i=j+off;let s=seats[i];if(!s){s=seats[i]=nbot()}used[i]=1;
-    if(s.hv!==r.slot){if(!s.hv){s.n0=s.n;s.id0=s.id;s.f0=s.f;s.b0=s.b}s.hv=r.slot}
-    s.uid=r.uid||'';s.n=r.n||('بازیکن '+r.slot);s.id=r.seed||1;s.f=!!r.f;s.sp=r.sp});
+   hs.forEach((r,j)=>{
+    // Keep the Firebase-assigned chair for this player when PeerJS connects later.
+    let i=r.uid?seats.findIndex((s,k)=>s&&s.uid===r.uid&&!used[k]):-1;
+    if(i<0)i=seats.findIndex((s,k)=>k>=off&&s&&!s.hv&&!s.uid&&!used[k]);
+    if(i<0)i=seats.findIndex((s,k)=>k>=off&&!s&&!used[k]);
+    if(i<0)return;
+    let s=seats[i];if(!s)s=seats[i]=nbot();used[i]=1;
+    if(s.hv!==r.slot){if(!s.hv&&!s.uid){s.n0=s.n;s.id0=s.id;s.f0=s.f;s.b0=s.b}s.hv=r.slot}
+    s.uid=r.uid||s.uid||'';s.n=r.n||('بازیکن '+r.slot);s.id=r.seed||1;s.f=!!r.f;s.sp=!!r.sp;
+   });
    seats.forEach((s,i)=>{if(s&&s.hv&&!used[i]){s.hv=0;s.uid='';s.n=s.n0;s.id=s.id0;s.f=s.f0;s.b=s.b0;s.sp=false}});
   }
   seats.forEach(s=>{if(s&&s.hv){const r=R[s.hv];s.mu=!!(r&&r.mu)}});
@@ -1001,9 +1008,14 @@ const Net=(()=>{
  function rChat(h,v){const m=seats[h];if(!m||typeof v!=='string')return;v=v.trim().slice(0,120);if(!v)return;
   if(mod(h,v))return;if(!canTalkI(h)){tellH(h,'الان نوبت صحبت شما نیست');return}
   m.sp=true;bub(h,v);setTimeout(()=>{if(seats[h]===m){m.sp=false;render()}},2400)}
- function onAct(slot,d){
-  if(role!=='god'||!d||typeof d!=='object')return;
-  const h=seats.findIndex(s=>s&&s.hv===slot);if(h<0)return;
+ const seenActionIds=new Set();
+ function onAct(slot,d,userUid){
+  if(role!=='god'||!d||typeof d!=='object')return false;
+  const aid=d.aid?String(d.aid):'';
+  if(aid&&seenActionIds.has(aid))return true;
+  const h=userUid?seats.findIndex(s=>s&&s.uid===userUid):seats.findIndex(s=>s&&s.hv===slot);
+  if(h<0)return false;
+  if(aid){seenActionIds.add(aid);if(seenActionIds.size>500)seenActionIds.delete(seenActionIds.values().next().value)}
   switch(d.a){
    case'pick':{const i=d.i|0;if(i>=0&&i<N)rPick(h,i);break}
    case'ch':rChallenge(h);break;
@@ -1013,10 +1025,11 @@ const Net=(()=>{
    case'mode':{const m=seats[h];if(started&&G.ph=='night'&&m&&!m.d&&m.r=='m'&&(d.m=='shot'||d.m=='neg'))G.mode=d.m;break}
   }
   render();
+  return true;
  }
  /* ====== میزبان: ارسال وضعیت ====== */
- function snapFor(slot){
-  const my=seats.findIndex(s=>s&&s.hv===slot),me=seats[my],now=Date.now();
+ function snapFor(slot,userUid){
+  const my=userUid?seats.findIndex(s=>s&&s.uid===userUid):seats.findIndex(s=>s&&s.hv===slot),me=seats[my],now=Date.now();
   const vis=(s,i)=>{if(!s.r)return false;if(s.rev)return true;if(!me)return false;return !!(me.d||i===my||(me.r==='m'&&s.r==='m'))};
   const won=g('ovWin').classList.contains('s');
   return{t:'st',my,st:!!started,ph:G.ph||null,phase:g('phase').textContent,tm:g('timer').textContent,pb:g('pbar').style.width,gt:g('gt').textContent,
@@ -1089,7 +1102,16 @@ const Net=(()=>{
    g('winL').innerHTML=(d.win.l||[]).filter(Boolean).map(x=>`<div>${x[0]?'✖ ':''}${esc(x[1])}<br>${esc(x[2])} ${esc(x[3])}</div>`).join('');op('ovWin')}
   else{cl('ovWin');wonShown=false}
  }
- function toHost(m){const gs=Voice.godSlot();if(gs)Voice.send(gs,m)}
+ let actionSeq=0;
+ function toHost(m){
+  if(!m||typeof m!=='object')return;
+  if(!m.aid){
+   let who='player';try{who=localStorage.getItem('mafia_uid')||who}catch(e){}
+   m.aid=who+'-'+Date.now().toString(36)+'-'+(++actionSeq).toString(36);
+  }
+  try{if(window.MAFIA_ROOM_CODE&&typeof window.__bmQueueFirebaseAction==='function')window.__bmQueueFirebaseAction(m)}catch(e){}
+  const gs=Voice.godSlot();if(gs)Voice.send(gs,m);
+}
  function canSpeak(){const d=snap;if(!d||!d.st)return true;const m=d.seats[d.my];if(!m||m.d||m.m)return false;if(m.v)return true;
   if(d.ph=='day')return d.ch?((d.ch.st=='ask'?d.ch.by:d.ch.to)==d.my):d.cur==d.my;if(d.ph=='defense')return d.acc==d.my;return false}
  function reset(){client=false;snap=null;clearInterval(hostT);clearInterval(wd)}
@@ -1102,8 +1124,55 @@ const Net=(()=>{
  Voice.onMsg('vp',(s,d)=>{if(!client||!d||!Array.isArray(d.l))return;
   g('vpn').innerHTML='<b>🗳 جدول آرا</b>'+d.l.slice(0,N).map(x=>`<div>${esc(x[0])} ➜ <b>${esc(x[1])}</b></div>`).join('')+((d.ab&&d.ab.length)?'<div style="opacity:.7">ممتنع: '+d.ab.slice(0,N).map(esc).join('، ')+'</div>':'');
   g('vpn').style.display='block';clearTimeout(vpT);vpT=setTimeout(()=>g('vpn').style.display='none',5500)});
- Voice.onMsg('act',onAct);
+ function reconcileFirebasePlayers(players){
+  if(role!=='god'||!Array.isArray(seats)||!inGame())return;
+  const now=Date.now();
+  const active=Object.entries(players||{}).filter(([uid,p])=>p&&p.role==='player'&&now-(+p.at||0)<15000);
+  const activeUids=new Set(active.map(([uid])=>uid));
+  if(!started){
+   seats.forEach(s=>{
+    if(!s||s.hv||!s.uid||activeUids.has(s.uid))return;
+    s.uid='';
+    if(s.n0!==undefined)s.n=s.n0;
+    if(s.id0!==undefined)s.id=s.id0;
+    if(s.f0!==undefined)s.f=s.f0;
+    s.b=typeof s.b0==='boolean'?s.b0:true;
+    s.sp=false;
+   });
+  }
+  active.forEach(([uid,p])=>{
+   let i=seats.findIndex(s=>s&&s.uid===uid);
+   if(i<0){
+    if(started){
+     i=seats.findIndex(s=>s&&s.b&&!s.hv&&!s.d);
+     if(i<0)i=seats.findIndex(s=>s&&s.b&&!s.hv);
+    }else{
+     i=seats.findIndex(s=>s&&!s.hv&&!s.uid);
+     if(i<0)i=seats.findIndex(s=>!s);
+    }
+   }
+   if(i<0||i>=N)return;
+   if(!seats[i])seats[i]=nbot();
+   const s=seats[i];
+   if(!s.hv&&!s.uid){
+    if(s.n0===undefined)s.n0=s.n;
+    if(s.id0===undefined)s.id0=s.id;
+    if(s.f0===undefined)s.f0=s.f;
+    if(s.b0===undefined)s.b0=s.b;
+   }
+   s.uid=uid;
+   s.n=String(p.n||('بازیکن '+(i+1))).slice(0,18);
+   s.id=Math.max(1,Math.min(12,parseInt(p.seed)||1));
+   s.f=!!p.seed&&(+p.seed%3===0);
+   if(!started||s.b)s.b=false;
+  });
+ }
+  Voice.onMsg('act',onAct);
  return{enter,hostStart,reset,bcast,canSpeak,snapshot:()=>snap,lastSyncAt:()=>rxT,isClient:()=>client,mySeat:()=>snap?snap.my:-1,
+  snapshotForUID(uid){if(role!=='god')return null;return snapFor(0,String(uid||''))},
+  reconcileFirebasePlayers,
+  handleFirebaseAction(uid,d){return onAct(0,d,String(uid||''))},
+  receiveFirebaseSnapshot(d){return apply(d)},
   tap(i){if(client&&snap&&snap.st)toHost({t:'act',a:'pick',i})},
   mode(m){toHost({t:'act',a:'mode',m})},rv(y){toHost({t:'act',a:'rv',y:y?1:0});g('vb').innerHTML='';lastVb=''},
   challenge(){if(!snap||!snap.st){toast('چالش فقط در بحث روز بازی ممکن است');return}toHost({t:'act',a:'ch'})},
@@ -3230,5 +3299,67 @@ body.ingame #bmSharedRoomBadge{display:block}
  const room=$('lobbyRoom');
  if(room)new MutationObserver(syncButton).observe(room,{attributes:true,attributeFilter:['class']});
  setInterval(syncButton,700);
+})();
+</script>
+
+<script id="bm-firebase-game-sync-v1">
+(()=>{
+ if(window.__bmFirebaseGameSyncInstalled)return;window.__bmFirebaseGameSyncInstalled=true;
+ const db=()=>String(window.MAFIA_DB_URL||'').replace(/\/$/,'');
+ const code=()=>String(window.MAFIA_ROOM_CODE||'').replace(/[^0-9]/g,'').slice(0,5);
+ const uid=()=>{try{return localStorage.getItem('mafia_uid')||''}catch(e){return ''}};
+ const req=async(path,method='GET',data)=>{
+  const endpoint=db();if(!endpoint)throw Error('database unavailable');
+  const r=await fetch(endpoint+'/'+path+'.json',{method,headers:{'Content-Type':'application/json'},body:data===undefined?undefined:JSON.stringify(data),cache:'no-store'});
+  if(!r.ok)throw Error('database HTTP '+r.status);
+  return method==='GET'?r.json():true;
+ };
+ let hostBusy=false,clientBusy=false;
+ window.__bmQueueFirebaseAction=async action=>{
+  const c=code(),u=uid();if(!c||!u||!db()||!action||!action.aid||lobbyMode==='god')return false;
+  try{await req('gameSync/'+c+'/actions/'+u,'PATCH',{act:action,actId:action.aid,actAt:Date.now()});return true}
+  catch(e){console.warn('[Black Mafia] Backup action delivery failed',e);return false}
+ };
+ async function hostSync(){
+  const c=code();
+  if(hostBusy||!c||!db()||!window.Net||typeof role==='undefined'||role!=='god'||!document.body.classList.contains('ingame'))return;
+  hostBusy=true;
+  try{
+   try{if(window.Voice&&Voice.active())Voice.patchSeats()}catch(e){}
+   const players=await req('roomsV23/'+c+'/players');
+   if(!players||typeof players!=='object')return;
+   if(typeof Net.reconcileFirebasePlayers==='function')Net.reconcileFirebasePlayers(players);
+   const actions=await req('gameSync/'+c+'/actions');
+   const now=Date.now();
+   for(const [playerUid,a] of Object.entries(actions||{})){
+    const p=players[playerUid];
+    if(!a||!a.act||!a.actId||a.handledId===a.actId||!p||p.role!=='player')continue;
+    if(now-(+p.at||0)>15000||now-(+a.actAt||0)>25000)continue;
+    let done=false;
+    try{done=!!Net.handleFirebaseAction(playerUid,a.act)}catch(e){console.warn('[Black Mafia] Could not apply backup action',e)}
+    if(done)try{await req('gameSync/'+c+'/actions/'+playerUid,'PATCH',{handledId:a.actId})}catch(e){}
+   }
+   const snapshots={};
+   for(const [playerUid,p] of Object.entries(players)){
+    if(!p||p.role!=='player'||now-(+p.at||0)>15000)continue;
+    const snap=Net.snapshotForUID(playerUid);
+    if(snap&&snap.my>=0&&Array.isArray(snap.seats))snapshots[playerUid]=snap;
+   }
+   await req('gameSync/'+c+'/snapshots','PUT',snapshots);
+  }catch(e){console.warn('[Black Mafia] Firebase game-state backup failed',e)}
+  finally{hostBusy=false}
+ }
+ async function clientSync(){
+  const c=code(),u=uid();
+  if(clientBusy||!c||!u||!db()||!window.Net||typeof lobbyMode==='undefined'||lobbyMode!=='player'||!Net.isClient())return;
+  clientBusy=true;
+  try{
+   const snap=await req('gameSync/'+c+'/snapshots/'+u);
+   if(snap&&Array.isArray(snap.seats)&&typeof Net.receiveFirebaseSnapshot==='function')Net.receiveFirebaseSnapshot(snap);
+  }catch(e){}
+  finally{clientBusy=false}
+ }
+ setInterval(()=>{hostSync();clientSync()},900);
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden){hostSync();clientSync()}});
 })();
 </script>
