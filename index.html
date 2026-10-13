@@ -769,7 +769,7 @@ const Voice=(()=>{
  const clean=s=>String(s||'').replace(/[<>&"'`\\]/g,'').trim().slice(0,18);
  const slotOf=id=>{const p=room+'-';if(typeof id!=='string'||!id.startsWith(p))return 0;const n=parseInt(id.slice(p.length),10);return n>=1&&n<=C.maxSlots?n:0};
  const inGame=()=>document.body.classList.contains('ingame');
- const allowed=()=>{if(!inGame())return true;if(window.Net&&Net.isClient())return Net.canSpeak();if(typeof role!=='undefined'&&role==='player'&&!C.talkAtNight&&G&&G.ph==='night')return false;return true};
+ const allowed=()=>{if(!inGame())return true;if(window.Net&&Net.isClient())return Net.canSpeak();if(typeof role!=='undefined'&&role==='player'){if(typeof window.canTalk==='function')return !!window.canTalk();if(!C.talkAtNight&&G&&G.ph==='night')return false}return true};
  function setStatus(t){const e=g('voiceStatus');if(e)e.textContent=t}
  function loadPeer(){
   if(window.Peer)return Promise.resolve();let i=0;
@@ -803,7 +803,7 @@ const Voice=(()=>{
    toast(window.isSecureContext?'میکروفن در دسترس نیست؛ فقط می‌شنوید':'برای میکروفن، سایت باید HTTPS باشد')}
   if(my!==gen){if(micOk)local.getTracks().forEach(t=>t.stop());joining=false;return}
   rawTrack=local.getAudioTracks()[0];watchLocal();
-  let p=null,fail=false;
+  let p=null,fail=false,failStreak=0;
   for(let s=1;s<=C.maxSlots&&!p;s++){
    let r;
    // Retry transient PeerJS signalling failures twice before declaring this phone offline.
@@ -814,7 +814,7 @@ const Voice=(()=>{
     if(attempt===0)await new Promise(resolve=>setTimeout(resolve,900));
    }
    if(my!==gen){if(r)try{r.destroy()}catch(e){}if(micOk)local.getTracks().forEach(t=>t.stop());joining=false;return}
-   if(r){p=r;slot=s}else if(r===undefined){fail=true;break}
+   if(r){p=r;slot=s;failStreak=0}else if(r===undefined){fail=true;failStreak++;if(failStreak>=3)break}else{failStreak=0}
   }
   if(!p){joining=false;if(micOk)local.getTracks().forEach(t=>t.stop());local=null;rawTrack=null;
    setStatus(fail?'❌ اتصال به سرور وویس برقرار نشد':'⚠️ ظرفیت وویس این لابی پر است');return}
@@ -825,7 +825,7 @@ const Voice=(()=>{
   p.on('error',e=>{if(e&&e.type==='peer-unavailable'){const m=/(\S+)\s*$/.exec(e.message||'');const s=m&&slotOf(m[1]);if(s&&R[s]&&!R[s].live)drop(s)}});
   tryT=setInterval(connectLoop,3000);loopT=setInterval(tick,140);
   connectLoop();enforce();refresh();
-  toast('🎙 وویس متصل شد');
+  toast('🎙 سرور ویس وصل شد؛ در حال وصل کردن صدای بازیکنان');
  }
  function send(s,m){const r=R[s];try{if(r&&r.conn&&r.conn.open)r.conn.send(m)}catch(e){}}
  function broadcast(m){Object.values(R).forEach(r=>{if(r.live||(r.conn&&r.conn.open))send(r.slot,m)})}
@@ -858,7 +858,7 @@ const Voice=(()=>{
   const gone=()=>{
    if(R[s]!==r||r.call!==call)return;
    // افتادن صدای WebRTC نباید کانال دادهٔ بازی را هم ببندد.
-   r.live=false;r.stream=null;r.an=null;r.buf=null;
+   r.live=false;r.stream=null;r.an=null;r.buf=null;r.audioPlaying=false;clearTimeout(r.playRetry);r.playRetry=null;
    if(r.audio){try{r.audio.pause()}catch(e){}r.audio.srcObject=null;r.audio.remove();r.audio=null}
    refresh();
   };
@@ -875,14 +875,16 @@ const Voice=(()=>{
   else if(typeof H[d.t]==='function'&&(d.t==='act'||d.t==='sync'||r.role==='god')){H[d.t](s,d)}});
  }
  function playRemote(r,st){
-  const a=document.createElement('audio');a.autoplay=true;a.playsInline=true;a.srcObject=st;a.style.display='none';document.body.appendChild(a);
-  const p=a.play&&a.play();if(p&&p.catch)p.catch(()=>{});r.audio=a;
+  const a=document.createElement('audio');a.autoplay=true;a.playsInline=true;a.setAttribute('autoplay','');a.setAttribute('playsinline','');a.muted=false;a.volume=1;a.srcObject=st;a.style.display='none';document.body.appendChild(a);r.audio=a;r.audioPlaying=false;
+  let tries=0;
+  const attemptPlay=()=>{try{if(ctx&&ctx.state==='suspended')ctx.resume();const p=a.play();if(p&&p.then)p.then(()=>{r.audioPlaying=true;refresh()}).catch(()=>{r.audioPlaying=false;if(tries<4&&!r.playRetry){r.playRetry=setTimeout(()=>{r.playRetry=null;tries++;if(a.isConnected&&a.paused)attemptPlay()},1600)}else setStatus('🔊 جریان ویس دریافت می‌شود؛ برای شنیدن، یک بار داخل بازی لمس کنید')});else r.audioPlaying=true}catch(e){r.audioPlaying=false}};
+  attemptPlay();st.getTracks().forEach(t=>t.addEventListener('ended',()=>{r.audioPlaying=false},{once:true}));
   try{const n=ctx.createAnalyser();n.fftSize=256;ctx.createMediaStreamSource(st).connect(n);r.an=n;r.buf=new Uint8Array(n.frequencyBinCount)}catch(e){}
  }
  function drop(s,quiet){
   const r=R[s];if(!r)return;delete R[s];
   try{r.call&&r.call.close()}catch(e){}try{r.conn&&r.conn.close()}catch(e){}
-  if(r.audio){r.audio.srcObject=null;r.audio.remove()}
+  clearTimeout(r.playRetry);r.playRetry=null;r.audioPlaying=false;if(r.audio){try{r.audio.pause()}catch(e){}r.audio.srcObject=null;r.audio.remove()}
   if(!quiet)refresh();
  }
  const lvl=(n,b)=>{n.getByteFrequencyData(b);let t=0;for(let i=0;i<b.length;i++)t+=b[i];return t/b.length};
@@ -939,7 +941,7 @@ const Voice=(()=>{
  }
  function refresh(){
   const n=humans().length+(on?1:0);
-  setStatus(on?'🎙 وویس متصل · '+n+' نفر در کانال'+(micOk?'':' · (بدون میکروفن)'):'');
+  const hasStream=humans().some(r=>r.live),hasPlayback=humans().some(r=>r.live&&r.audioPlaying);setStatus(on?(hasPlayback?'🟢 صدای دریافتی در حال پخش · '+n+' نفر':hasStream?'🟠 جریان صدا رسیده؛ گوشی هنوز آن را پخش نمی‌کند':'🟡 سرور ویس وصل است؛ منتظر جریان صدای بازیکنان')+(micOk?'':' · میکروفن در دسترس نیست'):'');
   const lr=g('lobbyRoom');
   if(lr&&lr.classList.contains('on')){applyLobbySeats();renderLobbyChairs();
    const sb=g('roomStartBtn');if(sb&&typeof lobbyMode!=='undefined'&&lobbyMode==='player'){const gd=on&&godHere();sb.textContent=gd?'⏳ منتظر گرداننده':'🎭 شروع بازی';sb.disabled=gd}}
@@ -981,7 +983,7 @@ const Voice=(()=>{
   applyLobbySeats();renderLobbyChairs();
  }
  // یک بار لمس صفحه: اگر مرورگر پخش خودکار صدا را بلاک کرده بود، دوباره تلاش می‌کند
- document.addEventListener('click',()=>{if(ctx&&ctx.state==='suspended')ctx.resume();Object.values(R).forEach(r=>{if(r.audio&&r.audio.paused)r.audio.play().catch(()=>{})})},true);
+ document.addEventListener('click',()=>{if(ctx&&ctx.state==='suspended')ctx.resume();Object.values(R).forEach(r=>{if(r.audio&&(r.audio.paused||!r.audioPlaying)){try{Promise.resolve(r.audio.play()).then(()=>{r.audioPlaying=true;refresh()}).catch(()=>{r.audioPlaying=false})}catch(e){}}})},true);
  return{join,leave:leaveVoice,toggleMute,isMuted:()=>!!(muted||!micOk),byUid:u=>{if(u&&u===myUid)return{sp:meSp,mu:!!(muted||!micOk)};const r=Object.values(R).find(x=>x.uid&&x.uid===u);return r?{sp:!!r.sp,mu:!!r.mu,live:!!r.live}:null},captureBase,patchSeats,afterRender,active:()=>on,broadcast,refresh,godHere,onGo:f=>{H.go=f},onMsg:(t,f)=>{H[t]=f},send,liveSlots:()=>humans().map(r=>r.slot),speakingOf:sl=>sl===slot?meSp:!!(R[sl]&&R[sl].sp),mySlot:()=>slot,godInfo,isLive:sl=>!!(R[sl]&&R[sl].live),godSlot:()=>{const r=humans().find(x=>x.role==='god');return r?r.slot:0},slotByUid:u=>{const r=Object.values(R).find(x=>x.uid&&x.uid===u);return r?r.slot:0}};
 })();
 
@@ -1028,7 +1030,7 @@ const Net=(()=>{
  /* ====== میزبان: ارسال وضعیت ====== */
  function snapForSeat(my){
   const me=seats[my],now=Date.now();
-  const vis=(s,i)=>{if(!s.r)return false;if(s.rev)return true;if(!me)return false;return !!(me.d||i===my||(me.r==='m'&&s.r==='m'))};
+  const vis=(s,i)=>!!(s&&s.r&&i===my);
   const won=g('ovWin').classList.contains('s');
   return{t:'st',my,st:!!started,ph:G.ph||null,phase:g('phase').textContent,tm:g('timer').textContent,pb:g('pbar').style.width,gt:g('gt').textContent,
    acc:G.acc,cur:G.cur,cand:Array.isArray(G.cand)?G.cand.slice(0,N):null,vi:G.vi,ch:G.ch?{st:G.ch.st,by:G.ch.by,to:G.ch.to}:null,
@@ -1083,7 +1085,7 @@ const Net=(()=>{
   renderNet(d);
   const m=d.seats[d.my];
   if(d.st&&!lastSt){S.games++;save()}
-  if(d.st&&m&&m.ro&&!revealed){revealed=true;revealCard({r:m.ro.r,gf:m.ro.gf,ng:m.ro.ng,conv:m.ro.conv})}
+  if(d.st&&m&&m.ro&&!revealed){/* نقش فقط پس از لمس آواتار خود باز می‌شود */}
   if(!d.st){revealed=false}
   if(d.st&&!m&&hadSeat)toast('شما از بازی خارج شدید');
   hadSeat=!!m;
@@ -3392,3 +3394,163 @@ body.ingame #bmSharedRoomBadge{display:block}
  pollClient();
 })();
 </script>
+
+
+<!-- BLACK MAFIA v33: voice/role/turn/equalizer reliability -->
+<style id="bm-v33-final-style">
+body.ingame #gFoot #gEqReserve{
+ display:flex!important;flex-direction:column!important;align-items:stretch!important;justify-content:space-between!important;
+ gap:3px!important;padding:5px 7px!important;min-width:0!important;overflow:hidden!important;
+ background:linear-gradient(145deg,#130d06,#030303 72%)!important;border:2px solid #a77a25!important;
+ box-shadow:inset 0 0 15px #000,0 0 13px #d9a83b22!important;
+}
+body.ingame #gFoot #gEqReserve>*{display:flex!important;visibility:visible!important;animation:none!important}
+.bmEqRoom{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:5px!important;
+ color:#f4d98b!important;font-weight:900!important;font-size:10px!important;line-height:1.1!important;min-height:13px!important}
+.bmEqRoom .bmRoomPill{direction:ltr!important;letter-spacing:2px!important;color:#eec45b!important}
+.bmEqBars{flex:1 1 auto!important;min-height:20px!important;width:100%!important;align-items:center!important;justify-content:center!important;
+ gap:3px!important;overflow:hidden!important}
+.bmEqBars i{display:block!important;flex:0 0 4px!important;height:4px!important;max-height:28px!important;border-radius:3px!important;
+ background:linear-gradient(180deg,#fff4b0 0%,#e0b255 48%,#8a5b16 100%)!important;box-shadow:0 0 5px #e0b25566!important;opacity:.55!important}
+.bmEqBars.on i{opacity:1!important;animation:bmEqGold 380ms ease-in-out infinite alternate!important}
+.bmEqBars.on i:nth-child(3n){animation-duration:260ms!important}
+.bmEqBars.on i:nth-child(2n){animation-duration:520ms!important}
+.bmEqBars.on i:nth-child(4n){animation-duration:330ms!important}
+@keyframes bmEqGold{from{height:4px;filter:brightness(.8)}to{height:27px;filter:brightness(1.35)}}
+.bmReact{display:flex!important;align-items:center!important;justify-content:center!important;gap:6px!important;min-height:30px!important}
+.bmReact button{display:inline-flex!important;align-items:center!important;justify-content:center!important;flex:1 1 0!important;min-width:0!important;
+ height:28px!important;min-height:28px!important;padding:2px 5px!important;border:1px solid #a77a25!important;border-radius:7px!important;
+ background:linear-gradient(#201507,#070503)!important;color:#f5d985!important;font-size:16px!important;line-height:1!important}
+.bmReact button:active{transform:scale(.94)}
+.bmRoleUnder{display:block!important;width:100%!important;margin:2px 0 0!important;text-align:center!important;color:#f4d27a!important;
+ font-size:10px!important;font-weight:900!important;line-height:1.25!important;overflow-wrap:anywhere!important;text-shadow:0 1px 3px #000!important}
+#bmNightResultsPanel{position:fixed;top:calc(52px + env(safe-area-inset-top));left:8px;right:8px;max-width:500px;margin:0 auto;
+ z-index:10020;max-height:32vh;overflow:auto;padding:10px 12px;border:1.5px solid #d9ad4d;border-radius:12px;
+ background:linear-gradient(145deg,#191006f7,#050403f7);color:#f6e8c5;box-shadow:0 10px 28px #000b;font-size:12px;line-height:1.7}
+#bmNightResultsPanel .bmNightHead{display:flex;align-items:center;justify-content:space-between;gap:10px;color:#f2ce6b;font-weight:900;font-size:13px}
+#bmNightResultsPanel button{background:#090603;border:1px solid #98702a;border-radius:6px;color:#f6dd91;padding:3px 8px;font-weight:900}
+#bmNightResultsPanel .bmNightLine{padding:3px 0;border-bottom:1px solid #80602b44;overflow-wrap:anywhere}
+@media(max-width:380px){.bmEqBars{gap:2px!important}.bmEqBars i{flex-basis:3px!important}.bmReact{gap:4px!important}.bmReact button{font-size:14px!important}}
+</style>
+<script id="bm-v33-final-script">
+(()=>{
+ const $=id=>document.getElementById(id);
+ let roleRevealed=false,lastPhase=null,nightSeen='';
+ const client=()=>!!(window.Net&&typeof Net.isClient==='function'&&Net.isClient());
+ const god=()=>!client()&&typeof role!=='undefined'&&(role==='god'||role==='admin');
+ const safeRole=s=>{try{const r=rn(s||{});return (r&&r.e?r.e+' ':'')+(r&&r.n?r.n:'نقش نامشخص')}catch(e){return 'نقش نامشخص'}};
+ const getTurn=d=>{
+  let i=-1,phase=d?d.ph:(typeof G!=='undefined'?G.ph:null),ch=d?d.ch:(typeof G!=='undefined'?G.ch:null);
+  if(!phase)return null;
+  if(phase==='day')i=ch?(ch.st==='ask'?ch.by:ch.to):(d?d.cur:G.cur);
+  else if(phase==='defense'||phase==='revote')i=d?d.acc:G.acc;
+  else if(phase==='vote'){const cand=d&&Array.isArray(d.cand)?d.cand:(typeof G!=='undefined'?G.cand:null);const vi=d?d.vi:G.vi;i=cand&&cand[vi]!=null?cand[vi]:-1}
+  if(i<0)return null;
+  const seatsNow=d?d.seats:seats,s=seatsNow&&seatsNow[i];if(!s)return null;
+  return {s,i,isMe:!!(d&&i===d.my),isGod:false,phase};
+ };
+ function speakerInfo(){
+  try{
+   if(client()){
+    const d=Net.snapshot();if(d&&d.st){const turn=getTurn(d);if(turn)return turn;
+     const i=(d.seats||[]).findIndex(s=>s&&s.sp);if(i>=0)return {s:d.seats[i],i,isMe:i===d.my,isGod:false,phase:d.ph};}
+    const gi=window.Voice&&Voice.godInfo?Voice.godInfo():null;if(gi&&gi.sp)return{s:gi,i:-1,isMe:!!gi.me,isGod:true,phase:d&&d.ph};
+    return null;
+   }
+   if(typeof started!=='undefined'&&started){const turn=getTurn(null);if(turn)return turn;
+    const i=Array.isArray(seats)?seats.findIndex(s=>s&&s.sp):-1;if(i>=0)return{s:seats[i],i,isMe:i===0,isGod:false,phase:G.ph};}
+   const gi=window.Voice&&Voice.godInfo?Voice.godInfo():null;if(gi&&gi.sp)return{s:gi,i:-1,isMe:!!gi.me,isGod:true,phase:typeof G!=='undefined'?G.ph:null};
+  }catch(e){}
+  return null;
+ }
+ function drawFooter(){
+  if(!document.body.classList.contains('ingame'))return;
+  const bay=$('gEqReserve'),img=$('gMeAv'),name=$('gMeName');if(!bay)return;
+  if(!bay.querySelector('.bmEqRoom')){
+   bay.innerHTML='';
+   const room=document.createElement('div');room.className='bmEqRoom';
+   const label=document.createElement('span');label.textContent='شماره اتاق';
+   const code=document.createElement('span');code.className='bmRoomPill';
+   room.append(label,code);
+   const bars=document.createElement('div');bars.className='bmEqBars';bars.setAttribute('aria-label','اکولایزر صدا');
+   for(let i=0;i<13;i++){const bar=document.createElement('i');bars.appendChild(bar)}
+   const reactions=document.createElement('div');reactions.className='bmReact';
+   const add=(label,aria,fn)=>{const b=document.createElement('button');b.textContent=label;b.setAttribute('aria-label',aria);b.onclick=fn;reactions.appendChild(b)};
+   add('👍','لایک به صحبت',()=>{try{window.rx('👍')}catch(e){}});
+   add('👎','دیسلایک به صحبت',()=>{try{window.rx('👎')}catch(e){}});
+   add('🎭','استیکرها',()=>{try{openEmo()}catch(e){toast('استیکرها در دسترس نیستند')}});
+   bay.append(room,bars,reactions);
+  }
+  const code=bay.querySelector('.bmRoomPill');
+  const roomCode=String(window.MAFIA_ROOM_CODE||window.MAFIA_ROOM_META?.code||'').replace(/[^\d]/g,'').slice(0,5);
+  if(code)code.textContent=roomCode||'—';
+  const reacts=bay.querySelector('.bmReact');
+  if(reacts){const d=client()?Net.snapshot():null;const allowReact=!!(d&&d.st&&!Net.canSpeak());reacts.style.display=allowReact?'flex':'none'}
+  const bar=bay.querySelector('.bmEqBars');let active=false;
+  try{
+   if(Voice&&Voice.active&&Voice.active()){
+    const own=Voice.mySlot&&Voice.mySlot();if(own&&Voice.speakingOf(own))active=true;
+    if(!active&&Array.isArray(seats))active=seats.some(s=>s&&((s.hv&&Voice.speakingOf(s.hv))||(s.uid&&Voice.byUid(s.uid)?.sp)));
+    const d=client()?Net.snapshot():null;
+    if(!active&&d&&Array.isArray(d.seats))active=d.seats.some(s=>s&&(s.sp||(s.hv&&Voice.speakingOf(s.hv))||(s.uid&&Voice.byUid(s.uid)?.sp)));
+    const gi=Voice.godInfo&&Voice.godInfo();if(!active&&gi&&gi.sp)active=true;
+   }
+  }catch(e){}
+  if(bar)bar.classList.toggle('on',active);
+  const info=speakerInfo();if(!img||!name)return;
+  if(!info){if(img.dataset.bmKey!==''){img.innerHTML='';img.dataset.bmKey=''}name.textContent='';name.style.display='none';img.style.borderColor='#c9972f';return}
+  const s=info.s||{},seed=s.id||s.seed||1,isMe=!!info.isMe&&!!S.photo;
+  const key=(info.isGod?'god':'player')+'|'+info.i+'|'+seed+'|'+(s.f?1:0)+'|'+(isMe?'me-photo':'');
+  if(img.dataset.bmKey!==key){img.innerHTML=isMe?'<div class="avi avme"></div>':avatar(seed,!!s.f,false);img.dataset.bmKey=key}
+  name.textContent=(s.n||'بازیکن')+(info.phase==='day'||info.phase==='defense'?' · نوبت صحبت':' · نوبت فعال');name.style.display='block';img.style.borderColor=active?'#e0b255':'#c9972f';
+ }
+ function decorateSeats(){
+  if(!document.body.classList.contains('ingame'))return;
+  const clientView=client(),isGod=god();
+  if(clientView){
+   document.querySelectorAll('#grid .rl').forEach(el=>el.remove());
+   document.querySelectorAll('#grid .bmRoleUnder').forEach(el=>el.remove());
+   if(roleRevealed){
+    const d=Net.snapshot(),s=d&&d.seats&&d.seats[d.my];
+    if(s&&s.ro){const seat=$('s'+d.my),cell=seat&&seat.querySelector('.cell');if(cell){let tag=cell.querySelector('.bmRoleUnder');if(!tag){tag=document.createElement('div');tag.className='bmRoleUnder';cell.appendChild(tag)}const val=safeRole(s.ro);if(tag.textContent!==val)tag.textContent=val}}
+   }
+  }else if(isGod&&typeof started!=='undefined'&&started&&Array.isArray(seats)){
+   seats.forEach((s,i)=>{const seat=$('s'+i),cell=seat&&seat.querySelector('.cell');if(!cell)return;
+    let tag=cell.querySelector('.bmRoleUnder');if(!s||!s.r){if(tag)tag.remove();return}
+    if(!tag){tag=document.createElement('div');tag.className='bmRoleUnder';cell.appendChild(tag)}
+    const val=safeRole(s);if(tag.textContent!==val)tag.textContent=val;
+   });
+  }else document.querySelectorAll('#grid .bmRoleUnder').forEach(el=>el.remove());
+ }
+ const originalTap=window.Net&&Net.tap;
+ if(originalTap&&!originalTap.__bmRoleTap){
+  const wrappedTap=function(i){
+   try{if(client()){const d=Net.snapshot();if(d&&d.st&&i===d.my){const m=d.seats&&d.seats[d.my];
+     if(m&&m.ro){roleRevealed=true;revealCard({r:m.ro.r,gf:!!m.ro.gf,ng:!!m.ro.ng,conv:!!m.ro.conv});decorateSeats()}
+     else toast('نقش هنوز دریافت نشده است؛ پس از شروع بازی دوباره بزنید');return}}}catch(e){}
+   return originalTap.call(this,i);
+  };
+  wrappedTap.__bmRoleTap=true;Net.tap=wrappedTap;
+ }
+ function showNightResults(){
+  if(!god()||!Array.isArray(logs))return;
+  const key=String(window.MAFIA_ROOM_CODE||'local')+'|'+logs.length+'|'+(G&&G.nn||0);if(key===nightSeen)return;nightSeen=key;
+  let panel=$('bmNightResultsPanel');if(!panel){panel=document.createElement('div');panel.id='bmNightResultsPanel';document.body.appendChild(panel)}
+  panel.innerHTML='';const head=document.createElement('div');head.className='bmNightHead';
+  const title=document.createElement('span');title.textContent='🌙 نتایج شب — فقط گاد';const close=document.createElement('button');close.textContent='بستن';close.onclick=()=>panel.remove();head.append(title,close);panel.appendChild(head);
+  const rows=logs.slice(-9);if(!rows.length){const x=document.createElement('div');x.textContent='نتیجه‌ای ثبت نشده است';panel.appendChild(x)}
+  rows.forEach(t=>{const line=document.createElement('div');line.className='bmNightLine';line.textContent=String(t);panel.appendChild(line)});
+  panel.style.display='block';clearTimeout(panel.__hideTimer);panel.__hideTimer=setTimeout(()=>{if(panel.isConnected)panel.remove()},14000);
+ }
+ function poll(){
+  try{if(lastPhase==='night'&&typeof G!=='undefined'&&G.ph==='day'&&god())showNightResults();
+   lastPhase=typeof G!=='undefined'?G.ph:null;drawFooter();decorateSeats();if(!god()){const p=$('bmNightResultsPanel');if(p)p.remove()}
+  }catch(e){}
+ }
+ const obs=new MutationObserver(()=>{decorateSeats()});const grid=$('grid');if(grid)obs.observe(grid,{subtree:true,childList:true});
+ const bodyObs=new MutationObserver(()=>{if(document.body.classList.contains('ingame')){drawFooter();decorateSeats()}});
+ bodyObs.observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['class']});
+ setInterval(poll,180);document.addEventListener('visibilitychange',()=>{if(!document.hidden)poll()});
+})();
+</script>
+<!-- END BLACK MAFIA v33 -->
