@@ -3012,3 +3012,67 @@ button[title], [role="button"][title]{cursor:pointer}button:focus-visible{outlin
  setInterval(()=>{if(room?.classList.contains('on'))syncRole()},700);
 })();
 </script>
+
+
+<!-- BLACK MAFIA CLEANUP: remove duplicate/test controls; direct God start -->
+<style id="bm-clean-controls">
+#deckBtn,#readyBtn{display:none!important}
+#lobbyRoom .roomActions #roomStartBtn{display:inline-flex!important}
+</style>
+<script id="bm-clean-controls-js">
+(()=>{
+ if(window.__bmCleanControlsApplied)return;
+ window.__bmCleanControlsApplied=true;
+ const $=id=>document.getElementById(id);
+ // Remove the test-only human injection and duplicated phase-start control.
+ const oldMenu=window.openMenu;
+ if(typeof oldMenu==='function'){
+   window.openMenu=function(){
+     oldMenu.apply(this,arguments);
+     const menu=$('mnu');
+     if(menu){
+       [...menu.querySelectorAll('button')].forEach(b=>{
+         const t=(b.textContent||'').trim();
+         if(t.includes('ورود بازیکن انسانی')||t.includes('شروع بازی /')||t.includes('رد کردن فاز'))b.remove();
+       });
+     }
+   };
+ }
+ const oldDock=window.buildDock;
+ if(typeof oldDock==='function'){
+   window.buildDock=function(){
+     oldDock.apply(this,arguments);
+     const dock=$('dock');
+     if(dock){
+       [...dock.querySelectorAll('button')].forEach(b=>{
+         const t=(b.textContent||'').trim();
+         if(t.includes('شروع / فاز'))b.remove();
+       });
+     }
+   };
+ }
+ // The God button launches the default scenario immediately, without a second start/phase screen.
+ const oldRoomStart=window.roomStartGame;
+ if(typeof oldRoomStart==='function'){
+   window.roomStartGame=function(){
+     if(window.lobbyMode!=='god'){
+       try{toast('فقط گردانندهٔ اتاق می‌تواند بازی را شروع کند.')}catch(e){}
+       return false;
+     }
+     const result=oldRoomStart.apply(this,arguments);
+     setTimeout(()=>{
+       if(typeof window.launch==='function'&&!window.started&&!window.G?.loading)window.launch(0);
+     },80);
+     return result;
+   };
+ }
+ // Remove deck-view button from the room, keep voice and shared-room chat controls.
+ const cleanup=()=>{
+   const d=$('deckBtn');if(d)d.remove();
+   const ready=$('readyBtn');if(ready)ready.style.display='none';
+ };
+ cleanup();
+ const room=$('lobbyRoom');
+ if(room)new MutationObserver(cleanup).observe(room,{childList:true,subtree:true});
+})();
+</script>
