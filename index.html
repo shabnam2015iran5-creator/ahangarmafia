@@ -623,7 +623,8 @@ const VOICE_CFG={
 };
 const Voice=(()=>{
  const C=VOICE_CFG,g=id=>document.getElementById(id);
- let peer=null,slot=0,room='',local=null,rawTrack=null,micOk=false,ctx=null,an=null,anBuf=null,muted=false,on=false,joining=false,gen=0,tryT=null,loopT=null,meSp=false,base=[],meSeat=null,lastMu=null,signalRetryAt=0,voiceDiag='',myUid=(()=>{try{return localStorage.getItem('mafia_uid')||''}catch(e){return ''}})();
+ let peer=null,slot=0,room='',local=null,rawTrack=null,micOk=false,ctx=null,an=null,anBuf=null,muted=false,on=false,joining=false,gen=0,tryT=null,loopT=null,meSp=false,base=[],meSeat=null,lastMu=null,signalRetryAt=0,voiceDiag='';
+ const myUid=()=>{try{return localStorage.getItem('mafia_uid')||''}catch(e){return ''}};
  const R={},H={};
  const myName=()=>String(S.nick||'بازیکن').replace(/[<>&"'`\\]/g,'').slice(0,18)||'بازیکن';
  const mySeed=()=>Math.max(1,Math.min(24,parseInt(selectedAvSeed)||1));
@@ -774,7 +775,7 @@ const Voice=(()=>{
   });
   const gone=()=>{
    if(R[s]!==r||r.call!==call)return;
-   r.live=false;r.stream=null;r.an=null;r.buf=null;r.audioPlaying=false;
+   r.live=false;r.stream=null;r.an=null;r.buf=null;r.audioPlaying=false;r.callT0=Date.now()-9000;
    clearTimeout(r.playRetry);r.playRetry=null;
    if(r.audio){try{r.audio.pause()}catch(e){}r.audio.srcObject=null;r.audio.remove();r.audio=null}
    refresh();
@@ -783,7 +784,7 @@ const Voice=(()=>{
  }
  function bindConn(s,conn){
   const r=newR(s);r.conn=conn;r.connT0=Date.now();
-  const hi=()=>{try{conn.send({t:'p',n:myName(),seed:mySeed(),f:mySeed()%3===0,role:(typeof lobbyMode!=='undefined'&&lobbyMode==='god')?'god':'player',rdy:(typeof lobbyReady!=='undefined'&&!!lobbyReady),mu:(muted||!micOk)?1:0,uid:myUid})}catch(e){}};
+  const hi=()=>{try{conn.send({t:'p',n:myName(),seed:mySeed(),f:mySeed()%3===0,role:(typeof lobbyMode!=='undefined'&&lobbyMode==='god')?'god':'player',rdy:(typeof lobbyReady!=='undefined'&&!!lobbyReady),mu:(muted||!micOk)?1:0,uid:myUid()})}catch(e){}};
   if(conn.open)hi();conn.on('open',hi);
   const connGone=()=>{if(R[s]===r&&r.conn===conn){r.conn=null;refresh()}};
   conn.on('close',connGone);conn.on('error',connGone);
@@ -817,7 +818,7 @@ const Voice=(()=>{
   // Keep the media element attached and renderable on mobile browsers; display:none
   // can prevent playback on some embedded/mobile WebViews.
   a.style.position='fixed';a.style.width='1px';a.style.height='1px';a.style.opacity='0.01';
-  a.style.left='-10px';a.style.bottom='0';a.style.pointerEvents='none';
+  a.style.left='0px';a.style.bottom='0';a.style.pointerEvents='none';
   a.srcObject=st;document.body.appendChild(a);r.audio=a;r.audioPlaying=false;
   let tries=0,removed=false;
   const current=()=>!removed&&R[r.slot]===r&&r.stream===st&&r.audio===a&&a.isConnected;
@@ -961,7 +962,7 @@ const Voice=(()=>{
  }
  // یک بار لمس صفحه: اگر مرورگر پخش خودکار صدا را بلاک کرده بود، دوباره تلاش می‌کند
  document.addEventListener('click',()=>{if(ctx&&ctx.state==='suspended')ctx.resume();Object.values(R).forEach(r=>{if(r.audio&&(r.audio.paused||!r.audioPlaying)){try{Promise.resolve(r.audio.play()).then(()=>{r.audioPlaying=true;refresh()}).catch(()=>{r.audioPlaying=false})}catch(e){}}})},true);
- return{join,leave:leaveVoice,toggleMute,isMuted:()=>!!(muted||!micOk),byUid:u=>{if(u&&u===myUid)return{sp:meSp,mu:!!(muted||!micOk)};const r=Object.values(R).find(x=>x.uid&&x.uid===u);return r?{sp:!!r.sp,mu:!!r.mu,live:!!r.live}:null},captureBase,patchSeats,afterRender,active:()=>on,broadcast,refresh,godHere,onGo:f=>{H.go=f},onMsg:(t,f)=>{H[t]=f},send,liveSlots:()=>humans().map(r=>r.slot),speakingOf:sl=>sl===slot?meSp:!!(R[sl]&&R[sl].sp),mySlot:()=>slot,godInfo,isLive:sl=>!!(R[sl]&&R[sl].live),godSlot:()=>{const r=humans().find(x=>x.role==='god');return r?r.slot:0},slotByUid:u=>{const r=Object.values(R).find(x=>x.uid&&x.uid===u);return r?r.slot:0}};
+ return{join,leave:leaveVoice,toggleMute,isMuted:()=>!!(muted||!micOk),byUid:u=>{if(u&&u===myUid())return{sp:meSp,mu:!!(muted||!micOk)};const r=Object.values(R).find(x=>x.uid&&x.uid===u);return r?{sp:!!r.sp,mu:!!r.mu,live:!!r.live}:null},captureBase,patchSeats,afterRender,active:()=>on,broadcast,refresh,godHere,onGo:f=>{H.go=f},onMsg:(t,f)=>{H[t]=f},send,liveSlots:()=>humans().map(r=>r.slot),speakingOf:sl=>sl===slot?meSp:!!(R[sl]&&R[sl].sp),mySlot:()=>slot,godInfo,isLive:sl=>!!(R[sl]&&R[sl].live),godSlot:()=>{const r=humans().find(x=>x.role==='god');return r?r.slot:0},slotByUid:u=>{const r=Object.values(R).find(x=>x.uid&&x.uid===u);return r?r.slot:0}};
 })();
 
 const Net=(()=>{
