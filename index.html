@@ -2767,10 +2767,33 @@ window.APP_VERSION='27.0';
  const db=()=>String(window.MAFIA_DB_URL||'').replace(/\/$/,'');
  const code=()=>String(window.MAFIA_ROOM_CODE||'').replace(/\D/g,'').slice(0,5);
  const myUid=()=>{try{return localStorage.getItem('mafia_uid')||''}catch(e){return ''}};
- let rosterBusy=false,publishBusy=false,actionBusy=false,pollTimer=null,clientBusy=false,lastClientRoom='',lastRoomCheck=0,cachedRoomStatus='',lastSyncAt=0,clientFinished=false,hostHadStarted=false,lastHostRoom='';
+ let rosterBusy=false,publishBusy=false,actionBusy=false,pollTimer=null,clientBusy=false,lastClientRoom='',lastRoomCheck=0,cachedRoomStatus='',lastSyncAt=0,clientFinished=false,hostHadStarted=false,lastHostRoom='',lastSnapshotJSON='',liveStreams={};
  const url=(path)=>db()+'/roomsV23/'+encodeURIComponent(code())+'/'+path+'.json';
  async function get(path){const r=await fetch(url(path),{cache:'no-store'});if(!r.ok)throw Error('HTTP '+r.status);return r.json()}
  async function put(path,data,method='PUT'){const r=await fetch(url(path),{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(data),cache:'no-store'});if(!r.ok)throw Error('HTTP '+r.status);return r}
+ // Realtime Database supports SSE. Use it as an immediate wake-up channel and
+ // retain polling as a fallback (the Worker proxy may not forward SSE).
+ function ensureLiveStreams(){
+  if(typeof EventSource==='undefined'||!/^https:\/\//i.test(db())||!/(firebaseio\.com|firebasedatabase\.app)$/i.test(new URL(db()).hostname))return;
+  const c=code(),mode=(typeof lobbyMode!=='undefined'?lobbyMode:window.lobbyMode);
+  const want={};
+  if(c&&mode==='god'&&started)want.actions=db()+'/roomsV23/'+encodeURIComponent(c)+'/gameActions.json';
+  if(c&&mode==='player'){
+   const uid=myUid();
+   if(uid){want.snapshot=db()+'/roomsV23/'+encodeURIComponent(c)+'/gameSnapshots/'+encodeURIComponent(uid)+'.json';want.status=db()+'/roomsV23/'+encodeURIComponent(c)+'/status.json'}
+  }
+  Object.keys(liveStreams).forEach(k=>{if(!want[k]||liveStreams[k].url!==want[k]){try{liveStreams[k].es.close()}catch(e){}delete liveStreams[k]}});
+  Object.entries(want).forEach(([k,u])=>{
+   if(liveStreams[k]&&liveStreams[k].url===u)return;
+   try{
+    const es=new EventSource(u);liveStreams[k]={url:u,es};
+    const wake=()=>{if(k==='actions')handleActions();else pollClient()};
+    es.addEventListener('put',wake);es.addEventListener('patch',wake);
+    es.addEventListener('cancel',()=>{try{es.close()}catch(e){}delete liveStreams[k]});
+    es.onerror=()=>{/* EventSource reconnects automatically; polling remains active */};
+   }catch(e){console.warn('Live stream unavailable',k,e)}
+  });
+ }
  async function livePlayers(){
   const data=await get('players')||{},now=Date.now(),self=myUid();
   return Object.entries(data).map(([id,p])=>({...p,uid:p&&p.uid||id}))
@@ -2831,7 +2854,7 @@ window.APP_VERSION='27.0';
  async function publishSnapshots(){
   const c=code(),base=db();
   if(publishBusy||!(typeof role!=='undefined'&&role==='god')||!c||!base||!window.Net||typeof Net.snapshotForUid!=='function')return;
-  if(c!==lastHostRoom){lastHostRoom=c;hostHadStarted=false}
+  if(c!==lastHostRoom){lastHostRoom=c;hostHadStarted=false;lastSnapshotJSON=''}
   const running=!!started;
   if(!running&&!hostHadStarted)return;
   publishBusy=true;
@@ -2843,7 +2866,10 @@ window.APP_VERSION='27.0';
      if(snap)map[s.uid]=snap;
     }
    });
-   await put('gameSnapshots',map,'PUT');
+   // Do not rewrite the same full snapshot map every 650 ms; that creates
+   // unnecessary database traffic and competes with player actions.
+   const serialized=JSON.stringify(map);
+   if(serialized!==lastSnapshotJSON){await put('gameSnapshots',map,'PUT');lastSnapshotJSON=serialized}
    if(running){hostHadStarted=true;return}
    const now=Date.now();
    const response=await fetch(base+'/roomsV23/'+encodeURIComponent(c)+'.json',{
@@ -2927,10 +2953,10 @@ window.APP_VERSION='27.0';
   finally{clientBusy=false}
  }
  // کانال‌ها مستقل‌اند تا انتشار snapshotهای حجیم، فرمان‌های بازی را معطل نکند.
- const actionTimer=setInterval(()=>{handleActions()},450);
+ const actionTimer=setInterval(()=>{ensureLiveStreams();handleActions()},450);
  const snapshotTimer=setInterval(()=>{publishSnapshots()},650);
- pollTimer=setInterval(()=>{pollClient()},350);
- pollClient();
+ pollTimer=setInterval(()=>{ensureLiveStreams();pollClient()},350);
+ ensureLiveStreams();pollClient();
  window.__bmOnlineSyncTimers={actionTimer,snapshotTimer,pollTimer};
 })();
 </script>
