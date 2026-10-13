@@ -3060,9 +3060,10 @@ button[title], [role="button"][title]{cursor:pointer}button:focus-visible{outlin
        return false;
      }
      const result=oldRoomStart.apply(this,arguments);
-     setTimeout(()=>{
-       if(typeof window.launch==='function'&&!window.started&&!window.G?.loading)window.launch(0);
-     },80);
+     // Wait until the async shared-room/host setup has completed before launching.
+     Promise.resolve(result).then(()=>setTimeout(()=>{
+       if(typeof window.launch==='function'&&typeof started!=='undefined'&&!started&&typeof G!=='undefined'&&!G.loading)window.launch(0);
+     },80)).catch(()=>{});
      return result;
    };
  }
@@ -3074,5 +3075,85 @@ button[title], [role="button"][title]{cursor:pointer}button:focus-visible{outlin
  cleanup();
  const room=$('lobbyRoom');
  if(room)new MutationObserver(cleanup).observe(room,{childList:true,subtree:true});
+})();
+</script>
+
+
+
+<!-- BLACK MAFIA: one shared waiting lobby and one room ID across devices -->
+<style id="bm-one-lobby-style">
+#bmSharedRoomBadge{display:none;position:fixed;top:calc(env(safe-area-inset-top,0px) + 5px);left:50%;transform:translateX(-50%);z-index:20010;padding:4px 11px;border:1px solid #d8ad50;border-radius:12px;background:#100904ed;color:#ffe6a0;font:800 11px/1.3 sans-serif;letter-spacing:1px;direction:rtl;box-shadow:0 3px 12px #0008;pointer-events:none;white-space:nowrap}
+body.ingame #bmSharedRoomBadge{display:block}
+#lobbyRoom.bm-start-wait .roomActions #roomStartBtn{opacity:.55;pointer-events:none}
+#lobbyRoom.bm-start-wait .roomActions #readyBtn{display:none!important}
+</style>
+<div id="bmSharedRoomBadge" aria-label="شناسه اتاق مشترک"></div>
+<script id="bm-one-lobby-js">
+(()=>{
+ if(window.__bmOneLobbyInstalled)return;
+ window.__bmOneLobbyInstalled=true;
+ const $=id=>document.getElementById(id);
+ const code=()=>String(window.MAFIA_ROOM_CODE||'').replace(/[^0-9]/g,'').slice(0,5);
+ let waitingSince=0, lastCode='';
+ function paintBadge(){
+   const c=code(),b=$('bmSharedRoomBadge');
+   if(!b)return;
+   b.textContent=c?'شناسه مشترک اتاق: #'+c:'';
+   b.style.display=c&&document.body.classList.contains('ingame')?'block':'none';
+ }
+ function keepWaitingRoom(){
+   const c=code(),room=$('lobbyRoom');
+   if(!c||!room)return;
+   lastCode=c;waitingSince=Date.now();
+   room.classList.add('on','bm-start-wait');
+   const title=$('roomTitle'),banner=$('roomBanner'),start=$('roomStartBtn'),ready=$('readyBtn');
+   if(title)title.innerHTML='اتاق مشترک <span class="roomCodeBadge">#'+c+'</span>';
+   if(banner)banner.innerHTML='<span class="roomCodeBadge">شناسه اتاق #'+c+'</span> لابی انتظار مشترک<small>همه در همین اتاق می‌مانند؛ با شروع گاد، همگی وارد همان بازی می‌شوید.</small>';
+   if(start){start.textContent='⏳ در انتظار شروع بازی…';start.disabled=true}
+   if(ready)ready.style.display='none';
+   paintBadge();
+ }
+ function leaveWaitingRoom(){
+   const room=$('lobbyRoom');
+   if(room)room.classList.remove('on','bm-start-wait');
+   paintBadge();
+ }
+ // Keep the single room lobby visible for players after Net.enter; reveal the game only
+ // after the host's first real synchronized game snapshot says the game has started.
+ if(window.Net&&typeof Net.enter==='function'&&!window.__bmNetEnterWrapped){
+   window.__bmNetEnterWrapped=true;
+   const enter=Net.enter;
+   Net.enter=function(){const r=enter.apply(this,arguments);if(code())keepWaitingRoom();return r};
+ }
+ const priorStart=window.roomStartGame;
+ if(typeof priorStart==='function'&&!window.__bmOneLobbyStartWrapped){
+   window.__bmOneLobbyStartWrapped=true;
+   window.roomStartGame=function(){
+     const isGod=window.lobbyMode==='god',c=code();
+     if(!isGod||!c)return priorStart.apply(this,arguments);
+     const start=$('roomStartBtn');
+     if(start){start.disabled=true;start.textContent='⏳ در حال راه‌اندازی بازی…'}
+     const result=priorStart.apply(this,arguments);
+     Promise.resolve(result).then(()=>keepWaitingRoom()).catch(()=>keepWaitingRoom());
+     return result;
+   };
+ }
+ // Host and players leave the waiting lobby on the same shared start state.
+ setInterval(()=>{
+   const c=code();
+   if(!c){leaveWaitingRoom();return}
+   if(c!==lastCode)paintBadge();
+   if(!document.body.classList.contains('ingame')){paintBadge();return}
+   let live=false;
+   try{
+     if(window.lobbyMode==='god')live=typeof started!=='undefined'&&!!started;
+     else if(window.Net&&typeof Net.snapshot==='function'){const snap=Net.snapshot();live=!!(snap&&snap.st)}
+   }catch(e){}
+   if(live)leaveWaitingRoom();
+   else if(window.lobbyMode==='player'&&window.Net&&Net.isClient()&&!$('lobbyRoom')?.classList.contains('on'))keepWaitingRoom();
+   paintBadge();
+ },250);
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden)paintBadge()});
+ paintBadge();
 })();
 </script>
