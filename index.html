@@ -1133,9 +1133,9 @@ const Net=(()=>{
   g('vpn').innerHTML='<b>🗳 جدول آرا</b>'+d.l.slice(0,N).map(x=>`<div>${esc(x[0])} ➜ <b>${esc(x[1])}</b></div>`).join('')+((d.ab&&d.ab.length)?'<div style="opacity:.7">ممتنع: '+d.ab.slice(0,N).map(esc).join('، ')+'</div>':'');
   g('vpn').style.display='block';clearTimeout(vpT);vpT=setTimeout(()=>g('vpn').style.display='none',5500)});
  function reconcileFirebasePlayers(players){
-  if(role!=='god'||!Array.isArray(seats)||!document.body.classList.contains('ingame'))return;
+  if((role!=='god'&&lobbyMode!=='god')||!Array.isArray(seats)||!document.body.classList.contains('ingame'))return;
   const now=Date.now();
-  const active=Object.entries(players||{}).filter(([uid,p])=>p&&p.role==='player'&&now-(+p.at||0)<15000);
+  const active=Object.entries(players||{}).filter(([uid,p])=>p&&p.role!=='god'&&now-(+p.at||0)<15000);
   const activeUids=new Set(active.map(([uid])=>uid));
   if(!started){
    seats.forEach(s=>{
@@ -1177,7 +1177,7 @@ const Net=(()=>{
  }
   Voice.onMsg('act',onAct);
  return{enter,hostStart,reset,bcast,canSpeak,snapshot:()=>snap,lastSyncAt:()=>rxT,isClient:()=>client,mySeat:()=>snap?snap.my:-1,
-  snapshotForUID(uid){if(role!=='god')return null;return snapFor(0,String(uid||''))},
+  snapshotForUID(uid){if(role!=='god'&&lobbyMode!=='god')return null;return snapFor(0,String(uid||''))},
   reconcileFirebasePlayers,
   handleFirebaseAction(uid,d){return onAct(0,d,String(uid||''))},
   receiveFirebaseSnapshot(d){return apply(d)},
@@ -3330,7 +3330,7 @@ body.ingame #bmSharedRoomBadge{display:block}
  };
  async function hostSync(){
   const c=code();
-  if(hostBusy||!c||!db()||!window.Net||typeof role==='undefined'||role!=='god'||!document.body.classList.contains('ingame'))return;
+  if(hostBusy||!c||!db()||!window.Net||((typeof role==='undefined'||role!=='god')&&lobbyMode!=='god')||!document.body.classList.contains('ingame'))return;
   hostBusy=true;
   try{
    try{if(window.Voice&&Voice.active())Voice.patchSeats()}catch(e){}
@@ -3341,7 +3341,7 @@ body.ingame #bmSharedRoomBadge{display:block}
    const now=Date.now();
    for(const [playerUid,a] of Object.entries(actions||{})){
     const p=players[playerUid];
-    if(!a||!a.act||!a.actId||a.handledId===a.actId||!p||p.role!=='player')continue;
+    if(!a||!a.act||!a.actId||a.handledId===a.actId||!p||p.role==='god')continue;
     if(now-(+p.at||0)>15000||now-(+a.actAt||0)>25000)continue;
     let done=false;
     try{done=!!Net.handleFirebaseAction(playerUid,a.act)}catch(e){console.warn('[Black Mafia] Could not apply backup action',e)}
@@ -3349,7 +3349,7 @@ body.ingame #bmSharedRoomBadge{display:block}
    }
    const snapshots={};
    for(const [playerUid,p] of Object.entries(players)){
-    if(!p||p.role!=='player'||now-(+p.at||0)>15000)continue;
+    if(!p||p.role==='god'||now-(+p.at||0)>15000)continue;
     const snap=Net.snapshotForUID(playerUid);
     if(snap&&snap.my>=0&&Array.isArray(snap.seats))snapshots[playerUid]=snap;
    }
@@ -3359,7 +3359,7 @@ body.ingame #bmSharedRoomBadge{display:block}
  }
  async function clientSync(){
   const c=code(),u=uid();
-  if(clientBusy||!c||!u||!db()||!window.Net||typeof lobbyMode==='undefined'||lobbyMode!=='player'||!Net.isClient())return;
+  if(clientBusy||!c||!u||!db()||!window.Net||!Net.isClient())return;
   clientBusy=true;
   try{
    const snap=await req('gameSync/'+c+'/snapshots/'+u);
