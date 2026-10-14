@@ -219,7 +219,7 @@ nav{background:#0009;border:1px solid var(--g2);border-radius:12px;padding:3px}n
 /* mobile portrait fit */
 @media(max-height:720px){#proSpeakerSpotlight{top:7%;transform:translateX(-50%) scale(.86)}#proSpeakerSpotlight.on{transform:translateX(-50%) scale(.86)}}
 </style>
-<script src="config.js"></script>
+<script src="config.js?v=20261014-routefailover1"></script>
 <link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#000000"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><link rel="apple-touch-icon" href="icon-192.png">
 </head><body>
 <div id="fx"></div><div id="toast"></div>
@@ -3353,7 +3353,18 @@ body.ingame #bmSharedRoomBadge{display:block}
     const snap=Net.snapshotForUID(playerUid);
     if(snap&&snap.my>=0&&Array.isArray(snap.seats))snapshots[playerUid]=snap;
    }
-   await req('gameSync/'+c+'/snapshots','PUT',snapshots);
+   try {
+    await req('gameSync/'+c+'/snapshots','PUT',snapshots);
+   } catch (bulkError) {
+    // Large bulk writes or a proxy path issue should not block every player's game state.
+    const rows=Object.entries(snapshots);
+    if(!rows.length)throw bulkError;
+    const results=await Promise.allSettled(rows.map(([playerUid,snap])=>
+     req('gameSync/'+c+'/snapshots/'+encodeURIComponent(playerUid),'PUT',snap)
+    ));
+    if(results.every(result=>result.status==='rejected'))throw bulkError;
+    console.warn('[Black Mafia] Bulk snapshot write failed; per-player fallback was used');
+   }
   }catch(e){console.warn('[Black Mafia] Firebase game-state backup failed',e)}
   finally{hostBusy=false}
  }
