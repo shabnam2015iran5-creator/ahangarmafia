@@ -987,7 +987,7 @@ const Voice=(()=>{
  }
  // یک بار لمس صفحه: اگر مرورگر پخش خودکار صدا را بلاک کرده بود، دوباره تلاش می‌کند
  document.addEventListener('click',()=>{if(ctx&&ctx.state==='suspended')ctx.resume();Object.values(R).forEach(r=>{if(r.audio&&r.audio.paused)r.audio.play().catch(()=>{})})},true);
- return{join,leave:leaveVoice,toggleMute,isMuted:()=>!!(muted||!micOk),byUid:u=>{if(u&&u===myUid)return{sp:meSp,mu:!!(muted||!micOk)};const r=Object.values(R).find(x=>x.uid&&x.uid===u);return r?{sp:!!r.sp,mu:!!r.mu,live:!!r.live}:null},slotByUid:u=>{if(u&&u===myUid)return slot||0;const r=Object.values(R).find(x=>x.uid&&x.uid===u);return r?(r.slot||0):0},captureBase,patchSeats,afterRender,active:()=>on,broadcast,refresh,godHere,onGo:f=>{H.go=f},onMsg:(t,f)=>{H[t]=f},send,liveSlots:()=>humans().map(r=>r.slot),speakingOf:sl=>sl===slot?meSp:!!(R[sl]&&R[sl].sp),mySlot:()=>slot,godInfo,isLive:sl=>!!(R[sl]&&R[sl].live),godSlot:()=>{const r=humans().find(x=>x.role==='god');return r?r.slot:0}};
+ return{join,leave:leaveVoice,toggleMute,isMuted:()=>!!(muted||!micOk),byUid:u=>{if(u&&u===myUid)return{sp:meSp,mu:!!(muted||!micOk)};const r=Object.values(R).find(x=>x.uid&&x.uid===u);return r?{sp:!!r.sp,mu:!!r.mu,live:!!r.live}:null},captureBase,patchSeats,afterRender,active:()=>on,broadcast,refresh,godHere,onGo:f=>{H.go=f},onMsg:(t,f)=>{H[t]=f},send,liveSlots:()=>humans().map(r=>r.slot),speakingOf:sl=>sl===slot?meSp:!!(R[sl]&&R[sl].sp),mySlot:()=>slot,godInfo,isLive:sl=>!!(R[sl]&&R[sl].live),godSlot:()=>{const r=humans().find(x=>x.role==='god');return r?r.slot:0}};
 })();
 
 const Net=(()=>{
@@ -1150,11 +1150,6 @@ const Net=(()=>{
   }
   active.forEach(([uid,p])=>{
    let i=seats.findIndex(s=>s&&s.uid===uid);
-    // Prefer the seat already occupied by this account's voice slot before assigning a spare bot seat.
-    if(i<0&&window.Voice&&typeof Voice.slotByUid==='function'){
-     const voiceSlot=Voice.slotByUid(uid);
-     if(voiceSlot)i=seats.findIndex(s=>s&&s.hv===voiceSlot);
-    }
    if(i<0){
     if(started){
      i=seats.findIndex(s=>s&&s.b&&!s.hv&&!s.d);
@@ -3374,64 +3369,5 @@ body.ingame #bmSharedRoomBadge{display:block}
  }
  setInterval(()=>{hostSync();clientSync()},900);
  document.addEventListener('visibilitychange',()=>{if(!document.hidden){hostSync();clientSync()}});
-})();
-</script>
-
-
-<!-- BLACK MAFIA: recover a player stuck in the waiting-room overlay; audio paths are unchanged -->
-<script id="bm-player-sync-recovery-v2">
-(()=>{
- if(window.__bmPlayerSyncRecoveryV2)return;window.__bmPlayerSyncRecoveryV2=true;
- const db=()=>String(window.MAFIA_DB_URL||'').replace(/\/$/,'');
- const code=()=>String(window.MAFIA_ROOM_CODE||'').replace(/[^0-9]/g,'').slice(0,5);
- const uid=()=>{try{return localStorage.getItem('mafia_uid')||''}catch(e){return ''}};
- const get=async path=>{
-  const endpoint=db();if(!endpoint)throw Error('database unavailable');
-  const r=await fetch(endpoint+'/'+path+'.json',{cache:'no-store'});
-  if(!r.ok)throw Error('database HTTP '+r.status);
-  return r.json();
- };
- let currentCode='',startedSeenAt=0,busy=false;
- async function recover(){
-  const c=code(),mode=typeof lobbyMode!=='undefined'?lobbyMode:window.lobbyMode;
-  if(!c||mode!=='player'||!db()||!window.Net||typeof Net.enter!=='function')return;
-  if(c!==currentCode){currentCode=c;startedSeenAt=0}
-  if(busy)return;busy=true;
-  try{
-   const room=await get('roomsV23/'+encodeURIComponent(c));
-   if(!room||room.status!=='started'){startedSeenAt=0;return}
-   if(!startedSeenAt)startedSeenAt=Date.now();
-   if(!Net.isClient()) {window.lobbyReady=true;Net.enter()}
-   const current=Net.snapshot&&Net.snapshot();
-   const last=Net.lastSyncAt&&Net.lastSyncAt();
-   if(current&&current.st&&last&&Date.now()-last<6500){
-    const lobby=document.getElementById('lobbyRoom');if(lobby)lobby.classList.remove('on','bm-start-wait');
-    return;
-   }
-   const playerUid=uid();
-   if(playerUid&&typeof Net.receiveFirebaseSnapshot==='function'){
-    try{
-     const snap=await get('gameSync/'+encodeURIComponent(c)+'/snapshots/'+encodeURIComponent(playerUid));
-     if(snap&&snap.st&&Array.isArray(snap.seats)){
-      Net.receiveFirebaseSnapshot(snap);
-      const applied=Net.snapshot&&Net.snapshot();
-      if(applied&&applied.st){
-       const lobby=document.getElementById('lobbyRoom');if(lobby)lobby.classList.remove('on','bm-start-wait');
-       return;
-      }
-     }
-    }catch(e){}
-   }
-   // Never leave a player trapped behind the lobby overlay after the server says the game started.
-   if(Date.now()-startedSeenAt>4500){
-    const lobby=document.getElementById('lobbyRoom');if(lobby)lobby.classList.remove('on','bm-start-wait');
-    const phase=document.getElementById('phase');
-    if(phase&&!(Net.snapshot&&Net.snapshot()&&Net.snapshot().st))phase.textContent='در حال دریافت وضعیت بازی از گرداننده…';
-   }
-  }catch(e){console.warn('[Black Mafia] Player recovery check failed',e)}
-  finally{busy=false}
- }
- setInterval(recover,850);
- document.addEventListener('visibilitychange',()=>{if(!document.hidden)recover()});
 })();
 </script>
