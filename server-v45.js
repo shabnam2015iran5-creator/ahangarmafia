@@ -631,17 +631,17 @@ const server = http.createServer(async (req, res) => {
       };
       try {
         requiredReplace(
-          "async function autoRoom(kind){\\n    if(!validProfile()",
-          "async function autoRoom(kind){\\n    const requestedGod = lobbyMode === 'god';\\n    if(!validProfile()",
+          "async function autoRoom(kind){\n    if(!validProfile()",
+          "async function autoRoom(kind){\n    const requestedGod = lobbyMode === 'god';\n    if(!validProfile()",
           "capture selected role"
         );
-        const roomChoicePattern = /let c='',createNew=!active\\.length;[\\s\\S]*?lobbyReady=!asGod;/;
+        const roomChoicePattern = /let c='',createNew=!active\.length;[\s\S]*?lobbyReady=!asGod;/;
         const roomChoiceMatches = html.match(roomChoicePattern);
         if (!roomChoiceMatches || html.match(new RegExp(roomChoicePattern.source, "g")).length !== 1) {
           throw new Error("Single-path replacement failed: room selection");
         }
         html = html.replace(roomChoicePattern,
-          "let c='',createNew=requestedGod;\\n    if (requestedGod) {\\n      createNew=true;\\n    } else if (active.length) {\\n      c=String(active[0].code);\\n      createNew=false;\\n    } else {\\n      toast('اتاق فعالی نیست؛ ابتدا گرداننده وارد همان لابی شود.');\\n      return;\\n    }\\n    const asGod=requestedGod;\\n    lobbyMode=asGod?'god':'player';window.lobbyMode=lobbyMode;\\n    lobbyReady=!asGod;");
+          "let c='',createNew=requestedGod;\n    if (requestedGod) {\n      createNew=true;\n    } else if (active.length) {\n      c=String(active[0].code);\n      createNew=false;\n    } else {\n      toast('اتاق فعالی نیست؛ ابتدا گرداننده وارد همان لابی شود.');\n      return;\n    }\n    const asGod=requestedGod;\n    lobbyMode=asGod?'god':'player';window.lobbyMode=lobbyMode;\n    lobbyReady=!asGod;");
         requiredReplace("lobbyReady=false;$(\'readyBtn\').style.display=lobbyMode===\'player\'?\'inline-block\':\'none\';",
           "lobbyReady=true;$(\'readyBtn\').style.display=\'none\';", "implicit ready");
         requiredReplace("if(lobbyMode===\'player\'&&!lobbyReady){toast(\'اول روی «آماده‌ام» بزنید\');return}",
@@ -650,8 +650,8 @@ const server = http.createServer(async (req, res) => {
           "/* Game actions use the shared local database only. */", "player actions");
         requiredReplace("function bcast(m){if(role===\'god\'&&Voice.active())Voice.broadcast(m)}",
           "function bcast(m){}", "game state broadcast");
-        requiredReplace("window.roomStartGame=function(){\\n  if(lobbyMode===\'god\'){Voice.broadcast({t:\'go\'});const r=_rsg();Net.hostStart();return r}\\n  if(Voice.active()&&Voice.godHere()){toast(\'منتظر شروع بازی توسط گرداننده باشید\');return}\\n  return _rsg()};\\n Voice.onGo(()=>{if(document.getElementById(\'lobbyRoom\').classList.contains(\'on\')&&lobbyMode===\'player\'){lobbyReady=true;Net.enter()}});",
-          "window.roomStartGame=function(){\\n  if(lobbyMode===\'god\'){return _rsg()}\\n  lobbyReady=true;\\n  try{toast(\'منتظر شروع بازی توسط گرداننده باشید\')}catch(e){}\\n  return false;\\n};", "single start trigger");
+        requiredReplace("window.roomStartGame=function(){\n  if(lobbyMode===\'god\'){Voice.broadcast({t:\'go\'});const r=_rsg();Net.hostStart();return r}\n  if(Voice.active()&&Voice.godHere()){toast(\'منتظر شروع بازی توسط گرداننده باشید\');return}\n  return _rsg()};\n Voice.onGo(()=>{if(document.getElementById(\'lobbyRoom\').classList.contains(\'on\')&&lobbyMode===\'player\'){lobbyReady=true;Net.enter()}});",
+          "window.roomStartGame=function(){\n  if(lobbyMode===\'god\'){return _rsg()}\n  lobbyReady=true;\n  try{toast(\'منتظر شروع بازی توسط گرداننده باشید\')}catch(e){}\n  return false;\n};", "single start trigger");
         requiredReplace("setTimeout(()=>{ov.classList.remove(\'s\');try{next()}catch(e){console.error(e)}},2000)",
           "setTimeout(()=>{ov.classList.remove(\'s\');try{next()}catch(e){console.error(e)}},250)", "entry loading");
         requiredReplace("setTimeout(()=>{cl(\'ovLoad\');G.loading=false;if(role)godStart(si)},2000)",
@@ -661,9 +661,9 @@ const server = http.createServer(async (req, res) => {
         res.writeHead(500, { "Content-Type": "text/plain; charset=utf-8" });
         return res.end("Local v45 HTML patch failed: " + String(error.message || error));
       }
-      html = html.replace("</head>", '<style id="bm-no-ready-v45">#readyBtn{display:none!important;visibility:hidden!important;pointer-events:none!important}</style>\\n</head>');
+      html = html.replace("</head>", '<style id="bm-no-ready-v45">#readyBtn{display:none!important;visibility:hidden!important;pointer-events:none!important}</style>\n</head>');
       html += SINGLE_PATH_SYNC_SCRIPT;
-      html += "\\n<script>console.info('[Local Mafia v45] Single local database start/sync active');</script>\\n";
+      html += "\n<script>console.info('[Local Mafia v45] Single local database start/sync active');</script>\n";
 
       const body = Buffer.from(html, "utf8");
       const acceptsGzip = /\bgzip\b/i.test(String(req.headers["accept-encoding"] || ""));
