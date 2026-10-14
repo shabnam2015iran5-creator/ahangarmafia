@@ -631,6 +631,21 @@ const server = http.createServer(async (req, res) => {
       };
       try {
         requiredReplace(
+          "function start(r){lobbyMode=r==='god'?'god':'player';openDoorFlow(lobbyMode)}",
+          "function start(r){lobbyMode=r==='god'?'god':'player';window.lobbyMode=lobbyMode;openDoorFlow(lobbyMode)}",
+          "keep selected role shared"
+        );
+        requiredReplace(
+          "function openDoorFlow(mode){lobbyMode=mode||'player';$('doorScreen')",
+          "function openDoorFlow(mode){lobbyMode=mode||'player';window.lobbyMode=lobbyMode;$('doorScreen')",
+          "keep door role shared"
+        );
+        requiredReplace(
+          "window.lobbyMode='god';if(typeof doorSfx==='function')doorSfx();",
+          "lobbyMode='god';window.lobbyMode='god';if(typeof doorSfx==='function')doorSfx();",
+          "moderator entrance mode"
+        );
+        requiredReplace(
           "async function autoRoom(kind){\n    if(!validProfile()",
           "async function autoRoom(kind){\n    const requestedGod = lobbyMode === 'god';\n    if(!validProfile()",
           "capture selected role"
