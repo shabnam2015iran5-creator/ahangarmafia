@@ -1,10 +1,7 @@
-/* تنظیمات دیتابیس: روی Cloudflare Worker از پراکسی هم‌مبدأ استفاده کن؛
-   روی GitHub Pages و هاست‌های ایستا، مستقیم به Firebase وصل شو تا /api/db به 404 نخورد. */
-const mafiaHost = String(window.location && window.location.hostname || '').toLowerCase();
-const mafiaWorkerHost = mafiaHost.endsWith('.workers.dev');
-window.MAFIA_DB_URL = mafiaWorkerHost
-  ? '/api/db'
-  : 'https://black-mafia-online-default-rtdb.firebaseio.com';
+/* تنظیمات دیتابیس آنلاین: از Firebase مستقیم استفاده می‌کنیم.
+   این پروژه روی Worker فعلی مسیر پراکسی /api/db تضمین‌شده‌ای ندارد؛
+   استفاده از آن می‌تواند تمام درخواست‌های اتاق و همگام‌سازی بازی را به 404 بفرستد. */
+window.MAFIA_DB_URL = 'https://black-mafia-online-default-rtdb.firebaseio.com';
 // سرور TURN برای اینترنت همراه/شبکه‌های سخت. این‌ها سرورهای رایگان و مشترک Open Relay هستند (برای شروع و تست).
 // برای استفادهٔ جدی، در metered.ca حساب رایگان بساز و اطلاعات خودت را اینجا بگذار.
 window.MAFIA_TURN=[
