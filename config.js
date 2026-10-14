@@ -1,10 +1,10 @@
-/* اتصال دیتابیس:
-   روی Cloudflare Worker از پراکسی هم‌مبدأ /api/db استفاده می‌کنیم تا مرورگر
-   لازم نباشد مستقیم به Firebase وصل شود. روی هاست‌های دیگر از Firebase مستقیم استفاده می‌شود. */
+/* اتصال دیتابیس از مسیر واسط Cloudflare انجام می‌شود تا مرورگر مستقیماً به Firebase نیاز نداشته باشد.
+   این کار فقط وقتی مفید است که دامنه Worker روی اینترنت بازیکن قابل دسترسی باشد. */
 const MAFIA_WORKER_HOST = 'mafia-game-server.nova-d9d04c.workers.dev';
+const MAFIA_DB_PROXY = 'https://' + MAFIA_WORKER_HOST + '/api/db';
 window.MAFIA_DB_URL = (location.hostname === MAFIA_WORKER_HOST)
   ? '/api/db'
-  : 'https://black-mafia-online-default-rtdb.firebaseio.com';
+  : MAFIA_DB_PROXY;
 
 // TURN servers Open Relay:
 window.MAFIA_TURN=[
