@@ -1,9 +1,12 @@
-/* تنظیمات دیتابیس آنلاین: از Firebase مستقیم استفاده می‌کنیم.
-   این پروژه روی Worker فعلی مسیر پراکسی /api/db تضمین‌شده‌ای ندارد؛
-   استفاده از آن می‌تواند تمام درخواست‌های اتاق و همگام‌سازی بازی را به 404 بفرستد. */
-window.MAFIA_DB_URL = 'https://black-mafia-online-default-rtdb.firebaseio.com';
-// سرور TURN برای اینترنت همراه/شبکه‌های سخت. این‌ها سرورهای رایگان و مشترک Open Relay هستند (برای شروع و تست).
-// برای استفادهٔ جدی، در metered.ca حساب رایگان بساز و اطلاعات خودت را اینجا بگذار.
+/* اتصال دیتابیس:
+   روی Cloudflare Worker از پراکسی هم‌مبدأ /api/db استفاده می‌کنیم تا مرورگر
+   لازم نباشد مستقیم به Firebase وصل شود. روی هاست‌های دیگر از Firebase مستقیم استفاده می‌شود. */
+const MAFIA_WORKER_HOST = 'mafia-game-server.nova-d9d04c.workers.dev';
+window.MAFIA_DB_URL = (location.hostname === MAFIA_WORKER_HOST)
+  ? '/api/db'
+  : 'https://black-mafia-online-default-rtdb.firebaseio.com';
+
+// TURN servers Open Relay:
 window.MAFIA_TURN=[
   {urls:'turn:openrelay.metered.ca:80',username:'openrelayproject',credential:'openrelayproject'},
   {urls:'turn:openrelay.metered.ca:443',username:'openrelayproject',credential:'openrelayproject'},
@@ -17,5 +20,5 @@ window.MAFIA_BP_ADMIN_PASS='00100900'; // رمز مرکز مدیریت؛ حتم�
 // حالت «فقط یک اتاق»: همهٔ بازیکن‌ها با ورود از در، مستقیم وارد یک اتاق مشترک می‌شوند (بدون کد و بدون Firebase).
 // برای برگشت به ساخت اتاق با کد، false بگذار.
 window.MAFIA_SINGLE_ROOM=false;
-window.MAFIA_ROOM_NAME='main';      // نام اتاق مشترک
-window.MAFIA_ONE_ROOM_ALL=true;     // true: هر سه لابی یک اتاق‌اند؛ false: برای هر لابی یک اتاق جدا
+window.MAFIA_ROOM_NAME='main';
+window.MAFIA_ONE_ROOM_ALL=true;
