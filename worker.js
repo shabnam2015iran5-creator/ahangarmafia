@@ -7,6 +7,22 @@ function json(data, status = 200, headers = {}) {
   });
 }
 
+const ALLOWED_ORIGINS = new Set([
+  "https://mafia-game-server.nova-d9d04c.workers.dev",
+  "https://shabnam2015iran5-creator.github.io"
+]);
+
+function corsHeaders(origin) {
+  const headers = {
+    "Access-Control-Allow-Methods": "GET, PUT, PATCH, POST, DELETE, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Max-Age": "600",
+    "Vary": "Origin"
+  };
+  if (origin && ALLOWED_ORIGINS.has(origin)) headers["Access-Control-Allow-Origin"] = origin;
+  return headers;
+}
+
 function allowedPath(path) {
   const p = path.replace(/\.json$/, "").split("/");
   if (p.some(x => !x || x === "." || x === "..")) return false;
@@ -53,25 +69,16 @@ export default {
     }
 
     const method = request.method.toUpperCase();
+    const origin = request.headers.get("Origin");
+    if (origin && !ALLOWED_ORIGINS.has(origin)) return json({ error: "Origin not allowed" }, 403);
+
     if (method === "OPTIONS") {
-      return new Response(null, {
-        status: 204,
-        headers: {
-          "Access-Control-Allow-Origin": url.origin,
-          "Access-Control-Allow-Methods": "GET, PUT, PATCH, POST, DELETE, OPTIONS",
-          "Access-Control-Allow-Headers": "Content-Type",
-          "Access-Control-Max-Age": "600",
-          "Vary": "Origin"
-        }
-      });
+      return new Response(null, { status: 204, headers: corsHeaders(origin) });
     }
 
     if (!["GET", "PUT", "PATCH", "POST", "DELETE"].includes(method)) {
       return json({ error: "Method not allowed" }, 405, { "Allow": "GET, PUT, PATCH, POST, DELETE, OPTIONS" });
     }
-
-    const origin = request.headers.get("Origin");
-    if (origin && origin !== url.origin) return json({ error: "Origin not allowed" }, 403);
 
     const rawPath = url.pathname.slice("/api/db/".length);
     if (!rawPath.endsWith(".json") || !allowedPath(rawPath)) {
@@ -105,6 +112,7 @@ export default {
     const headers = new Headers(upstream.headers);
     headers.set("Cache-Control", "no-store");
     headers.delete("Access-Control-Allow-Origin");
+    for (const [key, value] of Object.entries(corsHeaders(origin))) headers.set(key, value);
     return new Response(upstream.body, { status: upstream.status, headers });
   }
 };
